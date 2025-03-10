@@ -1,1 +1,9 @@
+streamlit
 earthengine-api
+geemap
+streamlit-folium
+pandas
+altair
+python-dateutil
+folium
+geopandas
