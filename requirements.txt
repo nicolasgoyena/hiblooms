@@ -7,3 +7,4 @@ altair
 python-dateutil
 folium
 geopandas
+setuptools
