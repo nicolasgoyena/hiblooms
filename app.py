@@ -20,13 +20,13 @@ import os
 st.write("⏳ Inicializando Google Earth Engine...")
 
 try:
-    if "GEE_REFRESH_TOKEN" in st.secrets:
+    if "EARTHENGINE_TOKEN" in st.secrets:
         st.write("🔑 Usando refresh token para autenticación...")
-        
-        # Guardar el refresh token en una variable de entorno temporal
-        os.environ["EARTHENGINE_TOKEN"] = st.secrets["GEE_REFRESH_TOKEN"]
 
-        # Inicializar GEE
+        # Guardar el refresh token en una variable de entorno temporal
+        os.environ["EARTHENGINE_TOKEN"] = st.secrets["EARTHENGINE_TOKEN"]
+
+        # Inicializar Google Earth Engine
         ee.Initialize()
 
     else:
@@ -38,6 +38,7 @@ try:
 except Exception as e:
     st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
     st.stop()
+
 
 puntos_interes = {
     "EUGUI": {
