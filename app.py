@@ -583,7 +583,7 @@ with tab2:
 
     with row1[0]:
         st.subheader("Mapa de Embalses")
-        map_embalses = geemap.Map(center=[42.0, 0.5], zoom=7)
+        map_embalses = geemap.Map(center=[42.0, 0.5], zoom=18)
         cargar_y_mostrar_embalses(map_embalses, nombre_columna="NOMBRE")
         folium_static(map_embalses)
 
