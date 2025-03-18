@@ -13,28 +13,34 @@ import geopandas as gpd
 import os
 import time
 from datetime import timedelta
-import ee
-import streamlit as st
-import os
-
-import ee
-import streamlit as st
-import os
-import requests
+import json
 
 st.write("⏳ Inicializando Google Earth Engine...")
 
 try:
-    # Intentar autenticación directa en Streamlit Cloud
-    ee.Authenticate()
-    ee.Initialize()
-    st.success("✅ Google Earth Engine autenticado correctamente")
-    
+    if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
+        st.write("🔑 Usando JSON de cuenta de servicio para autenticación...")
+
+        # Convertir el JSON guardado en Streamlit Secrets a un diccionario
+        json_object = json.loads(st.secrets["GEE_SERVICE_ACCOUNT_JSON"], strict=False)
+        service_account = json_object["client_email"]
+        json_object = json.dumps(json_object)
+
+        # Autenticar con la cuenta de servicio
+        credentials = ee.ServiceAccountCredentials(service_account, key_data=json_object)
+        ee.Initialize(credentials)
+
+        st.success("✅ Google Earth Engine inicializado correctamente con cuenta de servicio.")
+
+    else:
+        st.write("🔍 Intentando inicializar GEE localmente...")
+        ee.Initialize()
+
+    st.success("✅ Google Earth Engine inicializado correctamente.")
+
 except Exception as e:
-    st.error(f"❌ No se pudo autenticar en Google Earth Engine: {str(e)}")
+    st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
     st.stop()
-
-
 
 puntos_interes = {
     "EUGUI": {
