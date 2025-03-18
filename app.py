@@ -12,7 +12,7 @@ import folium
 import geopandas as gpd
 import os
 import time
-
+from datetime import timedelta
 # Autenticarse en Google Earth Engine
 ee.Authenticate()
 ee.Initialize(project='ee-nicolasgoyenaserveto')
@@ -95,8 +95,7 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="embalses_hiblooms.shp"
             nombre_embalse = row.get(nombre_columna, "Embalse desconocido")  # Obtener el nombre real
 
             if row.geometry.geom_type == 'Point':
-                folium.Marker(
-                    location=[row.geometry.y, row.geometry.x],
+                folium.Marker(                    location=[row.geometry.y, row.geometry.x],
                     popup=nombre_embalse,
                     tooltip=nombre_embalse,  # Muestra el nombre al hacer hover
                     icon=folium.Icon(color="blue", icon="tint")
@@ -299,7 +298,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "gNDVI": lambda: b8.subtract(b3).divide(b8.add(b3)).rename("gNDVI"),
             "NSMI": lambda: b4.add(b3).subtract(b2).divide(b4.add(b3).add(b2)).rename("NSMI"),
             "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
-            "PC": lambda: b5.divide(b4).pow(3.4607).multiply(24.665).rename("PC")
+            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC")
         }
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
@@ -345,15 +344,15 @@ def generar_leyenda(indices_seleccionados):
     parametros = {
         "FAI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "MCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},  # PCI
-        "B6_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},  # S2_MSI_R740_R665
-        "B5_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},  # S2_MSI_C2X_R705_R665
-        "B6_div_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},  # S2_MSI_Sen2cor_R740_R665
+        "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
+        "B6_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
+        "B5_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
+        "B6_div_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "gNDVI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "NSMI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "PC": {"min": 0, "max": 50, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]}
+        "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -454,16 +453,29 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
-col1, col2, col3 = st.columns([1, 4, 1])
+col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
 with col1:
-    st.image("logos.png", width=350)
-
-with col2:
-    st.title("Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles: Proyecto HIBLOOMS")
-
-with col3:
+    st.image("logo_hiblooms.png", width=350)
     st.image("ministerio.png", width=350)
+with col2:
+    st.markdown(
+        """
+        <h1 style="text-align: center; line-height: 1.2em;">
+            Visor del estado de eutrofización en embalses españoles:
+            <br> <span style="display: block; text-align: center;">Proyecto HIBLOOMS</span>
+        </h1>
+        """,
+        unsafe_allow_html=True
+    )
+with col3:
+    col3a, col3b = st.columns([1, 1])  # Dividimos col3 en dos partes iguales
+    with col3a:
+        st.image("logo_bioma.png", width=150)
+        st.image("logo_ebro.png", width=150)
+    with col3b:
+        st.image("logo_unav.png", width=150)
+        st.image("logo_jucar.png", width=150)
+
 tab1, tab2, tab3 = st.tabs(["Introducción", "Visualización", "Tablas"])
 with tab1:
     st.markdown("""
@@ -588,7 +600,9 @@ with tab2:
                 st.subheader("Selecciona el intervalo de fechas:")
                 date_range = st.date_input(
                     "Rango de fechas:",
-                    value=(datetime(2017, 7, 1), datetime.today()),
+                    value=(datetime.today() - timedelta(days=15), datetime.today()),  # Últimos 15 días hasta hoy
+                    min_value=datetime(2017, 7, 1),  # Fecha mínima permitida
+                    max_value=datetime.today(),  # Restringe la selección hasta el día actual
                     format="YYYY-MM-DD"
                 )
 
@@ -643,61 +657,100 @@ with tab2:
                                         registro.update(values)
                                         data_time.append(registro)
 
+                                index_palettes = {
+                                    "FAI": ['blue', 'green', 'yellow', 'red'],
+                                    "MCI": ['blue', 'green', 'yellow', 'red'],
+                                    "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
+                                    "B6_minus_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "B6_div_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "NDCI": ['blue', 'green', 'yellow', 'red'],
+                                    "gNDVI": ['blue', 'green', 'yellow', 'red'],
+                                    "NSMI": ['blue', 'green', 'yellow', 'red'],
+                                    "Toming_Index": ['blue', 'green', 'yellow', 'red'],
+                                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Paleta específica para PC
+                                }
+
                                 with row2[0]:
                                     with st.expander(f"📅 Mapa de Índices para {image_date}"):
                                         gdf_4326 = gdf.to_crs(epsg=4326)
-                                        map_center = [gdf_4326.geometry.centroid.y.mean(), gdf_4326.geometry.centroid.x.mean()]
+                                        map_center = [gdf_4326.geometry.centroid.y.mean(),
+                                                      gdf_4326.geometry.centroid.x.mean()]
                                         map_indices = geemap.Map(center=map_center, zoom=13)
 
-                                        # Añadir capa RGB
-                                        map_indices.addLayer(scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3, gamma=1.4), {}, "RGB")
-
-                                        # Añadir capa SCL con mejor diferenciación
-                                        map_indices.addLayer(indices_image.select('SCL').visualize(min=1, max=11, palette=scl_colors), {}, "SCL - Clasificación de Escena")
-
-                                        # Añadir capa de probabilidad de nubes MSK_CLDPRB
-                                        map_indices.addLayer(
-                                            indices_image.select('MSK_CLDPRB').visualize(min=0, max=100,
-                                                                                         palette=['blue', 'green', 'yellow',
-                                                                                                  'red','black']),
-                                            {},
-                                            "Probabilidad de Nubes (MSK_CLDPRB)"
+                                        # Crear grupos de capas para permitir que solo una se active a la vez
+                                        rgb_layer = folium.raster_layers.TileLayer(
+                                            tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
+                                                                         gamma=1.4).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="RGB",
+                                            overlay=True,
+                                            control=True,
+                                            show=True,  # Mostrar esta por defecto
+                                            attr="Copernicus Sentinel-2, processed by GEE"
                                         )
 
-                                        index_palettes = {
-                                            "FAI": ['blue', 'green', 'yellow', 'red'],
-                                            "MCI": ['blue', 'green', 'yellow', 'red'],
-                                            "B5_div_B4": ['blue', 'green', 'yellow', 'red'],  # PCI
-                                            "B6_minus_B4": ['blue', 'green', 'yellow', 'red'],  # S2_MSI_R740_R665
-                                            "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],  # S2_MSI_C2X_R705_R665
-                                            "B6_div_B4": ['blue', 'green', 'yellow', 'red'],
-                                            "NDCI": ['blue', 'green', 'yellow', 'red'],
-                                            "gNDVI": ['blue', 'green', 'yellow', 'red'],
-                                            "NSMI": ['blue', 'green', 'yellow', 'red'],
-                                            "Toming_Index": ['blue', 'green', 'yellow', 'red'],
-                                            "PC": ['blue', 'green', 'yellow', 'red']
-                                        }
+                                        scl_layer = folium.raster_layers.TileLayer(
+                                            tiles=indices_image.select('SCL').visualize(min=1, max=11,
+                                                                                        palette=scl_colors).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="SCL - Clasificación de Escena",
+                                            overlay=True,
+                                            control=True,
+                                            show=False,
+                                            attr="Copernicus Sentinel-2, processed by GEE"
+                                        )
 
+                                        cloud_layer = folium.raster_layers.TileLayer(
+                                            tiles=indices_image.select('MSK_CLDPRB').visualize(min=0, max=100,
+                                                                                               palette=['blue', 'green',
+                                                                                                        'yellow', 'red',
+                                                                                                        'black']).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="Probabilidad de Nubes (MSK_CLDPRB)",
+                                            overlay=True,
+                                            control=True,
+                                            show=False,
+                                            attr="Copernicus Sentinel-2, processed by GEE"
+                                        )
+
+                                        # Agregar capas al mapa
+                                        rgb_layer.add_to(map_indices)
+                                        scl_layer.add_to(map_indices)
+                                        cloud_layer.add_to(map_indices)
+
+                                        # Agregar los índices como capas opcionales
                                         for index in selected_indices:
-                                            vis_params = {"min": -0.1, "max": 0.4, "palette": index_palettes[index]}
-                                            if index == "PC":  # PC representa la ficocianina
+                                            vis_params = {"min": -0.1, "max": 0.4, "palette": index_palettes.get(index,
+                                                                                                                 [
+                                                                                                                     'blue',
+                                                                                                                     'green',
+                                                                                                                     'yellow',
+                                                                                                                     'red'])}
+                                            if index == "PC":
                                                 vis_params["min"] = 0
-                                                vis_params["max"] = 50  # Ajuste del máximo a 100 µg/L
-                                                vis_params["palette"] = [
-                                                    "#ADD8E6",
-                                                    "#008000",
-                                                    "#FFFF00",
-                                                    "#FF0000"
-                                                ]
-                                            elif index == "B5_div_B4":  # Ajuste de los valores min-max para PCI
+                                                vis_params["max"] = 7
+                                                vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
+                                            elif index == "B5_div_B4":
                                                 vis_params["min"] = 0.5
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
 
-                                            map_indices.addLayer(
-                                                indices_image.select(index).visualize(**vis_params), {}, index)
+                                            index_layer = folium.raster_layers.TileLayer(
+                                                tiles=indices_image.select(index).visualize(**vis_params).getMapId()[
+                                                    "tile_fetcher"].url_format,
+                                                name=index,
+                                                overlay=True,
+                                                control=True,
+                                                show=False,
+                                                attr="Copernicus Sentinel-2, processed by GEE"
+                                            )
+                                            index_layer.add_to(map_indices)
 
-                                        map_indices.addLayerControl()
+                                        # Agregar el control de capas con opción exclusiva
+                                        folium.LayerControl(collapsed=False, position='topright').add_to(map_indices)
+
+                                        # Mostrar el mapa en Streamlit
                                         folium_static(map_indices)
 
                             st.session_state['data_time'] = data_time
