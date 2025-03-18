@@ -22,8 +22,8 @@ st.write("⏳ Inicializando Google Earth Engine...")
 start_time = time.time()
 
 try:
-    if "GEE_REFRESH_TOKEN" in st.secrets:
-        gee_token = st.secrets["GEE_REFRESH_TOKEN"]
+    if "EARTHENGINE_TOKEN" in st.secrets:
+        gee_token = st.secrets["EARTHENGINE_TOKEN"]
         credentials = ee.Credentials(gee_token)
         ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
     else:
@@ -33,6 +33,7 @@ except Exception as e:
 
 end_time = time.time()
 st.write(f"✅ GEE inicializado en {end_time - start_time:.2f} segundos")
+
 
 puntos_interes = {
     "EUGUI": {
