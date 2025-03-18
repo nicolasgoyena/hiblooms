@@ -130,11 +130,6 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
-import streamlit as st
-import time
-import ee
-from datetime import datetime
-
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     inicio_total = time.time()
 
@@ -205,25 +200,18 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
 
 def gdf_to_ee_geometry(gdf):
 
-    # ✅ 1. Asegurar que el GeoDataFrame no está vacío
     if gdf.empty:
         raise ValueError("❌ El shapefile está vacío o no contiene geometrías.")
-
-    # ✅ 2. Verificar que el CRS es EPSG:32630
+        
     if gdf.crs is None or gdf.crs.to_epsg() != 32630:
         raise ValueError("❌ El shapefile debe estar en EPSG:32630.")
-
-    # ✅ 3. Extraer la geometría principal
+        
     geometry = gdf.geometry.iloc[0]
-
-    # ✅ 4. Si es MULTIPOLYGON, tomar solo el primer polígono
+    
     if geometry.geom_type == "MultiPolygon":
         geometry = list(geometry.geoms)[0]  # Extrae el primer polígono
-
-    # ✅ 5. Convertir a GeoJSON y extraer coordenadas
+        
     ee_coordinates = list(geometry.exterior.coords)
-
-    # ✅ 6. Crear la geometría en GEE con EPSG:32630 (definir geodesic=False)
     ee_geometry = ee.Geometry.Polygon(
         ee_coordinates,
         proj=ee.Projection("EPSG:32630"),  # Especifica la proyección UTM
@@ -595,7 +583,7 @@ with tab2:
 
     with row1[0]:
         st.subheader("Mapa de Embalses")
-        map_embalses = geemap.Map(center=[40.0, -3.5], zoom=18)
+        map_embalses = geemap.Map(center=[42.0, 0.5], zoom=7)
         cargar_y_mostrar_embalses(map_embalses, nombre_columna="NOMBRE")
         folium_static(map_embalses)
 
