@@ -91,7 +91,7 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
 
-def obtener_nombres_embalses(shapefile_path="embalses_hiblooms.shp"):
+def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
 
@@ -108,7 +108,7 @@ def obtener_nombres_embalses(shapefile_path="embalses_hiblooms.shp"):
 
 
 # Función combinada para cargar el shapefile, ajustar el zoom y mostrar los embalses con tooltip
-def cargar_y_mostrar_embalses(map_object, shapefile_path="embalses_hiblooms.shp", nombre_columna="NOMBRE"):
+def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE"):
     if os.path.exists(shapefile_path):
         gdf_embalses = gpd.read_file(shapefile_path).to_crs(epsg=4326)  # Convertir a WGS84
 
@@ -189,7 +189,7 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
 
     return sorted(available_dates)  # Convertir el conjunto a una lista ordenada
 
-def load_reservoir_shapefile(reservoir_name, shapefile_path="embalses_hiblooms.shp"):
+def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
 
