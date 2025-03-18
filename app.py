@@ -13,9 +13,25 @@ import geopandas as gpd
 import os
 import time
 from datetime import timedelta
-# Autenticarse en Google Earth Engine
-ee.Authenticate()
-ee.Initialize(project='ee-nicolasgoyenaserveto')
+import ee
+import streamlit as st
+import os
+
+# Verificar si estamos en Streamlit Cloud (donde existen `st.secrets`)
+if "GEE_REFRESH_TOKEN" in st.secrets:
+    # Usar el token de Streamlit Cloud
+    gee_token = st.secrets["GEE_REFRESH_TOKEN"]
+    credentials = ee.Credentials(gee_token)
+    ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
+
+else:
+    # Si estamos en local, usar la autenticación normal
+    try:
+        ee.Initialize(project='ee-nicolasgoyenaserveto')
+    except Exception as e:
+        ee.Authenticate()
+        ee.Initialize(project='ee-nicolasgoyenaserveto')
+
 
 puntos_interes = {
     "EUGUI": {
