@@ -17,21 +17,22 @@ import ee
 import streamlit as st
 import os
 
-# Verificar si estamos en Streamlit Cloud (donde existen `st.secrets`)
-if "GEE_REFRESH_TOKEN" in st.secrets:
-    # Usar el token de Streamlit Cloud
-    gee_token = st.secrets["GEE_REFRESH_TOKEN"]
-    credentials = ee.Credentials(gee_token)
-    ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
+st.write("⏳ Inicializando Google Earth Engine...")
 
-else:
-    # Si estamos en local, usar la autenticación normal
-    try:
-        ee.Initialize(project='ee-nicolasgoyenaserveto')
-    except Exception as e:
-        ee.Authenticate()
-        ee.Initialize(project='ee-nicolasgoyenaserveto')
+start_time = time.time()
 
+try:
+    if "GEE_REFRESH_TOKEN" in st.secrets:
+        gee_token = st.secrets["GEE_REFRESH_TOKEN"]
+        credentials = ee.Credentials(gee_token)
+        ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
+    else:
+        ee.Initialize(project='ee-nicolasgoyenaserveto')
+except Exception as e:
+    st.error(f"Error al inicializar GEE: {str(e)}")
+
+end_time = time.time()
+st.write(f"✅ GEE inicializado en {end_time - start_time:.2f} segundos")
 
 puntos_interes = {
     "EUGUI": {
