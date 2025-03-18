@@ -480,8 +480,8 @@ st.markdown("""
 
 col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
 with col1:
-    st.image("logo_hiblooms.png", width=350)
-    st.image("ministerio.png", width=350)
+    st.image("images/logo_hiblooms.png", width=350)
+    st.image("images/ministerio.png", width=350)
 with col2:
     st.markdown(
         """
@@ -495,11 +495,11 @@ with col2:
 with col3:
     col3a, col3b = st.columns([1, 1])  # Dividimos col3 en dos partes iguales
     with col3a:
-        st.image("logo_bioma.png", width=150)
-        st.image("logo_ebro.png", width=150)
+        st.image("images/logo_bioma.png", width=150)
+        st.image("images/logo_ebro.png", width=150)
     with col3b:
-        st.image("logo_unav.png", width=150)
-        st.image("logo_jucar.png", width=150)
+        st.image("images/logo_unav.png", width=150)
+        st.image("images/logo_jucar.png", width=150)
 
 tab1, tab2, tab3 = st.tabs(["Introducción", "Visualización", "Tablas"])
 with tab1:
