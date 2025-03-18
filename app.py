@@ -21,18 +21,22 @@ st.write("⏳ Inicializando Google Earth Engine...")
 
 start_time = time.time()
 
+# Intentar inicializar Google Earth Engine correctamente
 try:
     if "EARTHENGINE_TOKEN" in st.secrets:
+        st.write("⏳ Intentando inicializar GEE con refresh token...")
         gee_token = st.secrets["EARTHENGINE_TOKEN"]
         credentials = ee.Credentials(gee_token)
         ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
     else:
+        st.write("⏳ Intentando inicializar GEE localmente...")
         ee.Initialize(project='ee-nicolasgoyenaserveto')
-except Exception as e:
-    st.error(f"Error al inicializar GEE: {str(e)}")
 
-end_time = time.time()
-st.write(f"✅ GEE inicializado en {end_time - start_time:.2f} segundos")
+    st.success("✅ Google Earth Engine inicializado correctamente")
+
+except Exception as e:
+    st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
+    st.stop()  # Detiene la ejecución para evitar más errores
 
 
 puntos_interes = {
