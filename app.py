@@ -15,11 +15,8 @@ import time
 from datetime import timedelta
 import json
 
-st.write("⏳ Inicializando Google Earth Engine...")
-
 try:
     if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
-        st.write("🔑 Usando JSON de cuenta de servicio para autenticación...")
 
         # Convertir el JSON guardado en Streamlit Secrets a un diccionario
         json_object = json.loads(st.secrets["GEE_SERVICE_ACCOUNT_JSON"], strict=False)
@@ -30,13 +27,9 @@ try:
         credentials = ee.ServiceAccountCredentials(service_account, key_data=json_object)
         ee.Initialize(credentials)
 
-        st.success("✅ Google Earth Engine inicializado correctamente con cuenta de servicio.")
-
     else:
         st.write("🔍 Intentando inicializar GEE localmente...")
         ee.Initialize()
-
-    st.success("✅ Google Earth Engine inicializado correctamente.")
 
 except Exception as e:
     st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
