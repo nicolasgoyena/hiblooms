@@ -19,25 +19,25 @@ import os
 
 st.write("⏳ Inicializando Google Earth Engine...")
 
-start_time = time.time()
-
-# Intentar inicializar Google Earth Engine correctamente
 try:
-    if "EARTHENGINE_TOKEN" in st.secrets:
-        st.write("⏳ Intentando inicializar GEE con refresh token...")
-        gee_token = st.secrets["EARTHENGINE_TOKEN"]
-        credentials = ee.Credentials(gee_token)
-        ee.Initialize(credentials, project='ee-nicolasgoyenaserveto')
+    if "GEE_REFRESH_TOKEN" in st.secrets:
+        st.write("🔑 Usando refresh token para autenticación...")
+        
+        # Guardar el refresh token en una variable de entorno temporal
+        os.environ["EARTHENGINE_TOKEN"] = st.secrets["GEE_REFRESH_TOKEN"]
+
+        # Inicializar GEE
+        ee.Initialize()
+
     else:
-        st.write("⏳ Intentando inicializar GEE localmente...")
-        ee.Initialize(project='ee-nicolasgoyenaserveto')
+        st.write("🔍 Intentando inicializar GEE localmente...")
+        ee.Initialize()
 
     st.success("✅ Google Earth Engine inicializado correctamente")
 
 except Exception as e:
     st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
-    st.stop()  # Detiene la ejecución para evitar más errores
-
+    st.stop()
 
 puntos_interes = {
     "EUGUI": {
