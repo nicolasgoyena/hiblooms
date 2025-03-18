@@ -25,45 +25,13 @@ import requests
 st.write("⏳ Inicializando Google Earth Engine...")
 
 try:
-    if "EARTHENGINE_TOKEN" in st.secrets:
-        st.write("🔑 Usando refresh token para autenticación...")
-
-        # URL para obtener el access token desde el refresh token
-        token_url = "https://oauth2.googleapis.com/token"
-
-        # Parámetros para la solicitud del access token
-        params = {
-            "client_id": "YOUR_CLIENT_ID",
-            "client_secret": "YOUR_CLIENT_SECRET",
-            "refresh_token": st.secrets["EARTHENGINE_TOKEN"],
-            "grant_type": "refresh_token"
-        }
-
-        # Solicitar un access token
-        response = requests.post(token_url, data=params)
-        access_token = response.json().get("access_token")
-
-        if not access_token:
-            st.error("❌ No se pudo obtener el access token. Revisa el refresh token.")
-            st.stop()
-
-        # Guardar el access token en una variable de entorno
-        os.environ["EARTHENGINE_ACCESS_TOKEN"] = access_token
-
-        # Inicializar Google Earth Engine con el access token
-        credentials = ee.OAuthCredentials(access_token)
-        ee.Initialize(credentials)
-
-        st.success("✅ Google Earth Engine inicializado correctamente con access token.")
-
-    else:
-        st.write("🔍 Intentando inicializar GEE localmente...")
-        ee.Initialize()
-
-    st.success("✅ Google Earth Engine inicializado correctamente.")
-
+    # Intentar autenticación directa en Streamlit Cloud
+    ee.Authenticate()
+    ee.Initialize()
+    st.success("✅ Google Earth Engine autenticado correctamente")
+    
 except Exception as e:
-    st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
+    st.error(f"❌ No se pudo autenticar en Google Earth Engine: {str(e)}")
     st.stop()
 
 
