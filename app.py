@@ -474,13 +474,13 @@ with col2:
         unsafe_allow_html=True
     )
 with col3:
-    col3a, col3b = st.columns([1, 1])  # Dividimos col3 en dos partes iguales
+    st.image("images/bioma.jpg", width=300)  # Nueva imagen que ocupa el ancho de las dos anteriores
+    col3a, col3b = st.columns([1, 1])  # Dividimos col3 en dos partes iguales debajo de la nueva imagen
     with col3a:
-        st.image("images/logo_bioma.png", width=150)
         st.image("images/logo_ebro.png", width=150)
     with col3b:
-        st.image("images/logo_unav.png", width=150)
         st.image("images/logo_jucar.png", width=150)
+
 
 tab1, tab2, tab3 = st.tabs(["Introducción", "Visualización", "Tablas"])
 with tab1:
