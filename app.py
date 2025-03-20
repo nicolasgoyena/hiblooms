@@ -588,11 +588,11 @@ with tab2:
         folium_static(map_embalses)
 
     with row1[1]:
-        st.subheader("Selección de Parámetros")
+        st.subheader("Selección de Embalse")
         nombres_embalses = obtener_nombres_embalses()
 
         # Seleccionar embalse
-        reservoir_name = st.selectbox("Selecciona un embalse:", nombres_embalses)
+        reservoir_name = st.selectbox(nombres_embalses)
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name)
@@ -600,7 +600,8 @@ with tab2:
                 aoi = gdf_to_ee_geometry(gdf)
 
                 # Slider de nubosidad
-                max_cloud_percentage = st.slider("Porcentaje máximo de nubosidad:", 0, 100, 10)
+                st.subheader("Selecciona un porcentaje máximo de nubosidad")
+                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 15%, aunque si se quieren ver todas las imágenes, se puede aumentar dicha tolerancia:", 0, 100, 10)
 
                 # Selección de intervalo de fechas
                 st.subheader("Selecciona el intervalo de fechas:")
