@@ -592,7 +592,7 @@ with tab2:
         nombres_embalses = obtener_nombres_embalses()
 
         # Seleccionar embalse
-        reservoir_name = st.selectbox(nombres_embalses)
+        reservoir_name = st.selectbox("",nombres_embalses)
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name)
