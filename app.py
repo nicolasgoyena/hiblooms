@@ -592,7 +592,7 @@ with tab2:
         nombres_embalses = obtener_nombres_embalses()
 
         # Seleccionar embalse
-        reservoir_name = st.selectbox("",nombres_embalses)
+        reservoir_name = st.selectbox("Selecciona un embalse",nombres_embalses)
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name)
@@ -601,7 +601,7 @@ with tab2:
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad")
-                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 15%, aunque si se quieren ver todas las imágenes, se puede aumentar dicha tolerancia:", 0, 100, 10)
+                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 15%, aunque si se quieren ver todas las imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 10)
 
                 # Selección de intervalo de fechas
                 st.subheader("Selecciona el intervalo de fechas:")
