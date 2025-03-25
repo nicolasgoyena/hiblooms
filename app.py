@@ -85,23 +85,18 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-import streamlit as st
-
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-import streamlit as st
-
 def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str):
-    """
-    Descarga datos de ficocianina desde fichaDataTabla.php (SAICA) en tramos de hasta 3 meses.
-    Muestra información de diagnóstico en pantalla (modo debug activado siempre).
-    """
+    from bs4 import BeautifulSoup
+    import requests
+    import pandas as pd
+    from datetime import datetime, timedelta
+    import streamlit as st
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    }
+
     fecha_ini = datetime.strptime(fecha_ini_str, "%d-%m-%Y")
     fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
 
@@ -118,7 +113,7 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str):
         st.write("🔗 URL:", url)
 
         try:
-            r = requests.get(url, timeout=30)
+            r = requests.get(url, headers=headers, timeout=30)
             r.raise_for_status()
 
             soup = BeautifulSoup(r.text, 'html.parser')
@@ -152,6 +147,8 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str):
     if tramos:
         return pd.concat(tramos, ignore_index=True)
     else:
+        return pd.DataFrame()
+
         return pd.DataFrame()
 
 
