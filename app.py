@@ -635,7 +635,10 @@ with tab2:
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
+                    spinner_placeholder = st.empty()
+                    spinner_placeholder.spinner("Calculando fechas disponibles...")
                     available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                    spinner_placeholder.empty()
                     if not available_dates:
                         st.warning("⚠️ No se encontraron imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionado.")
                         st.session_state["data_time"] = []
