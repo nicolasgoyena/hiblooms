@@ -762,7 +762,7 @@ with tab2:
 
                             st.session_state['data_time'] = data_time
 
-                            df_time = pd.DataFrame(data_time)
+                        df_time = pd.DataFrame(data_time)
 
                         with row2[1]:
                             generar_leyenda(selected_indices)
