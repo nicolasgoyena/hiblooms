@@ -85,28 +85,60 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
-def extraer_datos_val_simple(desde, hasta, max_retries=3, delay=5):
-    """Obtiene los datos de ficocianina desde la web de SAICA con reintentos y timeout"""
-    url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={desde}&ffin={hasta}"
+def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, max_retries=3):
+    from bs4 import BeautifulSoup
+    import requests
+    import pandas as pd
+    from datetime import datetime, timedelta
 
-    for intento in range(max_retries):
-        try:
-            r = requests.get(url, timeout=30)  # hasta 30 segundos
-            r.raise_for_status()  # lanza error si la respuesta no es 200
-            soup = BeautifulSoup(r.text, 'html.parser')
-            table = soup.find('table')
+    fecha_ini = datetime.strptime(fecha_ini_str, "%d-%m-%Y")
+    fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
 
-            if table:
-                df = pd.read_html(str(table))[0]
-                columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
-                return df[[col for col in columnas_deseadas if col in df.columns]]
-            else:
-                return pd.DataFrame()
-        except Exception as e:
-            print(f"Intento {intento+1} fallido: {e}")
-            time.sleep(delay)  # Espera antes de reintentar
+    tramos = []
+    max_rango = timedelta(days=90)
 
-    raise Exception("❌ Error persistente al conectar con SAICA tras varios intentos.")
+    while fecha_ini <= fecha_fin:
+        fecha_to = min(fecha_ini + max_rango, fecha_fin)
+        fini = fecha_ini.strftime("%d-%m-%Y")
+        ffin = fecha_to.strftime("%d-%m-%Y")
+        url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={fini}&ffin={ffin}"
+        print(f"📥 Descargando: {fini} → {ffin}")
+
+        for intento in range(max_retries):
+            try:
+                r = requests.get(url, timeout=30)
+                r.raise_for_status()
+                soup = BeautifulSoup(r.text, 'html.parser')
+                all_tables = soup.find_all('table')
+
+                # Buscar la tabla que contenga la columna "Ficocianina (µg/L)"
+                df_bueno = None
+                for t in all_tables:
+                    try:
+                        df_tmp = pd.read_html(str(t))[0]
+                        if 'Ficocianina (µg/L)' in df_tmp.columns:
+                            columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
+                            df_bueno = df_tmp[[col for col in columnas_deseadas if col in df_tmp.columns]]
+                            break  # salir al encontrar la tabla buena
+                    except Exception:
+                        continue  # si falla una tabla, ignora
+
+                if df_bueno is not None:
+                    tramos.append(df_bueno)
+                else:
+                    print(f"⚠️ No se encontró tabla válida en {url}")
+                break
+            except Exception as e:
+                print(f"❌ Error intento {intento+1}: {e}")
+                if intento == max_retries - 1:
+                    print("⛔️ Omitido este tramo.")
+        fecha_ini = fecha_to + timedelta(days=1)
+
+    if tramos:
+        return pd.concat(tramos, ignore_index=True)
+    else:
+        return pd.DataFrame()
+
 
         
 
