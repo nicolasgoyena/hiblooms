@@ -83,6 +83,43 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
+def extraer_datos_val(desde, hasta):
+    """Descarga y concatena los datos del embalse del Val desde la web de SAICA"""
+    
+    fecha_ini = datetime.strptime(desde, "%d-%m-%Y")
+    fecha_fin = datetime.strptime(hasta, "%d-%m-%Y")
+    max_rango = timedelta(days=90)  # Máximo 3 meses por petición
+
+    todos_los_datos = []
+
+    while fecha_ini <= fecha_fin:
+        fecha_to = min(fecha_ini + max_rango, fecha_fin)
+        
+        url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={fecha_ini.strftime('%d-%m-%Y')}&ffin={fecha_to.strftime('%d-%m-%Y')}"
+        print(f"Extrayendo datos desde {fecha_ini.strftime('%d-%m-%Y')} hasta {fecha_to.strftime('%d-%m-%Y')}...")
+        
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        table = soup.find('table')
+
+        if table:
+            df = pd.read_html(str(table))[0]
+            
+            # Filtrar solo las columnas necesarias
+            columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
+            df_filtrado = df[[col for col in columnas_deseadas if col in df.columns]]
+            
+            todos_los_datos.append(df_filtrado)
+        else:
+            print("No se encontró tabla en:", url)
+
+        fecha_ini = fecha_to + timedelta(days=1)
+
+    if todos_los_datos:
+        return pd.concat(todos_los_datos, ignore_index=True)
+    else:
+        return pd.DataFrame()
+        
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
@@ -784,6 +821,31 @@ with tab2:
                                 df_results = pd.DataFrame(st.session_state["cloud_results"])
                                 st.write("### ☁️ Nubosidad aproximada:")
                                 st.dataframe(df_results)
+                            # 📊 Si el embalse es VAL, mostrar gráfica de ficocianina
+                            if reservoir_name.lower() == "val":
+                                st.subheader("📈 Concentración real de ficocianina (sonda in situ)")
+
+                                # Convertir fechas seleccionadas a formato dd-mm-YYYY
+                                start_fmt = datetime.strptime(start_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+                                end_fmt = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+
+                                with st.spinner("Obteniendo datos de la sonda de ficocianina del embalse El Val..."):
+                                    df_fico = extraer_datos_val(start_fmt, end_fmt)
+
+                                if df_fico.empty:
+                                    st.warning("⚠️ No se encontraron datos de la sonda de ficocianina para el rango de fechas seleccionado.")
+                                else:
+                                    # Convertir columna de fechas a datetime
+                                    df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], dayfirst=True)
+                            
+                                    chart_fico = alt.Chart(df_fico).mark_line(point=True).encode(
+                                        x=alt.X('Fecha-hora:T', title='Fecha y hora'),
+                                        y=alt.Y('Ficocianina (µg/L):Q', title='Concentración de ficocianina (µg/L)')
+                                    ).properties(
+                                        title="Evolución de la concentración de ficocianina (sonda SAICA)"
+                                    )
+                            
+                                    st.altair_chart(chart_fico, use_container_width=True)
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
 
