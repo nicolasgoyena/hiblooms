@@ -637,7 +637,7 @@ with tab2:
                 if st.button("Calcular y mostrar resultados"):
                     spinner_placeholder = st.empty()
                     with spinner_placeholder.container():
-                        with st.spinner("🌀 Calculando fechas disponibles..."):
+                        with st.spinner("Calculando fechas disponibles..."):
                             available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
 
                     spinner_placeholder.empty() 
