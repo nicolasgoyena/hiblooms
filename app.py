@@ -107,9 +107,23 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, max_retries=3):
         for intento in range(max_retries):
             try:
                 r = requests.get(url, timeout=30)
+                print("🧪 Longitud HTML recibido:", len(r.text))
+                with open("debug_saica.html", "w", encoding="utf-8") as f:
+                    f.write(r.text)
+                print("✅ HTML guardado como debug_saica.html")
+
                 r.raise_for_status()
                 soup = BeautifulSoup(r.text, 'html.parser')
                 all_tables = soup.find_all('table')
+                print(f"🔍 Número de tablas encontradas: {len(all_tables)}")
+
+                for i, t in enumerate(all_tables):
+                    try:
+                        df_tmp = pd.read_html(str(t))[0]
+                        print(f"📋 Tabla {i+1} columnas: {df_tmp.columns.tolist()}")
+                    except Exception as e:
+                        print(f"❌ No se pudo leer la tabla {i+1}: {e}")
+
 
                 # Buscar la tabla que contenga la columna "Ficocianina (µg/L)"
                 df_bueno = None
