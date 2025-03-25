@@ -631,108 +631,136 @@ with tab2:
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
-    with st.spinner("Calculando fechas disponibles..."):
-        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                    with st.spinner("Calculando fechas disponibles..."):
+                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
 
-        if available_dates:
-            st.session_state['available_dates'] = available_dates
-            st.session_state['selected_indices'] = selected_indices
+                        if available_dates:
+                            st.session_state['available_dates'] = available_dates
+                            st.session_state['selected_indices'] = selected_indices
 
-            st.subheader(f"Fechas disponibles dentro del rango seleccionado:")
-            st.write(available_dates)
+                            st.subheader(f"Fechas disponibles dentro del rango seleccionado:")
+                            st.write(available_dates)
 
-            # Procesar y visualizar resultados
-            data_time = []
+                            # Procesar y visualizar resultados
+                            data_time = []
 
-            # Paleta de colores para SCL con una mejor diferenciación
-            scl_palette = {
-                1: '#ff0004', 2: '#000000', 3: '#8B4513', 4: '#00FF00',
-                5: '#FFD700', 6: '#0000FF', 7: '#F4EEEC', 8: '#C8C2C0',
-                9: '#706C6B', 10: '#87CEFA', 11: '#00FFFF'
-            }
-            scl_colors = [scl_palette[i] for i in sorted(scl_palette.keys())]
+                            # Paleta de colores para SCL con una mejor diferenciación
+                            scl_palette = {
+                                1: '#ff0004', 2: '#000000', 3: '#8B4513', 4: '#00FF00',
+                                5: '#FFD700', 6: '#0000FF', 7: '#F4EEEC', 8: '#C8C2C0',
+                                9: '#706C6B', 10: '#87CEFA', 11: '#00FFFF'
+                            }
+                            scl_colors = [scl_palette[i] for i in sorted(scl_palette.keys())]
 
-            for day in available_dates:
-                scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
-                if indices_image is None:
-                    continue
+                            for day in available_dates:
+                                scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
+                                if indices_image is None:
+                                    continue
 
-                if reservoir_name in puntos_interes:
-                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
-                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
-                        registro = {"Point": point_name, "Date": day}
-                        registro.update(values)
-                        data_time.append(registro)
+                                if reservoir_name in puntos_interes:
+                                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
+                                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
+                                        registro = {"Point": point_name, "Date": day}
+                                        registro.update(values)
+                                        data_time.append(registro)
 
-                index_palettes = {
-                    "FAI": ['blue', 'green', 'yellow', 'red'],
-                    "MCI": ['blue', 'green', 'yellow', 'red'],
-                    "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],
-                    "B6_minus_B4": ['blue', 'green', 'yellow', 'red'],
-                    "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
-                    "B6_div_B4": ['blue', 'green', 'yellow', 'red'],
-                    "NDCI": ['blue', 'green', 'yellow', 'red'],
-                    "gNDVI": ['blue', 'green', 'yellow', 'red'],
-                    "NSMI": ['blue', 'green', 'yellow', 'red'],
-                    "Toming_Index": ['blue', 'green', 'yellow', 'red'],
-                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
-                }
+                                index_palettes = {
+                                    "FAI": ['blue', 'green', 'yellow', 'red'],
+                                    "MCI": ['blue', 'green', 'yellow', 'red'],
+                                    "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
+                                    "B6_minus_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "B6_div_B4": ['blue', 'green', 'yellow', 'red'],
+                                    "NDCI": ['blue', 'green', 'yellow', 'red'],
+                                    "gNDVI": ['blue', 'green', 'yellow', 'red'],
+                                    "NSMI": ['blue', 'green', 'yellow', 'red'],
+                                    "Toming_Index": ['blue', 'green', 'yellow', 'red'],
+                                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Paleta específica para PC
+                                }
 
-                with row2[0]:
-                    with st.expander(f"📅 Mapa de Índices para {image_date}"):
-                        gdf_4326 = gdf.to_crs(epsg=4326)
-                        map_center = [gdf_4326.geometry.centroid.y.mean(),
-                                      gdf_4326.geometry.centroid.x.mean()]
-                        map_indices = geemap.Map(center=map_center, zoom=13)
+                                with row2[0]:
+                                    with st.expander(f"📅 Mapa de Índices para {image_date}"):
+                                        gdf_4326 = gdf.to_crs(epsg=4326)
+                                        map_center = [gdf_4326.geometry.centroid.y.mean(),
+                                                      gdf_4326.geometry.centroid.x.mean()]
+                                        map_indices = geemap.Map(center=map_center, zoom=13)
 
-                        rgb_layer = folium.raster_layers.TileLayer(
-                            tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
-                                                         gamma=1.4).getMapId()["tile_fetcher"].url_format,
-                            name="RGB", overlay=True, control=True, show=True,
-                            attr="Copernicus Sentinel-2, processed by GEE"
-                        )
+                                        # Crear grupos de capas para permitir que solo una se active a la vez
+                                        rgb_layer = folium.raster_layers.TileLayer(
+                                            tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
+                                                                         gamma=1.4).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="RGB",
+                                            overlay=True,
+                                            control=True,
+                                            show=True,  # Mostrar esta por defecto
+                                            attr="Copernicus Sentinel-2, processed by GEE"
+                                        )
 
-                        scl_layer = folium.raster_layers.TileLayer(
-                            tiles=indices_image.select('SCL').visualize(min=1, max=11, palette=scl_colors).getMapId()["tile_fetcher"].url_format,
-                            name="SCL - Clasificación de Escena", overlay=True, control=True, show=False,
-                            attr="Copernicus Sentinel-2, processed by GEE"
-                        )
+                                        scl_layer = folium.raster_layers.TileLayer(
+                                            tiles=indices_image.select('SCL').visualize(min=1, max=11,
+                                                                                        palette=scl_colors).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="SCL - Clasificación de Escena",
+                                            overlay=True,
+                                            control=True,
+                                            show=False,
+                                            attr="Copernicus Sentinel-2, processed by GEE"
+                                        )
 
-                        cloud_layer = folium.raster_layers.TileLayer(
-                            tiles=indices_image.select('MSK_CLDPRB').visualize(min=0, max=100,
-                                                                               palette=['blue', 'green', 'yellow', 'red', 'black']).getMapId()["tile_fetcher"].url_format,
-                            name="Probabilidad de Nubes (MSK_CLDPRB)", overlay=True, control=True, show=False,
-                            attr="Copernicus Sentinel-2, processed by GEE"
-                        )
+                                        cloud_layer = folium.raster_layers.TileLayer(
+                                            tiles=indices_image.select('MSK_CLDPRB').visualize(min=0, max=100,
+                                                                                               palette=['blue', 'green',
+                                                                                                        'yellow', 'red',
+                                                                                                        'black']).getMapId()[
+                                                "tile_fetcher"].url_format,
+                                            name="Probabilidad de Nubes (MSK_CLDPRB)",
+                                            overlay=True,
+                                            control=True,
+                                            show=False,
+                                            attr="Copernicus Sentinel-2, processed by GEE"
+                                        )
 
-                        rgb_layer.add_to(map_indices)
-                        scl_layer.add_to(map_indices)
-                        cloud_layer.add_to(map_indices)
+                                        # Agregar capas al mapa
+                                        rgb_layer.add_to(map_indices)
+                                        scl_layer.add_to(map_indices)
+                                        cloud_layer.add_to(map_indices)
 
-                        for index in selected_indices:
-                            vis_params = {"min": -0.1, "max": 0.4, "palette": index_palettes.get(index, ['blue', 'green', 'yellow', 'red'])}
-                            if index == "PC":
-                                vis_params.update({"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]})
-                            elif index == "B5_div_B4":
-                                vis_params.update({"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]})
+                                        # Agregar los índices como capas opcionales
+                                        for index in selected_indices:
+                                            vis_params = {"min": -0.1, "max": 0.4, "palette": index_palettes.get(index,
+                                                                                                                 [
+                                                                                                                     'blue',
+                                                                                                                     'green',
+                                                                                                                     'yellow',
+                                                                                                                     'red'])}
+                                            if index == "PC":
+                                                vis_params["min"] = 0
+                                                vis_params["max"] = 7
+                                                vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
+                                            elif index == "B5_div_B4":
+                                                vis_params["min"] = 0.5
+                                                vis_params["max"] = 1.5
+                                                vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
 
-                            index_layer = folium.raster_layers.TileLayer(
-                                tiles=indices_image.select(index).visualize(**vis_params).getMapId()["tile_fetcher"].url_format,
-                                name=index, overlay=True, control=True, show=False,
-                                attr="Copernicus Sentinel-2, processed by GEE"
-                            )
-                            index_layer.add_to(map_indices)
+                                            index_layer = folium.raster_layers.TileLayer(
+                                                tiles=indices_image.select(index).visualize(**vis_params).getMapId()[
+                                                    "tile_fetcher"].url_format,
+                                                name=index,
+                                                overlay=True,
+                                                control=True,
+                                                show=False,
+                                                attr="Copernicus Sentinel-2, processed by GEE"
+                                            )
+                                            index_layer.add_to(map_indices)
 
-                        folium.LayerControl(collapsed=False, position='topright').add_to(map_indices)
-                        folium_static(map_indices)
+                                        # Agregar el control de capas con opción exclusiva
+                                        folium.LayerControl(collapsed=False, position='topright').add_to(map_indices)
 
-            st.session_state['data_time'] = data_time
+                                        # Mostrar el mapa en Streamlit
+                                        folium_static(map_indices)
 
-        else:
-            st.warning("⚠️ No se encontraron imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionado.")
-            st.session_state['data_time'] = []  # Evitar errores posteriores
-            st.stop()
-
+                            st.session_state['data_time'] = data_time
 
                         df_time = pd.DataFrame(data_time)
 
