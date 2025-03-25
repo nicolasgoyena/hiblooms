@@ -766,6 +766,10 @@ with tab2:
 
                             st.session_state['data_time'] = data_time
 
+                        else:
+                            st.warning("⚠️ No se encontraron imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionado.")
+                            st.stop()
+
                         df_time = pd.DataFrame(data_time)
 
                         with row2[1]:
