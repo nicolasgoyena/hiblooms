@@ -14,8 +14,6 @@ import os
 import time
 from datetime import timedelta
 import json
-import requests
-from bs4 import BeautifulSoup
 
 try:
     if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
@@ -84,72 +82,6 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
-
-def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str):
-    from bs4 import BeautifulSoup
-    import requests
-    import pandas as pd
-    from datetime import datetime, timedelta
-    import streamlit as st
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
-(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    }
-
-    fecha_ini = datetime.strptime(fecha_ini_str, "%d-%m-%Y")
-    fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
-
-    tramos = []
-    max_rango = timedelta(days=90)
-
-    while fecha_ini <= fecha_fin:
-        fecha_to = min(fecha_ini + max_rango, fecha_fin)
-        fini = fecha_ini.strftime("%d-%m-%Y")
-        ffin = fecha_to.strftime("%d-%m-%Y")
-        url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={fini}&ffin={ffin}"
-
-        st.subheader(f"🔍 Analizando tramo: {fini} → {ffin}")
-        st.write("🔗 URL:", url)
-
-        try:
-            r = requests.get(url, headers=headers, timeout=30)
-            r.raise_for_status()
-
-            soup = BeautifulSoup(r.text, 'html.parser')
-            all_tables = soup.find_all('table')
-
-            st.write("📄 Longitud del HTML:", len(r.text))
-            st.write("📊 Número de tablas encontradas:", len(all_tables))
-
-            tabla_encontrada = False
-            for i, t in enumerate(all_tables):
-                try:
-                    df_tmp = pd.read_html(str(t))[0]
-                    st.write(f"📋 Tabla {i+1} columnas:", df_tmp.columns.tolist())
-
-                    if 'Ficocianina (µg/L)' in df_tmp.columns:
-                        columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
-                        df_filtrado = df_tmp[[col for col in columnas_deseadas if col in df_tmp.columns]]
-                        tramos.append(df_filtrado)
-                        tabla_encontrada = True
-                        break
-                except Exception as e:
-                    st.warning(f"❌ Error leyendo tabla {i+1}: {e}")
-                    continue
-
-            if not tabla_encontrada:
-                st.warning("⚠️ No se encontró ninguna tabla válida en este tramo.")
-        except Exception as e:
-            st.error(f"❌ Error al conectar con la web: {e}")
-        fecha_ini = fecha_to + timedelta(days=1)
-
-    if tramos:
-        return pd.concat(tramos, ignore_index=True)
-    else:
-        return pd.DataFrame()
-
-        return pd.DataFrame()
 
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
@@ -852,28 +784,6 @@ with tab2:
                                 df_results = pd.DataFrame(st.session_state["cloud_results"])
                                 st.write("### ☁️ Nubosidad aproximada:")
                                 st.dataframe(df_results)
-                            # 📊 Si el embalse es VAL, mostrar gráfica de ficocianina
-                            if reservoir_name.lower() == "val":
-                                st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
-                            
-                                start_fmt = datetime.strptime(start_date, "%Y-%m-%d").strftime("%d-%m-%Y")
-                                end_fmt = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d-%m-%Y")
-                            
-                                with st.spinner("Descargando datos de ficocianina desde SAICA..."):
-                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt)
-                            
-                                if df_fico.empty:
-                                    st.warning("⚠️ No se encontraron datos de ficocianina para el rango seleccionado.")
-                                else:
-                                    df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], dayfirst=True)
-                                    chart_fico = alt.Chart(df_fico).mark_line(point=True).encode(
-                                        x='Fecha-hora:T',
-                                        y='Ficocianina (µg/L):Q'
-                                    ).properties(
-                                        title="Evolución de la concentración de ficocianina (µg/L)"
-                                    )
-                                    st.altair_chart(chart_fico, use_container_width=True)
-
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
 
