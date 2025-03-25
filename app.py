@@ -851,7 +851,7 @@ with tab2:
                                 end_fmt = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
                                 with st.spinner("Obteniendo datos de la sonda de ficocianina del embalse El Val..."):
-                                    df_fico = extraer_datos_val_simple(start_fmt, end_fmt)
+                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt)
 
                                 if df_fico.empty:
                                     st.warning("⚠️ No se encontraron datos de la sonda de ficocianina para el rango de fechas seleccionado.")
