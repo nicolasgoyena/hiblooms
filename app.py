@@ -85,12 +85,18 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
-def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, max_retries=3):
-    from bs4 import BeautifulSoup
-    import requests
-    import pandas as pd
-    from datetime import datetime, timedelta
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+import streamlit as st
 
+def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, debug=False):
+    """
+    Descarga datos de ficocianina desde fichaDataTabla.php (SAICA) en tramos de hasta 3 meses.
+    Devuelve un DataFrame con columnas ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)'].
+    Si debug=True, muestra información de diagnóstico en pantalla (Streamlit).
+    """
     fecha_ini = datetime.strptime(fecha_ini_str, "%d-%m-%Y")
     fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
 
@@ -102,59 +108,53 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, max_retries=3):
         fini = fecha_ini.strftime("%d-%m-%Y")
         ffin = fecha_to.strftime("%d-%m-%Y")
         url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={fini}&ffin={ffin}"
-        print(f"📥 Descargando: {fini} → {ffin}")
 
-        for intento in range(max_retries):
-            try:
-                r = requests.get(url, timeout=30)
-                print("🧪 Longitud HTML recibido:", len(r.text))
-                with open("debug_saica.html", "w", encoding="utf-8") as f:
-                    f.write(r.text)
-                print("✅ HTML guardado como debug_saica.html")
+        if debug:
+            st.subheader(f"🔍 Analizando tramo: {fini} → {ffin}")
+            st.write("🔗 URL:", url)
 
-                r.raise_for_status()
-                soup = BeautifulSoup(r.text, 'html.parser')
-                all_tables = soup.find_all('table')
-                print(f"🔍 Número de tablas encontradas: {len(all_tables)}")
+        try:
+            r = requests.get(url, timeout=30)
+            r.raise_for_status()
 
-                for i, t in enumerate(all_tables):
-                    try:
-                        df_tmp = pd.read_html(str(t))[0]
-                        print(f"📋 Tabla {i+1} columnas: {df_tmp.columns.tolist()}")
-                    except Exception as e:
-                        print(f"❌ No se pudo leer la tabla {i+1}: {e}")
+            soup = BeautifulSoup(r.text, 'html.parser')
+            all_tables = soup.find_all('table')
 
+            if debug:
+                st.write("📄 Longitud del HTML:", len(r.text))
+                st.write("📊 Número de tablas encontradas:", len(all_tables))
 
-                # Buscar la tabla que contenga la columna "Ficocianina (µg/L)"
-                df_bueno = None
-                for t in all_tables:
-                    try:
-                        df_tmp = pd.read_html(str(t))[0]
-                        if 'Ficocianina (µg/L)' in df_tmp.columns:
-                            columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
-                            df_bueno = df_tmp[[col for col in columnas_deseadas if col in df_tmp.columns]]
-                            break  # salir al encontrar la tabla buena
-                    except Exception:
-                        continue  # si falla una tabla, ignora
+            tabla_encontrada = False
+            for i, t in enumerate(all_tables):
+                try:
+                    df_tmp = pd.read_html(str(t))[0]
+                    if debug:
+                        st.write(f"📋 Tabla {i+1} columnas:", df_tmp.columns.tolist())
 
-                if df_bueno is not None:
-                    tramos.append(df_bueno)
-                else:
-                    print(f"⚠️ No se encontró tabla válida en {url}")
-                break
-            except Exception as e:
-                print(f"❌ Error intento {intento+1}: {e}")
-                if intento == max_retries - 1:
-                    print("⛔️ Omitido este tramo.")
+                    if 'Ficocianina (µg/L)' in df_tmp.columns:
+                        columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
+                        df_filtrado = df_tmp[[col for col in columnas_deseadas if col in df_tmp.columns]]
+                        tramos.append(df_filtrado)
+                        tabla_encontrada = True
+                        break  # salir del bucle al encontrar la tabla buena
+                except Exception as e:
+                    if debug:
+                        st.warning(f"❌ Error leyendo tabla {i+1}: {e}")
+                    continue
+
+            if not tabla_encontrada:
+                if debug:
+                    st.warning("⚠️ No se encontró ninguna tabla válida en este tramo.")
+        except Exception as e:
+            if debug:
+                st.error(f"❌ Error al conectar con la web: {e}")
         fecha_ini = fecha_to + timedelta(days=1)
 
     if tramos:
-        return pd.concat(tramos, ignore_index=True)
+        df_final = pd.concat(tramos, ignore_index=True)
+        return df_final
     else:
         return pd.DataFrame()
-
-
-        
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
@@ -858,28 +858,26 @@ with tab2:
                                 st.dataframe(df_results)
                             # 📊 Si el embalse es VAL, mostrar gráfica de ficocianina
                             if reservoir_name.lower() == "val":
-                                st.subheader("📈 Concentración real de ficocianina (sonda in situ)")
-
-                                # Convertir fechas seleccionadas a formato dd-mm-YYYY
+                                st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
+                            
                                 start_fmt = datetime.strptime(start_date, "%Y-%m-%d").strftime("%d-%m-%Y")
                                 end_fmt = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d-%m-%Y")
-
-                                with st.spinner("Obteniendo datos de la sonda de ficocianina del embalse El Val..."):
-                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt)
-
+                            
+                                debug_mode = st.checkbox("🛠️ Activar modo debug para la descarga de datos", value=False)
+                            
+                                with st.spinner("Descargando datos de ficocianina desde SAICA..."):
+                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt, debug=debug_mode)
+                            
                                 if df_fico.empty:
-                                    st.warning("⚠️ No se encontraron datos de la sonda de ficocianina para el rango de fechas seleccionado.")
+                                    st.warning("⚠️ No se encontraron datos de ficocianina para el rango seleccionado.")
                                 else:
-                                    # Convertir columna de fechas a datetime
                                     df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], dayfirst=True)
-                            
                                     chart_fico = alt.Chart(df_fico).mark_line(point=True).encode(
-                                        x=alt.X('Fecha-hora:T', title='Fecha y hora'),
-                                        y=alt.Y('Ficocianina (µg/L):Q', title='Concentración de ficocianina (µg/L)')
+                                        x='Fecha-hora:T',
+                                        y='Ficocianina (µg/L):Q'
                                     ).properties(
-                                        title="Evolución de la concentración de ficocianina (sonda SAICA)"
+                                        title="Evolución de la concentración de ficocianina (µg/L)"
                                     )
-                            
                                     st.altair_chart(chart_fico, use_container_width=True)
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
