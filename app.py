@@ -642,7 +642,7 @@ with tab2:
 
                     spinner_placeholder.empty() 
                     if not available_dates:
-                        st.warning("⚠️ No se encontraron imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionado.")
+                        st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
                         st.session_state["data_time"] = []
                         st.stop()
                     with st.spinner("Calculando fechas disponibles..."):
