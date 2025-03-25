@@ -91,11 +91,16 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import streamlit as st
 
-def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, debug=False):
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+import streamlit as st
+
+def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str):
     """
     Descarga datos de ficocianina desde fichaDataTabla.php (SAICA) en tramos de hasta 3 meses.
-    Devuelve un DataFrame con columnas ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)'].
-    Si debug=True, muestra información de diagnóstico en pantalla (Streamlit).
+    Muestra información de diagnóstico en pantalla (modo debug activado siempre).
     """
     fecha_ini = datetime.strptime(fecha_ini_str, "%d-%m-%Y")
     fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
@@ -109,9 +114,8 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, debug=False):
         ffin = fecha_to.strftime("%d-%m-%Y")
         url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={fini}&ffin={ffin}"
 
-        if debug:
-            st.subheader(f"🔍 Analizando tramo: {fini} → {ffin}")
-            st.write("🔗 URL:", url)
+        st.subheader(f"🔍 Analizando tramo: {fini} → {ffin}")
+        st.write("🔗 URL:", url)
 
         try:
             r = requests.get(url, timeout=30)
@@ -120,41 +124,36 @@ def extraer_datos_val_por_tramos(fecha_ini_str, fecha_fin_str, debug=False):
             soup = BeautifulSoup(r.text, 'html.parser')
             all_tables = soup.find_all('table')
 
-            if debug:
-                st.write("📄 Longitud del HTML:", len(r.text))
-                st.write("📊 Número de tablas encontradas:", len(all_tables))
+            st.write("📄 Longitud del HTML:", len(r.text))
+            st.write("📊 Número de tablas encontradas:", len(all_tables))
 
             tabla_encontrada = False
             for i, t in enumerate(all_tables):
                 try:
                     df_tmp = pd.read_html(str(t))[0]
-                    if debug:
-                        st.write(f"📋 Tabla {i+1} columnas:", df_tmp.columns.tolist())
+                    st.write(f"📋 Tabla {i+1} columnas:", df_tmp.columns.tolist())
 
                     if 'Ficocianina (µg/L)' in df_tmp.columns:
                         columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
                         df_filtrado = df_tmp[[col for col in columnas_deseadas if col in df_tmp.columns]]
                         tramos.append(df_filtrado)
                         tabla_encontrada = True
-                        break  # salir del bucle al encontrar la tabla buena
+                        break
                 except Exception as e:
-                    if debug:
-                        st.warning(f"❌ Error leyendo tabla {i+1}: {e}")
+                    st.warning(f"❌ Error leyendo tabla {i+1}: {e}")
                     continue
 
             if not tabla_encontrada:
-                if debug:
-                    st.warning("⚠️ No se encontró ninguna tabla válida en este tramo.")
+                st.warning("⚠️ No se encontró ninguna tabla válida en este tramo.")
         except Exception as e:
-            if debug:
-                st.error(f"❌ Error al conectar con la web: {e}")
+            st.error(f"❌ Error al conectar con la web: {e}")
         fecha_ini = fecha_to + timedelta(days=1)
 
     if tramos:
-        df_final = pd.concat(tramos, ignore_index=True)
-        return df_final
+        return pd.concat(tramos, ignore_index=True)
     else:
         return pd.DataFrame()
+
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
@@ -863,10 +862,8 @@ with tab2:
                                 start_fmt = datetime.strptime(start_date, "%Y-%m-%d").strftime("%d-%m-%Y")
                                 end_fmt = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d-%m-%Y")
                             
-                                debug_mode = st.checkbox("🛠️ Activar modo debug para la descarga de datos", value=False)
-                            
                                 with st.spinner("Descargando datos de ficocianina desde SAICA..."):
-                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt, debug=debug_mode)
+                                    df_fico = extraer_datos_val_por_tramos(start_fmt, end_fmt)
                             
                                 if df_fico.empty:
                                     st.warning("⚠️ No se encontraron datos de ficocianina para el rango seleccionado.")
@@ -879,6 +876,7 @@ with tab2:
                                         title="Evolución de la concentración de ficocianina (µg/L)"
                                     )
                                     st.altair_chart(chart_fico, use_container_width=True)
+
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
 
