@@ -14,6 +14,8 @@ import os
 import time
 from datetime import timedelta
 import json
+import requests
+from bs4 import BeautifulSoup
 
 try:
     if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
