@@ -85,22 +85,28 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
-def extraer_datos_val_simple(desde, hasta):
-    """Obtiene los datos de ficocianina desde la web de SAICA en un único bloque de fechas"""
-
+def extraer_datos_val_simple(desde, hasta, max_retries=3, delay=5):
+    """Obtiene los datos de ficocianina desde la web de SAICA con reintentos y timeout"""
     url = f"https://saica.chebro.es/fichaDataTabla.php?estacion=945&fini={desde}&ffin={hasta}"
 
-    r = requests.get(url)
-    soup = BeautifulSoup(r.text, 'html.parser')
-    table = soup.find('table')
+    for intento in range(max_retries):
+        try:
+            r = requests.get(url, timeout=30)  # hasta 30 segundos
+            r.raise_for_status()  # lanza error si la respuesta no es 200
+            soup = BeautifulSoup(r.text, 'html.parser')
+            table = soup.find('table')
 
-    if table:
-        df = pd.read_html(str(table))[0]
-        columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
-        df_filtrado = df[[col for col in columnas_deseadas if col in df.columns]]
-        return df_filtrado
-    else:
-        return pd.DataFrame()
+            if table:
+                df = pd.read_html(str(table))[0]
+                columnas_deseadas = ['Fecha-hora', 'Ficocianina (µg/L)', 'Temperatura (C)']
+                return df[[col for col in columnas_deseadas if col in df.columns]]
+            else:
+                return pd.DataFrame()
+        except Exception as e:
+            print(f"Intento {intento+1} fallido: {e}")
+            time.sleep(delay)  # Espera antes de reintentar
+
+    raise Exception("❌ Error persistente al conectar con SAICA tras varios intentos.")
 
         
 
