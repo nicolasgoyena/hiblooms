@@ -140,6 +140,10 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
+    
+    if sentinel2.size().getInfo() == 0:
+        st.warning("❌ No se encontraron imágenes de Sentinel-2 para este embalse y rango de fechas.")
+        return []
 
     images = sentinel2.toList(sentinel2.size())
     available_dates = set()  # Usar un conjunto para evitar duplicados
