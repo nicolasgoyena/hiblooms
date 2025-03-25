@@ -83,6 +83,11 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
+@st.cache_data
+def cargar_csv_drive():
+    url = "https://drive.google.com/uc?id=17Jh0zarH-lKKNRf30kjYjvSaKoA9Gr5h&export=download"
+    return pd.read_csv(url)
+
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
@@ -784,6 +789,20 @@ with tab2:
                                 df_results = pd.DataFrame(st.session_state["cloud_results"])
                                 st.write("### ☁️ Nubosidad aproximada:")
                                 st.dataframe(df_results)
+
+                            if reservoir_name.lower() == "val":
+                                st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
+                            
+                                df_fico = cargar_csv_drive()
+                                df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], dayfirst=True)
+                            
+                                chart_fico = alt.Chart(df_fico).mark_line(point=True).encode(
+                                    x='Fecha-hora:T',
+                                    y='Ficocianina (µg/L):Q'
+                                ).properties(
+                                    title="Evolución de la concentración de ficocianina (µg/L)"
+                                )
+                                st.altair_chart(chart_fico, use_container_width=True)
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
 
