@@ -657,8 +657,22 @@ with tab2:
                             st.session_state['available_dates'] = available_dates
                             st.session_state['selected_indices'] = selected_indices
 
-                            st.subheader(f"Fechas disponibles dentro del rango seleccionado:")
-                            st.write(available_dates)
+                            st.subheader("📅 Fechas disponibles dentro del rango seleccionado:")
+
+                            # Mostrar como gráfico interactivo en línea temporal
+                            df_available = pd.DataFrame(available_dates, columns=["Fecha"])
+                            df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
+                            
+                            timeline_chart = alt.Chart(df_available).mark_circle(size=80).encode(
+                                x=alt.X("Fecha:T", title="Fechas disponibles"),
+                                tooltip=alt.Tooltip("Fecha:T", title="Fecha")
+                            ).properties(
+                                height=80,
+                                width="container"
+                            )
+                            
+                            st.altair_chart(timeline_chart, use_container_width=True)
+
 
                             # Procesar y visualizar resultados
                             data_time = []
