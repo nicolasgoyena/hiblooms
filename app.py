@@ -85,7 +85,7 @@ reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
 @st.cache_data
 def cargar_csv_drive():
-    url = "https://drive.google.com/uc?id=17Jh0zarH-lKKNRf30kjYjvSaKoA9Gr5h&export=download"
+    url = "https://drive.google.com/uc?id=1dSDS54K1YNyBb3mU0JSaY63cASobabS7&export=download"
     return pd.read_csv(url)
 
 
