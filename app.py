@@ -659,20 +659,22 @@ with tab2:
 
                             st.subheader("📅 Fechas disponibles dentro del rango seleccionado:")
 
-                            # Mostrar como gráfico interactivo en línea temporal
                             df_available = pd.DataFrame(available_dates, columns=["Fecha"])
                             df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
                             
-                            timeline_chart = alt.Chart(df_available).mark_circle(size=80).encode(
-                                x=alt.X("Fecha:T", title="Fechas disponibles"),
+                            # Gráfico mejorado tipo stripplot horizontal
+                            timeline_chart = alt.Chart(df_available).mark_tick(thickness=2, size=20).encode(
+                                x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=45, format="%d-%b")),
                                 tooltip=alt.Tooltip("Fecha:T", title="Fecha")
                             ).properties(
-                                height=80,
+                                height=100,
                                 width="container"
+                            ).configure_axis(
+                                labelFontSize=12,
+                                tickSize=8
                             )
                             
                             st.altair_chart(timeline_chart, use_container_width=True)
-
 
                             # Procesar y visualizar resultados
                             data_time = []
