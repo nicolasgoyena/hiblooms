@@ -820,7 +820,7 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
-                                        df_filtrado['Fico Suavizada'] = df_filtrado['Ficocianina (µg/L)'].rolling(window=6).mean()
+                                        df_filtrado['Fico Suavizada'] = df_filtrado['Ficocianina (µg/L)'].rolling(window=3).mean()
                                         chart_smooth = alt.Chart(df_filtrado).mark_line(color='steelblue', strokeWidth=2).encode(
                                             x='Fecha-hora:T',
                                             y=alt.Y('Fico Suavizada:Q', title='Ficocianina suavizada (µg/L)')
