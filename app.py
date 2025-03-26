@@ -826,7 +826,7 @@ with tab2:
                                             y=alt.Y('Fico Suavizada:Q', title='Ficocianina suavizada (µg/L)')
                                         )
                                         
-                                        st.altair_chart(chart_raw + chart_smooth, use_container_width=True)
+                                        st.altair_chart(chart_smooth, use_container_width=True)
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
