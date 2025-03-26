@@ -820,13 +820,23 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
-                                        df_filtrado['Fico Suavizada'] = df_filtrado['Ficocianina (µg/L)'].rolling(window=3).mean()
-                                        chart_smooth = alt.Chart(df_filtrado).mark_line(color='steelblue', strokeWidth=2).encode(
+                                        max_puntos_grafico = 200
+                                        n_total = len(df_filtrado)
+                                        
+                                        # Evita step < 1 para rangos cortos
+                                        step = max(1, n_total // max_puntos_grafico)
+                                        
+                                        # Submuestreo
+                                        df_subsample = df_filtrado.iloc[::step]
+                                        chart_subsample = alt.Chart(df_subsample).mark_line(point=True).encode(
                                             x='Fecha-hora:T',
-                                            y=alt.Y('Fico Suavizada:Q', title='Ficocianina suavizada (µg/L)')
+                                            y='Ficocianina (µg/L):Q'
+                                        ).properties(
+                                            title="Ficocianina (µg/L) - Submuestreo automático"
                                         )
                                         
-                                        st.altair_chart(chart_smooth, use_container_width=True)
+                                        st.altair_chart(chart_subsample, use_container_width=True)
+
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
