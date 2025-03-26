@@ -820,7 +820,7 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
-                                        max_puntos_grafico = 200
+                                        max_puntos_grafico = 300
                                         n_total = len(df_filtrado)
                                         
                                         # Evita step < 1 para rangos cortos
