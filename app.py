@@ -793,16 +793,42 @@ with tab2:
                             if reservoir_name.lower() == "val":
                                 st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
                             
-                                df_fico = cargar_csv_drive()
-                                df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], dayfirst=True)
+                                # URLs de los dos CSV en Drive
+                                urls_csv = [
+                                    "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
+                                    "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
+                                ]
                             
-                                chart_fico = alt.Chart(df_fico).mark_line(point=True).encode(
-                                    x='Fecha-hora:T',
-                                    y='Ficocianina (µg/L):Q'
-                                ).properties(
-                                    title="Evolución de la concentración de ficocianina (µg/L)"
-                                )
-                                st.altair_chart(chart_fico, use_container_width=True)
+                                # Cargar y concatenar los CSV
+                                df_list = []
+                                for url in urls_csv:
+                                    try:
+                                        df = pd.read_csv(url)
+                                        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], dayfirst=True)
+                                        df_list.append(df)
+                                    except Exception as e:
+                                        st.warning(f"No se pudo cargar un CSV: {e}")
+                            
+                                if df_list:
+                                    df_fico = pd.concat(df_list).sort_values('Fecha-hora')
+                            
+                                    # Filtrar por el mismo rango de fechas elegido para los índices
+                                    start_dt = pd.to_datetime(start_date)
+                                    end_dt = pd.to_datetime(end_date)
+                                    df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
+                            
+                                    if df_filtrado.empty:
+                                        st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                    else:
+                                        chart_fico = alt.Chart(df_filtrado).mark_line(point=True).encode(
+                                            x='Fecha-hora:T',
+                                            y='Ficocianina (µg/L):Q'
+                                        ).properties(
+                                            title="Evolución de la concentración de ficocianina (µg/L)"
+                                        )
+                                        st.altair_chart(chart_fico, use_container_width=True)
+                                else:
+                                    st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
                             st.subheader("Gráficos de Líneas por Punto de Interés")
 
