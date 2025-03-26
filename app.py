@@ -820,15 +820,13 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
-                                        chart = alt.Chart(df_filtrado).mark_line(strokeWidth=1.2).encode(
+                                        df_filtrado['Fico Suavizada'] = df_filtrado['Ficocianina (µg/L)'].rolling(window=6).mean()
+                                        chart_smooth = alt.Chart(df_filtrado).mark_line(color='steelblue', strokeWidth=2).encode(
                                             x='Fecha-hora:T',
-                                            y='Ficocianina (µg/L):Q'
-                                        ) + alt.Chart(df_filtrado).mark_circle(size=10, color='red', opacity=0.4).encode(
-                                            x='Fecha-hora:T',
-                                            y='Ficocianina (µg/L):Q'
+                                            y=alt.Y('Fico Suavizada:Q', title='Ficocianina suavizada (µg/L)')
                                         )
-
-                                        st.altair_chart(chart, use_container_width=True)
+                                        
+                                        st.altair_chart(chart_raw + chart_smooth, use_container_width=True)
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
