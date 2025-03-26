@@ -662,19 +662,37 @@ with tab2:
                             df_available = pd.DataFrame(available_dates, columns=["Fecha"])
                             df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
                             
-                            # Gráfico mejorado tipo stripplot horizontal
+                            # Convertir fecha a string formateado para mostrar como etiqueta
+                            df_available["Fecha_str"] = df_available["Fecha"].dt.strftime("%d-%b")
+                            
+                            # Gráfico tipo punto con etiquetas visibles
                             timeline_chart = alt.Chart(df_available).mark_tick(thickness=2, size=20).encode(
-                                x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=45, format="%d-%b")),
+                                x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=0, format="%d-%b")),
                                 tooltip=alt.Tooltip("Fecha:T", title="Fecha")
                             ).properties(
-                                height=100,
+                                height=80,
                                 width="container"
-                            ).configure_axis(
-                                labelFontSize=12,
-                                tickSize=8
                             )
                             
-                            st.altair_chart(timeline_chart, use_container_width=True)
+                            # Agrega etiquetas sobre cada tick
+                            text_layer = alt.Chart(df_available).mark_text(
+                                align="center",
+                                baseline="bottom",
+                                dy=-8,  # Desplazamiento vertical
+                                fontSize=11
+                            ).encode(
+                                x="Fecha:T",
+                                text="Fecha_str:N"
+                            )
+                            
+                            # Combina los dos gráficos
+                            final_chart = (timeline_chart + text_layer).configure_axis(
+                                labelFontSize=12,
+                                tickSize=5
+                            )
+                            
+                            st.altair_chart(final_chart, use_container_width=True)
+
 
                             # Procesar y visualizar resultados
                             data_time = []
