@@ -820,13 +820,15 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
-                                        chart_fico = alt.Chart(df_filtrado).mark_line(point=True).encode(
+                                        chart = alt.Chart(df_filtrado).mark_line(strokeWidth=1.2).encode(
                                             x='Fecha-hora:T',
                                             y='Ficocianina (µg/L):Q'
-                                        ).properties(
-                                            title="Evolución de la concentración de ficocianina (µg/L)"
+                                        ) + alt.Chart(df_filtrado).mark_circle(size=10, color='red', opacity=0.4).encode(
+                                            x='Fecha-hora:T',
+                                            y='Ficocianina (µg/L):Q'
                                         )
-                                        st.altair_chart(chart_fico, use_container_width=True)
+
+                                        st.altair_chart(chart, use_container_width=True)
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
@@ -842,14 +844,14 @@ with tab2:
                                                               value_vars=selected_indices,
                                                               var_name="Índice", value_name="Valor")
 
-                                    chart = alt.Chart(df_filtrado).mark_line(strokeWidth=1.2).encode(
-                                        x='Fecha-hora:T',
-                                        y='Ficocianina (µg/L):Q'
-                                    ) + alt.Chart(df_filtrado).mark_circle(size=10, color='red', opacity=0.4).encode(
-                                        x='Fecha-hora:T',
-                                        y='Ficocianina (µg/L):Q'
+                                    chart = alt.Chart(df_melted).mark_line(point=True).encode(
+                                        x=alt.X('Date:T', title='Fecha'),
+                                        y=alt.Y('Valor:Q', title='Valor'),
+                                        color=alt.Color('Índice:N', title='Índice')
+                                    ).properties(
+                                        title=f"Valores de índices en {point}"
                                     )
-                                    
+
                                     st.altair_chart(chart, use_container_width=True)
 
                         with tab3:
