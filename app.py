@@ -828,15 +828,18 @@ with tab2:
                                         
                                         # Submuestreo
                                         df_subsample = df_filtrado.iloc[::step]
-                                        chart_subsample = alt.Chart(df_subsample).mark_line(point=True).encode(
-                                            x='Fecha-hora:T',
-                                            y='Ficocianina (µg/L):Q'
+                                        chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
+                                            x=alt.X('Fecha-hora:T', title='Fecha y hora'),
+                                            y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
+                                            tooltip=[
+                                                alt.Tooltip('Fecha-hora:T', title='Fecha y hora'),
+                                                alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
+                                            ]
                                         ).properties(
-                                            title="Ficocianina (µg/L) - Submuestreo automático"
+                                            title="Evolución de la concentración de ficocianina (µg/L)"
                                         )
                                         
-                                        st.altair_chart(chart_subsample, use_container_width=True)
-
+                                        st.altair_chart(chart_fico, use_container_width=True)
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
