@@ -829,10 +829,10 @@ with tab2:
                                         # Submuestreo
                                         df_subsample = df_filtrado.iloc[::step]
                                         chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
-                                            x=alt.X('Fecha-hora:T', title='Fecha y hora'),
+                                            x=alt.X('Fecha-hora:T', title='Fecha'),
                                             y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
                                             tooltip=[
-                                                alt.Tooltip('Fecha-hora:T', title='Fecha y hora'),
+                                                alt.Tooltip('Fecha-hora:N', title='Fecha y hora'),  # <-- Nominal para mostrar hora
                                                 alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
                                             ]
                                         ).properties(
@@ -840,6 +840,7 @@ with tab2:
                                         )
                                         
                                         st.altair_chart(chart_fico, use_container_width=True)
+
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
