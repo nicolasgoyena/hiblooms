@@ -84,9 +84,14 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
 @st.cache_data
-def cargar_csv_drive():
-    url = "https://drive.google.com/uc?id=1dSDS54K1YNyBb3mU0JSaY63cASobabS7&export=download"
-    return pd.read_csv(url)
+def cargar_csv_desde_url(url: str) -> pd.DataFrame:
+    try:
+        df = pd.read_csv(url)
+        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], dayfirst=True)
+        return df
+    except Exception as e:
+        st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
+        return pd.DataFrame()
 
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
@@ -831,26 +836,20 @@ with tab2:
                             if reservoir_name.lower() == "val":
                                 st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
                             
-                                # URLs de los dos CSV en Drive
+                                # URLs de los CSV en Google Drive
                                 urls_csv = [
                                     "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
                                     "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
                                 ]
                             
-                                # Cargar y concatenar los CSV
-                                df_list = []
-                                for url in urls_csv:
-                                    try:
-                                        df = pd.read_csv(url)
-                                        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], dayfirst=True)
-                                        df_list.append(df)
-                                    except Exception as e:
-                                        st.warning(f"No se pudo cargar un CSV: {e}")
+                                # Cargar y concatenar los CSV válidos
+                                df_list = [cargar_csv_desde_url(url) for url in urls_csv]
+                                df_list = [df for df in df_list if not df.empty]
                             
                                 if df_list:
                                     df_fico = pd.concat(df_list).sort_values('Fecha-hora')
                             
-                                    # Filtrar por el mismo rango de fechas elegido para los índices
+                                    # Filtrar por rango de fechas definido en la app
                                     start_dt = pd.to_datetime(start_date)
                                     end_dt = pd.to_datetime(end_date)
                                     df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
@@ -858,15 +857,13 @@ with tab2:
                                     if df_filtrado.empty:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
+                                        # Submuestreo si hay demasiados puntos
                                         max_puntos_grafico = 400
-                                        n_total = len(df_filtrado)
-                                        
-                                        # Evita step < 1 para rangos cortos
-                                        step = max(1, n_total // max_puntos_grafico)
-                                        
-                                        # Submuestreo
+                                        step = max(1, len(df_filtrado) // max_puntos_grafico)
                                         df_subsample = df_filtrado.iloc[::step]
                                         df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
+                            
+                                        # Crear el gráfico
                                         chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
                                             x=alt.X('Fecha-hora:T', title='Fecha'),
                                             y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
@@ -877,8 +874,8 @@ with tab2:
                                         ).properties(
                                             title="Evolución de la concentración de ficocianina (µg/L)"
                                         )
+                            
                                         st.altair_chart(chart_fico, use_container_width=True)
-
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
 
