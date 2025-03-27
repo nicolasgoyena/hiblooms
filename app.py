@@ -864,7 +864,7 @@ with tab2:
                                         df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
 
                                         chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
-                                            x=alt.X('Fecha_formateada:N', title='Fecha y hora'),  # <- usar como cadena formateada
+                                            x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
                                             y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
                                             tooltip=[
                                                 alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
