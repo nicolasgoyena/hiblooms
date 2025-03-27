@@ -858,12 +858,12 @@ with tab2:
                                         st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
                                     else:
                                         # Submuestreo si hay demasiados puntos
-                                        max_puntos_grafico = 400
+                                        max_puntos_grafico = 500
                                         step = max(1, len(df_filtrado) // max_puntos_grafico)
                                         df_subsample = df_filtrado.iloc[::step]
                                         df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
 
-                                        chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
+                                        chart_fico = alt.Chart(df_subsample).mark_line().encode(
                                             x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
                                             y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
                                             tooltip=[
