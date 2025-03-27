@@ -863,9 +863,22 @@ with tab2:
                                         df_subsample = df_filtrado.iloc[::step]
                                         df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
                             
-                                        # Crear el gráfico
+                                        # Configurar el locale a español para fechas
+                                        spanish_time_format = {
+                                            "dateTime": "%A, %e de %B de %Y, %H:%M",
+                                            "date": "%d-%m-%Y",
+                                            "time": "%H:%M",
+                                            "months": ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
+                                                       "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+                                            "shortMonths": ["ene", "feb", "mar", "abr", "may", "jun", 
+                                                            "jul", "ago", "sep", "oct", "nov", "dic"],
+                                            "days": ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"],
+                                            "shortDays": ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
+                                            "periods": ["a. m.", "p. m."]
+                                        }
+                                        
                                         chart_fico = alt.Chart(df_subsample).mark_line(point=True).encode(
-                                            x=alt.X('Fecha-hora:T', title='Fecha'),
+                                            x=alt.X('Fecha-hora:T', title='Fecha y hora', format='%d-%m-%Y %H:%M'),
                                             y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
                                             tooltip=[
                                                 alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
@@ -873,8 +886,15 @@ with tab2:
                                             ]
                                         ).properties(
                                             title="Evolución de la concentración de ficocianina (µg/L)"
+                                        ).configure_axis(
+                                            labelFontSize=12,
+                                            titleFontSize=14
+                                        ).configure_view(
+                                            strokeWidth=0
+                                        ).configure(
+                                            locale=spanish_time_format
                                         )
-                            
+                                        
                                         st.altair_chart(chart_fico, use_container_width=True)
                                 else:
                                     st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
