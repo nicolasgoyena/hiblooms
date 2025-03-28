@@ -746,9 +746,6 @@ with tab2:
                                         map_center = [gdf_4326.geometry.centroid.y.mean(),
                                                       gdf_4326.geometry.centroid.x.mean()]
                                         map_indices = geemap.Map(center=map_center, zoom=13)
-
-                                        # Crear un grupo de capas para los puntos de interés
-                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=True)
                                         
 
 
@@ -787,6 +784,8 @@ with tab2:
                                             show=False,
                                             attr="Copernicus Sentinel-2, processed by GEE"
                                         )
+                                        # Crear un grupo de capas para los puntos de interés
+                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=False)
 
                                         # Añadir los marcadores al grupo
                                         if reservoir_name in puntos_interes:
@@ -798,13 +797,12 @@ with tab2:
                                                     icon=folium.Icon(color="red", icon="info-sign")
                                                 ).add_to(poi_group)
                                         
-                                        # Añadir el grupo de puntos al mapa
-                                        poi_group.add_to(map_indices)
 
                                         # Agregar capas al mapa
                                         rgb_layer.add_to(map_indices)
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
+                                        poi_group.add_to(map_indices)
 
                                         # Agregar los índices como capas opcionales
                                         for index in selected_indices:
