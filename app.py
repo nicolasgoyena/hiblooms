@@ -284,13 +284,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         if sentinel2.size().getInfo() == 0:
             st.warning("No hay imágenes disponibles para la fecha {}".format(selected_date))
-            return None, None, None, None  # 👈 añade uno más
+            return None, None, None
 
         sentinel2_image = sentinel2.first()
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
         clipped_image = sentinel2_image.clip(aoi)
+
 
         # Procesamiento de bandas e índices
         optical_bands = clipped_image.select(['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12']).divide(10000)
@@ -307,11 +308,12 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         indices_functions = {
             "FAI": lambda: b8.subtract(b4.add(b11).subtract(b4.multiply((834 - 665) / (1612 - 665)))).rename('FAI'),
-            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
-            "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),
-            "B6_minus_B4": lambda: b6.subtract(b4).rename('B6_minus_B4'),
-            "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),
-            "B6_div_B4": lambda: b6.divide(b4).rename('B6_div_B4'),
+            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename(
+                'MCI'),
+            "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
+            "B6_minus_B4": lambda: b6.subtract(b4).rename('B6_minus_B4'),  # S2_MSI_R740_R665 (B6-B4)
+            "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
+            "B6_div_B4": lambda: b6.divide(b4).rename('B6_div_B4'),  # S2_MSI_Sen2cor_R740_R665 (B6/B4)
             "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
             "gNDVI": lambda: b8.subtract(b3).divide(b8.add(b3)).rename("gNDVI"),
             "NSMI": lambda: b4.add(b3).subtract(b2).divide(b4.add(b3).add(b2)).rename("NSMI"),
@@ -320,9 +322,16 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         }
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
+
         indices_image = scaled_image.addBands(indices_to_add)
 
-        return scaled_image, indices_image, image_date, clipped_image  # 👈 añadimos clipped_image
+        return scaled_image, indices_image, image_date
+
+        indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
+
+        indices_image = scaled_image.addBands(indices_to_add)
+
+        return scaled_image, indices_image, image_date
 
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
@@ -706,7 +715,7 @@ with tab2:
                             scl_colors = [scl_palette[i] for i in sorted(scl_palette.keys())]
 
                             for day in available_dates:
-                                scaled_image, indices_image, image_date, clipped_image = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
+                                scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is None:
                                     continue
 
@@ -796,33 +805,6 @@ with tab2:
                                         rgb_layer.add_to(map_indices)
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
-                                        # Capa QA60 (máscara de nubes y cirros), usando clipped_image directamente
-                                        qa60 = clipped_image.select('QA60')
-                                        cloud_bit_mask = 1 << 10
-                                        cirrus_bit_mask = 1 << 11
-                                        
-                                        # Combinamos las dos máscaras en una sola imagen binaria (0 = cielo claro, 1 = nubes o cirros)
-                                        qa60_mask = (
-                                            qa60.bitwiseAnd(cloud_bit_mask).gt(0)
-                                            .Or(qa60.bitwiseAnd(cirrus_bit_mask).gt(0))
-                                            .multiply(1)  # Convierte a 0/1
-                                        )
-                                        
-                                        qa60_layer = folium.raster_layers.TileLayer(
-                                            tiles=qa60_mask.visualize(
-                                                min=0,
-                                                max=1,
-                                                palette=['white', 'black']  # Transparente = claro; negro = nubes/cirros
-                                            ).getMapId()["tile_fetcher"].url_format,
-                                            name="Máscara de Nubes (QA60)",
-                                            overlay=True,
-                                            control=True,
-                                            show=False,
-                                            attr="Copernicus Sentinel-2, processed by GEE"
-                                        )
-                                        qa60_layer.add_to(map_indices)
-
-
                                         if tiene_puntos:
                                             poi_group.add_to(map_indices)
 
