@@ -812,7 +812,7 @@ with tab2:
                                             tiles=qa60_mask.visualize(
                                                 min=0,
                                                 max=1,
-                                                palette=['transparent', 'black']  # Transparente = claro; negro = nubes/cirros
+                                                palette=['white', 'black']  # Transparente = claro; negro = nubes/cirros
                                             ).getMapId()["tile_fetcher"].url_format,
                                             name="Máscara de Nubes (QA60)",
                                             overlay=True,
