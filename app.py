@@ -805,10 +805,14 @@ with tab2:
                                         rgb_layer.add_to(map_indices)
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
+                                        qa60_mask = scaled_image.select('QA60').bitwiseAnd(1 << 10).Or(
+                                            scaled_image.select('QA60').bitwiseAnd(1 << 11)
+                                        ).gt(0)
+                                        
                                         qa60_layer = folium.raster_layers.TileLayer(
-                                            tiles=scaled_image.select('QA60').visualize(
-                                                min=0, max=65535,
-                                                palette=['white', 'black']
+                                            tiles=qa60_mask.visualize(
+                                                min=0, max=1,
+                                                palette=['transparent', 'black']
                                             ).getMapId()["tile_fetcher"].url_format,
                                             name="Máscara de Nubes (QA60)",
                                             overlay=True,
@@ -817,6 +821,7 @@ with tab2:
                                             attr="Copernicus Sentinel-2, processed by GEE"
                                         )
                                         qa60_layer.add_to(map_indices)
+
 
 
                                         if tiene_puntos:
