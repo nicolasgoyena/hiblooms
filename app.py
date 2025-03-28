@@ -747,7 +747,10 @@ with tab2:
                                                       gdf_4326.geometry.centroid.x.mean()]
                                         map_indices = geemap.Map(center=map_center, zoom=13)
 
-                                        # Si el embalse tiene puntos de interés, añadir marcadores
+                                        # Crear un grupo de capas para los puntos de interés
+                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=True)
+                                        
+                                        # Añadir los marcadores al grupo
                                         if reservoir_name in puntos_interes:
                                             for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
                                                 folium.Marker(
@@ -755,7 +758,10 @@ with tab2:
                                                     popup=f"{point_name}",
                                                     tooltip=f"{point_name}",
                                                     icon=folium.Icon(color="red", icon="info-sign")
-                                                ).add_to(map_indices)
+                                                ).add_to(poi_group)
+                                        
+                                        # Añadir el grupo de puntos al mapa
+                                        poi_group.add_to(map_indices)
 
 
                                         # Crear grupos de capas para permitir que solo una se active a la vez
