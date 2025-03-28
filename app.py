@@ -784,10 +784,12 @@ with tab2:
                                             show=False,
                                             attr="Copernicus Sentinel-2, processed by GEE"
                                         )
-                                        # Crear un grupo de capas para los puntos de interés
-                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=False)
 
-                                        # Añadir los marcadores al grupo
+                                        # Crear el grupo de puntos de interés (no activado por defecto)
+                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=False)
+                                        tiene_puntos = False  # Variable de control
+                                        
+                                        # Añadir marcadores al grupo si existen
                                         if reservoir_name in puntos_interes:
                                             for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
                                                 folium.Marker(
@@ -796,13 +798,15 @@ with tab2:
                                                     tooltip=f"{point_name}",
                                                     icon=folium.Icon(color="red", icon="info-sign")
                                                 ).add_to(poi_group)
+                                                tiene_puntos = True  # Al menos un punto añadido
                                         
 
                                         # Agregar capas al mapa
                                         rgb_layer.add_to(map_indices)
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
-                                        poi_group.add_to(map_indices)
+                                        if tiene_puntos:
+                                            poi_group.add_to(map_indices)
 
                                         # Agregar los índices como capas opcionales
                                         for index in selected_indices:
