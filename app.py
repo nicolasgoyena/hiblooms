@@ -806,7 +806,7 @@ with tab2:
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
                                         qa60_layer = folium.raster_layers.TileLayer(
-                                            tiles=sentinel2_image.select('QA60').visualize(
+                                            tiles=scaled_image.select('QA60').visualize(
                                                 min=0, max=65535,
                                                 palette=['white', 'black']
                                             ).getMapId()["tile_fetcher"].url_format,
@@ -817,6 +817,7 @@ with tab2:
                                             attr="Copernicus Sentinel-2, processed by GEE"
                                         )
                                         qa60_layer.add_to(map_indices)
+
 
                                         if tiene_puntos:
                                             poi_group.add_to(map_indices)
