@@ -747,6 +747,17 @@ with tab2:
                                                       gdf_4326.geometry.centroid.x.mean()]
                                         map_indices = geemap.Map(center=map_center, zoom=13)
 
+                                        # Si el embalse tiene puntos de interés, añadir marcadores
+                                        if reservoir_name in puntos_interes:
+                                            for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
+                                                folium.Marker(
+                                                    location=[lat_point, lon_point],
+                                                    popup=f"{point_name}",
+                                                    tooltip=f"{point_name}",
+                                                    icon=folium.Icon(color="red", icon="info-sign")
+                                                ).add_to(map_indices)
+
+
                                         # Crear grupos de capas para permitir que solo una se active a la vez
                                         rgb_layer = folium.raster_layers.TileLayer(
                                             tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
