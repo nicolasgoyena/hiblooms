@@ -805,16 +805,23 @@ with tab2:
                                         rgb_layer.add_to(map_indices)
                                         scl_layer.add_to(map_indices)
                                         cloud_layer.add_to(map_indices)
-                                       # Máscara de nubes QA60 usando el clipped_image (que aún tiene esa banda intacta)
-                                        qa60_mask = clipped_image.select('QA60') \
-                                            .bitwiseAnd(1 << 10).Or(clipped_image.select('QA60').bitwiseAnd(1 << 11)) \
-                                            .gt(0).multiply(1)
+                                        # Capa QA60 (máscara de nubes y cirros), usando clipped_image directamente
+                                        qa60 = clipped_image.select('QA60')
+                                        cloud_bit_mask = 1 << 10
+                                        cirrus_bit_mask = 1 << 11
+                                        
+                                        # Combinamos las dos máscaras en una sola imagen binaria (0 = cielo claro, 1 = nubes o cirros)
+                                        qa60_mask = (
+                                            qa60.bitwiseAnd(cloud_bit_mask).gt(0)
+                                            .Or(qa60.bitwiseAnd(cirrus_bit_mask).gt(0))
+                                            .multiply(1)  # Convierte a 0/1
+                                        )
                                         
                                         qa60_layer = folium.raster_layers.TileLayer(
                                             tiles=qa60_mask.visualize(
                                                 min=0,
                                                 max=1,
-                                                palette=['transparent', 'black']
+                                                palette=['transparent', 'black']  # Transparente = claro; negro = nubes/cirros
                                             ).getMapId()["tile_fetcher"].url_format,
                                             name="Máscara de Nubes (QA60)",
                                             overlay=True,
@@ -823,6 +830,7 @@ with tab2:
                                             attr="Copernicus Sentinel-2, processed by GEE"
                                         )
                                         qa60_layer.add_to(map_indices)
+
 
                                         if tiene_puntos:
                                             poi_group.add_to(map_indices)
