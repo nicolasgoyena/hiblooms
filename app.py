@@ -161,27 +161,31 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
 
     for i in range(images.size().getInfo()):
         inicio_iter = time.time()
-
+    
         image = ee.Image(images.get(i)).clip(aoi)
         image_date = image.get('system:time_start').getInfo()
         formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
-
-        # Si la fecha ya fue procesada, saltar esta iteración
+    
+        # Evitar duplicados
         if formatted_date in available_dates:
             continue
-
-        # Spinner con texto más grande y en negrita
+    
         with st.spinner(f"**🕒 Analizando imagen del {formatted_date}...**"):
-            # Calcular la nubosidad dentro del embalse
             cloud_percentage = calculate_cloud_percentage(image, aoi).getInfo()
-
-            # Si la imagen tiene nubosidad dentro del umbral, guardarla
-            if cloud_percentage <= max_cloud_percentage:
-                available_dates.add(formatted_date)  # Agregar la fecha al conjunto
-                results_list.append({"Fecha": formatted_date, "Nubosidad aproximada (%)": round(cloud_percentage, 2)})
-
+    
+            # 🔁 NUEVA LÓGICA: si el usuario permite 100%, guardamos siempre
+            if max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage:
+                available_dates.add(formatted_date)
+            
+            # 🔹 Guardar SIEMPRE el resultado en la tabla
+            results_list.append({
+                "Fecha": formatted_date,
+                "Nubosidad aproximada (%)": round(cloud_percentage, 2)
+            })
+    
         fin_iter = time.time()
         print(f"Tiempo en procesar imagen {formatted_date}: {fin_iter - inicio_iter:.2f} seg")
+
 
     fin_total = time.time()
     print(f"Tiempo total en get_available_dates: {fin_total - inicio_total:.2f} seg")
@@ -659,6 +663,8 @@ with tab2:
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad")
                 max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 15%, aunque si se quieren ver todas las imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 10)
+                if max_cloud_percentage == 100:
+                    st.info("🔁 Has seleccionado un 100 % de nubosidad permitida: se mostrarán todas las imágenes del periodo. Aun así, se estimará la nubosidad de cada imagen.")
 
                 # Selección de intervalo de fechas
                 st.subheader("Selecciona el intervalo de fechas:")
