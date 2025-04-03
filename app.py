@@ -602,48 +602,54 @@ with tab1:
     st.success(
         "🔬 HIBLOOMS no solo estudia el presente, sino que reconstruye el pasado para entender el futuro de la calidad del agua en España.")
 with tab2:
+    # 🔄 Cargar shapefile personalizado (fuera de las columnas para que esté disponible antes)
+    st.subheader("🔄 Cargar shapefile propio (opcional)")
+    st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
+
+    uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses (proyección EPSG:32630)", type=["zip"])
+
+    custom_shapefile_path = None
+
+    if uploaded_zip is not None:
+        import zipfile
+        import tempfile
+
+        temp_dir = tempfile.TemporaryDirectory()
+        with zipfile.ZipFile(uploaded_zip, "r") as zip_ref:
+            zip_ref.extractall(temp_dir.name)
+
+        for file in os.listdir(temp_dir.name):
+            if file.endswith(".shp"):
+                custom_shapefile_path = os.path.join(temp_dir.name, file)
+                break
+
+        if custom_shapefile_path:
+            st.success("✅ Shapefile cargado correctamente.")
+        else:
+            st.error("❌ No se encontró ningún archivo .shp válido en el ZIP.")
+
+    # ──────────────────────────────
+    # 🔳 Dividimos el contenido en dos columnas
     row1 = st.columns([2, 2])
     row2 = st.columns([2, 2])
 
     with row1[0]:
         st.subheader("Mapa de Embalses")
         map_embalses = geemap.Map(center=[42.0, 0.5], zoom=18)
-        cargar_y_mostrar_embalses(map_embalses, shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE")
+        cargar_y_mostrar_embalses(
+            map_embalses,
+            shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
+            nombre_columna="NOMBRE"
+        )
         folium_static(map_embalses)
 
     with row1[1]:
-        st.subheader("🔄 Cargar shapefile propio (opcional)")
-        st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
-    
-        uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses (proyección EPSG:32630)", type=["zip"])
-    
-        custom_shapefile_path = None
-    
-        if uploaded_zip is not None:
-            import zipfile
-            import tempfile
-    
-            temp_dir = tempfile.TemporaryDirectory()
-            with zipfile.ZipFile(uploaded_zip, "r") as zip_ref:
-                zip_ref.extractall(temp_dir.name)
-    
-            for file in os.listdir(temp_dir.name):
-                if file.endswith(".shp"):
-                    custom_shapefile_path = os.path.join(temp_dir.name, file)
-                    break
-    
-            if custom_shapefile_path:
-                st.success("✅ Shapefile cargado correctamente.")
-            else:
-                st.error("❌ No se encontró ningún archivo .shp válido en el ZIP.")
-    
         st.subheader("Selección de Embalse")
-    
+
         nombres_embalses = obtener_nombres_embalses(custom_shapefile_path) if custom_shapefile_path else obtener_nombres_embalses()
 
-
         # Seleccionar embalse
-        reservoir_name = st.selectbox("Selecciona un embalse",nombres_embalses)
+        reservoir_name = st.selectbox("Selecciona un embalse", nombres_embalses)
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
