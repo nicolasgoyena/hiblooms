@@ -748,9 +748,7 @@ with tab2:
                                 tickSize=5
                             )
                             
-                            st.altair_chart(final_chart, use_container_width=True)
-
-
+                            st.altair_chart(final_chart, use_container_width=True, theme=None, config={"actions": False})
 
                             # Procesar y visualizar resultados
                             data_time = []
