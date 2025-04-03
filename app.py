@@ -751,6 +751,7 @@ with tab2:
                             st.altair_chart(final_chart, use_container_width=True)
 
 
+
                             # Procesar y visualizar resultados
                             data_time = []
 
