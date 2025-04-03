@@ -748,7 +748,7 @@ with tab2:
                                 tickSize=5
                             )
                             
-                            st.altair_chart(final_chart, use_container_width=True, config={"actions": False})
+                            st.altair_chart(final_chart, use_container_width=True)
 
 
                             # Procesar y visualizar resultados
