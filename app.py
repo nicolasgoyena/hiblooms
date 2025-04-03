@@ -321,16 +321,11 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b12 = scaled_image.select('B12')
 
         indices_functions = {
-            "FAI": lambda: b8.subtract(b4.add(b11).subtract(b4.multiply((834 - 665) / (1612 - 665)))).rename('FAI'),
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename(
                 'MCI'),
             "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
-            "B6_minus_B4": lambda: b6.subtract(b4).rename('B6_minus_B4'),  # S2_MSI_R740_R665 (B6-B4)
             "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
-            "B6_div_B4": lambda: b6.divide(b4).rename('B6_div_B4'),  # S2_MSI_Sen2cor_R740_R665 (B6/B4)
             "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
-            "gNDVI": lambda: b8.subtract(b3).divide(b8.add(b3)).rename("gNDVI"),
-            "NSMI": lambda: b4.add(b3).subtract(b2).divide(b4.add(b3).add(b2)).rename("NSMI"),
             "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
             "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC")
         }
@@ -376,15 +371,10 @@ def get_index_value(lon, lat, index_name, indices_image):
 def generar_leyenda(indices_seleccionados):
     # Parámetros de visualización para cada índice
     parametros = {
-        "FAI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "MCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "B6_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "B5_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "B6_div_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "gNDVI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "NSMI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]}
     }
@@ -686,11 +676,7 @@ with tab2:
                 end_date = end_date.strftime('%Y-%m-%d')
 
                 # Selección de índices
-                available_indices = [
-                    "FAI", "MCI", "B5_div_B4",
-                    "B6_minus_B4", "B5_minus_B4", "B6_div_B4",
-                    "NDCI", "gNDVI", "NSMI", "Toming_Index", "PC"
-                ]
+                available_indices = ["MCI", "B5_div_B4","B5_minus_B4","NDCI", "Toming_Index", "PC"]
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
@@ -776,15 +762,10 @@ with tab2:
                                         data_time.append(registro)
 
                                 index_palettes = {
-                                    "FAI": ['blue', 'green', 'yellow', 'red'],
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
                                     "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
-                                    "B6_minus_B4": ['blue', 'green', 'yellow', 'red'],
                                     "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
-                                    "B6_div_B4": ['blue', 'green', 'yellow', 'red'],
                                     "NDCI": ['blue', 'green', 'yellow', 'red'],
-                                    "gNDVI": ['blue', 'green', 'yellow', 'red'],
-                                    "NSMI": ['blue', 'green', 'yellow', 'red'],
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Paleta específica para PC
                                 }
