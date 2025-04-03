@@ -98,16 +98,16 @@ def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
 
-        # Asegurar que la columna de nombres existe
         if "NOMBRE" in gdf.columns:
-            nombres_embalses = sorted(gdf["NOMBRE"].dropna().unique())  # Eliminar duplicados y NaN
+            nombres_embalses = sorted(gdf["NOMBRE"].dropna().unique())
             return nombres_embalses
         else:
-            st.error(f"La columna 'NOMBRE' no se encontró en {shapefile_path}.")
+            st.error("❌ El shapefile cargado no contiene una columna llamada 'NOMBRE'. No se pueden mostrar embalses.")
             return []
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
         return []
+
 
 
 # Función combinada para cargar el shapefile, ajustar el zoom y mostrar los embalses con tooltip
@@ -195,21 +195,31 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
 
-        # Normalizar nombres para asegurar coincidencia
+        # Verificar existencia del campo 'NOMBRE'
+        if "NOMBRE" not in gdf.columns:
+            st.error("❌ El shapefile cargado no contiene una columna llamada 'NOMBRE'. Añádela para poder seleccionar embalses.")
+            return None
+
+        # Reproyectar automáticamente si no está en EPSG:32630
+        if gdf.crs is None or gdf.crs.to_epsg() != 32630:
+            st.warning("🔄 El shapefile no está en EPSG:32630. Se reproyectará automáticamente.")
+            gdf = gdf.to_crs(epsg=32630)
+
+        # Normalizar nombres
         gdf["NOMBRE"] = gdf["NOMBRE"].str.lower().str.replace(" ", "_")
         normalized_name = reservoir_name.lower().replace(" ", "_")
 
-        # Filtrar el embalse específico
         gdf_filtered = gdf[gdf["NOMBRE"] == normalized_name]
 
         if gdf_filtered.empty:
-            st.error(f"No se encontró el embalse {reservoir_name} en {shapefile_path}.")
+            st.error(f"No se encontró el embalse {reservoir_name} en el shapefile.")
             return None
 
         return gdf_filtered
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
         return None
+
 
 
 def gdf_to_ee_geometry(gdf):
@@ -598,18 +608,45 @@ with tab2:
     with row1[0]:
         st.subheader("Mapa de Embalses")
         map_embalses = geemap.Map(center=[42.0, 0.5], zoom=18)
-        cargar_y_mostrar_embalses(map_embalses, nombre_columna="NOMBRE")
+        cargar_y_mostrar_embalses(map_embalses, shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE")
         folium_static(map_embalses)
 
     with row1[1]:
+        st.subheader("🔄 Cargar shapefile propio (opcional)")
+        st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
+    
+        uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses (proyección EPSG:32630)", type=["zip"])
+    
+        custom_shapefile_path = None
+    
+        if uploaded_zip is not None:
+            import zipfile
+            import tempfile
+    
+            temp_dir = tempfile.TemporaryDirectory()
+            with zipfile.ZipFile(uploaded_zip, "r") as zip_ref:
+                zip_ref.extractall(temp_dir.name)
+    
+            for file in os.listdir(temp_dir.name):
+                if file.endswith(".shp"):
+                    custom_shapefile_path = os.path.join(temp_dir.name, file)
+                    break
+    
+            if custom_shapefile_path:
+                st.success("✅ Shapefile cargado correctamente.")
+            else:
+                st.error("❌ No se encontró ningún archivo .shp válido en el ZIP.")
+    
         st.subheader("Selección de Embalse")
-        nombres_embalses = obtener_nombres_embalses()
+    
+        nombres_embalses = obtener_nombres_embalses(custom_shapefile_path) if custom_shapefile_path else obtener_nombres_embalses()
+
 
         # Seleccionar embalse
         reservoir_name = st.selectbox("Selecciona un embalse",nombres_embalses)
 
         if reservoir_name:
-            gdf = load_reservoir_shapefile(reservoir_name)
+            gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
 
