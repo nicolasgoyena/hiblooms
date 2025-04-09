@@ -357,10 +357,10 @@ def get_values_at_point(lat, lon, indices_image, selected_indices):
     return values
 
 
-def get_index_value(lon, lat, index_name, indices_image):
+def get_index_value(lon, lat, index_name, ):
     """Función para obtener el valor del índice en un punto específico."""
     point = ee.Geometry.Point(lon, lat)
-    value = indices_image.select(index_name).sampleRegions(
+    value = .select(index_name).sampleRegions(
         collection=ee.FeatureCollection([ee.Feature(point)]),
         scale=20  # Resolución de Sentinel-2
     ).first().get(index_name)
@@ -459,15 +459,15 @@ def autenticar_drive_desde_secrets():
     gauth.credentials = gauth.LoadServiceAccountCredentials(cred_path)
     return GoogleDrive(gauth)
 
-def exportar_geotiff_multibanda(indices_image, aoi, fecha, indices_seleccionados, incluir_bandas=False):
+def exportar_geotiff_multibanda(, aoi, fecha, indices_seleccionados, incluir_bandas=False):
     bandas_fijas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12', 'SCL', 'MSK_CLDPRB']
     if incluir_bandas:
         bandas_exportar = bandas_fijas + indices_seleccionados
     else:
         bandas_exportar = indices_seleccionados
 
-    bandas_validas = [b for b in bandas_exportar if b in indices_image.bandNames().getInfo()]
-    imagen_exportar = indices_image.select(bandas_validas)
+    bandas_validas = [b for b in bandas_exportar if b in .bandNames().getInfo()]
+    imagen_exportar = .select(bandas_validas)
 
     nombre_archivo = f"HIBLOOMS_{fecha.replace('-', '')}"
     task = ee.batch.Export.image.toDrive(
@@ -805,6 +805,13 @@ with tab2:
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is None:
                                     continue
+                                # Dentro del bucle for day in available_dates
+                                if 'aoi' not in st.session_state:
+                                    st.session_state['aoi'] = aoi
+                                    st.session_state['indices_image'] = indices_image
+                                    st.session_state['selected_indices'] = selected_indices
+                                    st.session_state['reservoir_name'] = reservoir_name
+
 
                                 if reservoir_name in puntos_interes:
                                     for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
@@ -1003,11 +1010,26 @@ with tab2:
                                     st.altair_chart(chart, use_container_width=True)
 
                         with tab3:
-                            st.subheader("Tabla de Índices Calculados")
-                            if not df_time.empty:
+                            st.subheader("📊 Tabla de Índices Calculados")
+                            
+                            if 'df_time' in st.session_state:
+                                df_time = pd.DataFrame(st.session_state['data_time'])
                                 st.dataframe(df_time)
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+                                st.stop()
+                        
+                            # ✅ Recuperar variables clave para exportación
+                            if all(k in st.session_state for k in ['aoi', 'indices_image', 'selected_indices', 'available_dates']):
+                                aoi = st.session_state['aoi']
+                                indices_image = st.session_state['indices_image']
+                                selected_indices = st.session_state['selected_indices']
+                                available_dates = st.session_state['available_dates']
+                            else:
+                                st.warning("⚠️ Faltan datos del análisis. Vuelve a la pestaña de Visualización y calcula primero los índices.")
+                                st.stop()
+                        
+                                                        
                             st.markdown("---")
                             st.subheader("📦 Exportación de Mapas GeoTIFF (multibanda)")
                             st.subheader("📤 Exportar y descargar todos los GeoTIFF")
