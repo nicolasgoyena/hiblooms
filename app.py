@@ -365,7 +365,6 @@ def get_index_value(lon, lat, index_name, indices_image):
         scale=20  # Resolución de Sentinel-2
     ).first().get(index_name)
 
-
     return value.getInfo() if value is not None else None
 
 
@@ -460,15 +459,15 @@ def autenticar_drive_desde_secrets():
     gauth.credentials = gauth.LoadServiceAccountCredentials(cred_path)
     return GoogleDrive(gauth)
 
-def exportar_geotiff_multibanda(, aoi, fecha, indices_seleccionados, incluir_bandas=False):
+def exportar_geotiff_multibanda(indices_image, aoi, fecha, indices_seleccionados, incluir_bandas=False):
     bandas_fijas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12', 'SCL', 'MSK_CLDPRB']
     if incluir_bandas:
         bandas_exportar = bandas_fijas + indices_seleccionados
     else:
         bandas_exportar = indices_seleccionados
 
-    bandas_validas = [b for b in bandas_exportar if b in .bandNames().getInfo()]
-    imagen_exportar = .select(bandas_validas)
+    bandas_validas = [b for b in bandas_exportar if b in indices_image.bandNames().getInfo()]
+    imagen_exportar = indices_image.select(bandas_validas)
 
     nombre_archivo = f"HIBLOOMS_{fecha.replace('-', '')}"
     task = ee.batch.Export.image.toDrive(
@@ -1028,9 +1027,7 @@ with tab2:
                                 available_dates = st.session_state['available_dates']
                             else:
                                 st.warning("⚠️ Faltan datos del análisis. Vuelve a la pestaña de Visualización y calcula primero los índices.")
-                                st.stop()
-                        
-                                                        
+                                st.stop()  
                             st.markdown("---")
                             st.subheader("📦 Exportación de Mapas GeoTIFF (multibanda)")
                             st.subheader("📤 Exportar y descargar todos los GeoTIFF")
@@ -1082,8 +1079,5 @@ with tab2:
                                                 data=f,
                                                 file_name=archivo,
                                                 mime="application/octet-stream"
-                                            )
-
-                            
-
+                                            )                            
                             
