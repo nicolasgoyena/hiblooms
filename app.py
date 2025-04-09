@@ -934,6 +934,8 @@ with tab2:
                             st.session_state['data_time'] = data_time
 
                         df_time = pd.DataFrame(data_time)
+                        st.session_state["df_time"] = df_time
+
 
                         with row2[1]:
                             # 🔁 Exportar y descargar GeoTIFFs de todos los días disponibles
@@ -1057,10 +1059,11 @@ with tab2:
                         with tab3:
                             st.subheader("📊 Tabla de Índices Calculados")
                         
-                            if df_time is not None and not df_time.empty:
+                            df_time = st.session_state.get("df_time", pd.DataFrame())
+                        
+                            if not df_time.empty:
                                 st.dataframe(df_time)
                         
-                                # Botón de descarga como CSV
                                 csv = df_time.to_csv(index=False).encode("utf-8")
                                 st.download_button(
                                     label="⬇️ Descargar tabla como CSV",
@@ -1071,4 +1074,3 @@ with tab2:
                             else:
                                 st.warning("⚠️ No hay datos disponibles. Vuelve a la pestaña de Visualización para calcular primero.")
 
-                           
