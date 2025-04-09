@@ -445,58 +445,16 @@ def generar_leyenda(indices_seleccionados):
     # Mostrar la leyenda en Streamlit
     st.markdown(leyenda_html, unsafe_allow_html=True)
 
-import tempfile
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
-
-def autenticar_drive_desde_secrets():
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w") as f:
-        f.write(json.dumps(json.loads(st.secrets["GEE_SERVICE_ACCOUNT_JSON"])))
-        cred_path = f.name
-
-    gauth = GoogleAuth()
-    gauth.LoadServiceConfigFile()
-    gauth.credentials = gauth.LoadServiceAccountCredentials(cred_path)
-    return GoogleDrive(gauth)
-
-def exportar_geotiff_multibanda(indices_image, aoi, fecha, indices_seleccionados, incluir_bandas=False):
-    bandas_fijas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12', 'SCL', 'MSK_CLDPRB']
-    if incluir_bandas:
-        bandas_exportar = bandas_fijas + indices_seleccionados
-    else:
-        bandas_exportar = indices_seleccionados
-
-    bandas_validas = [b for b in bandas_exportar if b in indices_image.bandNames().getInfo()]
-    imagen_exportar = indices_image.select(bandas_validas)
-
-    nombre_archivo = f"HIBLOOMS_{fecha.replace('-', '')}"
-    task = ee.batch.Export.image.toDrive(
-        image=imagen_exportar,
-        description=nombre_archivo,
-        folder='HIBLOOMS_GEE_EXPORTS',
-        fileNamePrefix=nombre_archivo,
-        region=aoi.bounds().getInfo()['coordinates'],
-        scale=20,
-        crs='EPSG:32630',
-        maxPixels=1e13
-    )
-    task.start()
-    return task, nombre_archivo
-
-def esperar_tarea_gee(task):
-    while task.active():
-        time.sleep(10)
-    estado = task.status()['state']
-    return estado == 'COMPLETED'
-
-def descargar_geotiff_desde_drive(drive, file_prefix):
-    file_list = drive.ListFile({'q': f"title contains '{file_prefix}' and mimeType = 'application/octet-stream'"}).GetList()
-    if not file_list:
+def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scale=20):
+    try:
+        url = indices_image.select(selected_indices).getDownloadURL({
+            'scale': scale,
+            'region': region.getInfo()['coordinates'],
+            'fileFormat': 'GeoTIFF'
+        })
+        return url
+    except Exception as e:
         return None
-    file_drive = file_list[0]
-    file_name = file_drive['title']
-    file_drive.GetContentFile(file_name)
-    return file_name
 
 
 # INTERFAZ DE STREAMLIT
@@ -803,15 +761,20 @@ with tab2:
 
                             for day in available_dates:
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
+                                if indices_image is not None:
+                                    url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
+                                
+                                    if "urls_exportacion" not in st.session_state:
+                                        st.session_state["urls_exportacion"] = []
+                                
+                                    if url:
+                                        st.session_state["urls_exportacion"].append({
+                                            "fecha": day,
+                                            "url": url
+                                        })
+
                                 if indices_image is None:
                                     continue
-                                # Dentro del bucle for day in available_dates
-                                if 'aoi' not in st.session_state:
-                                    st.session_state['aoi'] = aoi
-                                    st.session_state['indices_image'] = indices_image
-                                    st.session_state['selected_indices'] = selected_indices
-                                    st.session_state['reservoir_name'] = reservoir_name
-
 
                                 if reservoir_name in puntos_interes:
                                     for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
@@ -934,55 +897,15 @@ with tab2:
                             st.session_state['data_time'] = data_time
 
                         df_time = pd.DataFrame(data_time)
-                        st.session_state["df_time"] = df_time
-
+                        if "urls_exportacion" in st.session_state and st.session_state["urls_exportacion"]:
+                            st.markdown("## 📦 Descarga de imágenes multibanda por fecha")
+                        
+                            for item in st.session_state["urls_exportacion"]:
+                                st.markdown(f"- 🗓️ **{item['fecha']}**: [Descargar GeoTIFF multibanda]({item['url']})")
+                        
+                            st.info("🔧 Puedes descargar todos los archivos y luego comprimirlos en ZIP en tu ordenador.")
 
                         with row2[1]:
-                            # 🔁 Exportar y descargar GeoTIFFs de todos los días disponibles
-                            st.subheader("📤 Exportar y descargar todos los GeoTIFF (multibanda)")
-                            
-                            incluir_bandas_fijas = st.checkbox(
-                                "Incluir bandas originales (B2-B12, SCL, MSK_CLDPRB)", 
-                                value=False
-                            )
-                            
-                            if st.button("Exportar y descargar todos los días"):
-                                if not available_dates or not indices_image or not aoi or not selected_indices:
-                                    st.warning("⚠️ Faltan datos para exportar. Asegúrate de haber visualizado al menos una imagen.")
-                                else:
-                                    drive = autenticar_drive_desde_secrets()
-                                    archivos_descargados = []
-                            
-                                    with st.spinner(f"🚀 Exportando y descargando {len(available_dates)} imágenes..."):
-                                        for fecha in available_dates:
-                                            st.write(f"🛰 Procesando {fecha}...")
-                                            task, nombre_archivo = exportar_geotiff_multibanda(
-                                                indices_image, aoi, fecha, selected_indices, incluir_bandas=incluir_bandas_fijas
-                                            )
-                            
-                                            completado = esperar_tarea_gee(task)
-                            
-                                            if completado:
-                                                archivo_local = descargar_geotiff_desde_drive(drive, nombre_archivo)
-                                                if archivo_local:
-                                                    archivos_descargados.append(archivo_local)
-                                                    st.success(f"✅ {archivo_local} descargado.")
-                                                else:
-                                                    st.warning(f"⚠️ No se pudo encontrar {nombre_archivo} en Drive.")
-                                            else:
-                                                st.error(f"❌ Exportación fallida para {fecha}.")
-                            
-                                    if archivos_descargados:
-                                        st.subheader("📥 Archivos disponibles para descargar:")
-                                        for archivo in archivos_descargados:
-                                            with open(archivo, "rb") as f:
-                                                st.download_button(
-                                                    label=f"⬇️ Descargar {archivo}",
-                                                    data=f,
-                                                    file_name=archivo,
-                                                    mime="application/octet-stream"
-                                                )
-
                             generar_leyenda(selected_indices)
                             if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
                                 df_results = pd.DataFrame(st.session_state["cloud_results"])
@@ -1057,20 +980,9 @@ with tab2:
                                     st.altair_chart(chart, use_container_width=True)
 
                         with tab3:
-                            st.subheader("📊 Tabla de Índices Calculados")
-                        
-                            df_time = st.session_state.get("df_time", pd.DataFrame())
-                        
+                            st.subheader("Tabla de Índices Calculados")
                             if not df_time.empty:
                                 st.dataframe(df_time)
-                        
-                                csv = df_time.to_csv(index=False).encode("utf-8")
-                                st.download_button(
-                                    label="⬇️ Descargar tabla como CSV",
-                                    data=csv,
-                                    file_name="indices_embalse.csv",
-                                    mime="text/csv"
-                                )
                             else:
-                                st.warning("⚠️ No hay datos disponibles. Vuelve a la pestaña de Visualización para calcular primero.")
+                                st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
 
