@@ -445,6 +445,58 @@ def generar_leyenda(indices_seleccionados):
     # Mostrar la leyenda en Streamlit
     st.markdown(leyenda_html, unsafe_allow_html=True)
 
+import tempfile
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
+
+def autenticar_drive_desde_secrets():
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w") as f:
+        f.write(json.dumps(json.loads(st.secrets["GEE_SERVICE_ACCOUNT_JSON"])))
+        cred_path = f.name
+
+    gauth = GoogleAuth()
+    gauth.LoadServiceConfigFile()
+    gauth.credentials = gauth.LoadServiceAccountCredentials(cred_path)
+    return GoogleDrive(gauth)
+
+def exportar_geotiff_multibanda(indices_image, aoi, fecha, indices_seleccionados, incluir_bandas=False):
+    bandas_fijas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12', 'SCL', 'MSK_CLDPRB']
+    if incluir_bandas:
+        bandas_exportar = bandas_fijas + indices_seleccionados
+    else:
+        bandas_exportar = indices_seleccionados
+
+    bandas_validas = [b for b in bandas_exportar if b in indices_image.bandNames().getInfo()]
+    imagen_exportar = indices_image.select(bandas_validas)
+
+    nombre_archivo = f"HIBLOOMS_{fecha.replace('-', '')}"
+    task = ee.batch.Export.image.toDrive(
+        image=imagen_exportar,
+        description=nombre_archivo,
+        folder='HIBLOOMS_GEE_EXPORTS',
+        fileNamePrefix=nombre_archivo,
+        region=aoi.bounds().getInfo()['coordinates'],
+        scale=20,
+        crs='EPSG:32630',
+        maxPixels=1e13
+    )
+    task.start()
+    return task, nombre_archivo
+
+def esperar_tarea_gee(task):
+    while task.active():
+        time.sleep(10)
+    estado = task.status()['state']
+    return estado == 'COMPLETED'
+
+def descargar_geotiff_desde_drive(drive, file_prefix):
+    file_list = drive.ListFile({'q': f"title contains '{file_prefix}' and mimeType = 'application/octet-stream'"}).GetList()
+    if not file_list:
+        return None
+    file_drive = file_list[0]
+    file_name = file_drive['title']
+    file_drive.GetContentFile(file_name)
+    return file_name
 
 
 # INTERFAZ DE STREAMLIT
@@ -956,3 +1008,59 @@ with tab2:
                                 st.dataframe(df_time)
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+                            st.markdown("---")
+                            st.subheader("📦 Exportación de Mapas GeoTIFF (multibanda)")
+                            st.subheader("📤 Exportar y descargar todos los GeoTIFF")
+
+                            incluir_bandas_fijas = st.checkbox(
+                                "Incluir bandas originales (B2-B12, SCL, MSK_CLDPRB)", 
+                                value=False
+                            )
+                        
+                            if st.button("Exportar y descargar todos los días disponibles"):
+                                available_dates = st.session_state.get("available_dates", [])
+                                if not available_dates:
+                                    st.warning("⚠️ No hay fechas disponibles para exportar.")
+                                    st.stop()
+                        
+                                if not indices_image or not aoi or not selected_indices:
+                                    st.warning("⚠️ Faltan datos para exportar: asegúrate de haber calculado al menos una imagen.")
+                                    st.stop()
+                        
+                                drive = autenticar_drive_desde_secrets()
+                                archivos_descargados = []
+                        
+                                with st.spinner(f"🚀 Exportando y descargando {len(available_dates)} imágenes..."):
+                                    for fecha in available_dates:
+                                        st.write(f"🛰 Procesando {fecha}...")
+                                        task, nombre_archivo = exportar_geotiff_multibanda(
+                                            indices_image, aoi, fecha, selected_indices, incluir_bandas=incluir_bandas_fijas
+                                        )
+                        
+                                        completado = esperar_tarea_gee(task)
+                        
+                                        if completado:
+                                            archivo_local = descargar_geotiff_desde_drive(drive, nombre_archivo)
+                                            if archivo_local:
+                                                archivos_descargados.append(archivo_local)
+                                                st.success(f"✅ {archivo_local} descargado.")
+                                            else:
+                                                st.warning(f"⚠️ No se pudo encontrar {nombre_archivo} en Drive.")
+                                        else:
+                                            st.error(f"❌ Exportación fallida para {fecha}.")
+                        
+                                # Mostrar botones de descarga
+                                if archivos_descargados:
+                                    st.subheader("📥 Archivos disponibles para descargar:")
+                                    for archivo in archivos_descargados:
+                                        with open(archivo, "rb") as f:
+                                            st.download_button(
+                                                label=f"⬇️ Descargar {archivo}",
+                                                data=f,
+                                                file_name=archivo,
+                                                mime="application/octet-stream"
+                                            )
+
+                            
+
+                            
