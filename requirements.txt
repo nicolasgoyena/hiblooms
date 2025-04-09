@@ -9,3 +9,4 @@ geopandas==1.0.1
 matplotlib==3.10.1
 setuptools
 bs4
+pydrive2
