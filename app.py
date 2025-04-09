@@ -936,6 +936,51 @@ with tab2:
                         df_time = pd.DataFrame(data_time)
 
                         with row2[1]:
+                            # 🔁 Exportar y descargar GeoTIFFs de todos los días disponibles
+                            st.subheader("📤 Exportar y descargar todos los GeoTIFF (multibanda)")
+                            
+                            incluir_bandas_fijas = st.checkbox(
+                                "Incluir bandas originales (B2-B12, SCL, MSK_CLDPRB)", 
+                                value=False
+                            )
+                            
+                            if st.button("Exportar y descargar todos los días"):
+                                if not available_dates or not indices_image or not aoi or not selected_indices:
+                                    st.warning("⚠️ Faltan datos para exportar. Asegúrate de haber visualizado al menos una imagen.")
+                                else:
+                                    drive = autenticar_drive_desde_secrets()
+                                    archivos_descargados = []
+                            
+                                    with st.spinner(f"🚀 Exportando y descargando {len(available_dates)} imágenes..."):
+                                        for fecha in available_dates:
+                                            st.write(f"🛰 Procesando {fecha}...")
+                                            task, nombre_archivo = exportar_geotiff_multibanda(
+                                                indices_image, aoi, fecha, selected_indices, incluir_bandas=incluir_bandas_fijas
+                                            )
+                            
+                                            completado = esperar_tarea_gee(task)
+                            
+                                            if completado:
+                                                archivo_local = descargar_geotiff_desde_drive(drive, nombre_archivo)
+                                                if archivo_local:
+                                                    archivos_descargados.append(archivo_local)
+                                                    st.success(f"✅ {archivo_local} descargado.")
+                                                else:
+                                                    st.warning(f"⚠️ No se pudo encontrar {nombre_archivo} en Drive.")
+                                            else:
+                                                st.error(f"❌ Exportación fallida para {fecha}.")
+                            
+                                    if archivos_descargados:
+                                        st.subheader("📥 Archivos disponibles para descargar:")
+                                        for archivo in archivos_descargados:
+                                            with open(archivo, "rb") as f:
+                                                st.download_button(
+                                                    label=f"⬇️ Descargar {archivo}",
+                                                    data=f,
+                                                    file_name=archivo,
+                                                    mime="application/octet-stream"
+                                                )
+
                             generar_leyenda(selected_indices)
                             if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
                                 df_results = pd.DataFrame(st.session_state["cloud_results"])
@@ -1011,73 +1056,19 @@ with tab2:
 
                         with tab3:
                             st.subheader("📊 Tabla de Índices Calculados")
-                            
-                            if 'df_time' in st.session_state:
-                                df_time = pd.DataFrame(st.session_state['data_time'])
+                        
+                            if df_time is not None and not df_time.empty:
                                 st.dataframe(df_time)
-                            else:
-                                st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
-                                st.stop()
                         
-                            # ✅ Recuperar variables clave para exportación
-                            if all(k in st.session_state for k in ['aoi', 'indices_image', 'selected_indices', 'available_dates']):
-                                aoi = st.session_state['aoi']
-                                indices_image = st.session_state['indices_image']
-                                selected_indices = st.session_state['selected_indices']
-                                available_dates = st.session_state['available_dates']
+                                # Botón de descarga como CSV
+                                csv = df_time.to_csv(index=False).encode("utf-8")
+                                st.download_button(
+                                    label="⬇️ Descargar tabla como CSV",
+                                    data=csv,
+                                    file_name="indices_embalse.csv",
+                                    mime="text/csv"
+                                )
                             else:
-                                st.warning("⚠️ Faltan datos del análisis. Vuelve a la pestaña de Visualización y calcula primero los índices.")
-                                st.stop()  
-                            st.markdown("---")
-                            st.subheader("📦 Exportación de Mapas GeoTIFF (multibanda)")
-                            st.subheader("📤 Exportar y descargar todos los GeoTIFF")
+                                st.warning("⚠️ No hay datos disponibles. Vuelve a la pestaña de Visualización para calcular primero.")
 
-                            incluir_bandas_fijas = st.checkbox(
-                                "Incluir bandas originales (B2-B12, SCL, MSK_CLDPRB)", 
-                                value=False
-                            )
-                        
-                            if st.button("Exportar y descargar todos los días disponibles"):
-                                available_dates = st.session_state.get("available_dates", [])
-                                if not available_dates:
-                                    st.warning("⚠️ No hay fechas disponibles para exportar.")
-                                    st.stop()
-                        
-                                if not indices_image or not aoi or not selected_indices:
-                                    st.warning("⚠️ Faltan datos para exportar: asegúrate de haber calculado al menos una imagen.")
-                                    st.stop()
-                        
-                                drive = autenticar_drive_desde_secrets()
-                                archivos_descargados = []
-                        
-                                with st.spinner(f"🚀 Exportando y descargando {len(available_dates)} imágenes..."):
-                                    for fecha in available_dates:
-                                        st.write(f"🛰 Procesando {fecha}...")
-                                        task, nombre_archivo = exportar_geotiff_multibanda(
-                                            indices_image, aoi, fecha, selected_indices, incluir_bandas=incluir_bandas_fijas
-                                        )
-                        
-                                        completado = esperar_tarea_gee(task)
-                        
-                                        if completado:
-                                            archivo_local = descargar_geotiff_desde_drive(drive, nombre_archivo)
-                                            if archivo_local:
-                                                archivos_descargados.append(archivo_local)
-                                                st.success(f"✅ {archivo_local} descargado.")
-                                            else:
-                                                st.warning(f"⚠️ No se pudo encontrar {nombre_archivo} en Drive.")
-                                        else:
-                                            st.error(f"❌ Exportación fallida para {fecha}.")
-                        
-                                # Mostrar botones de descarga
-                                if archivos_descargados:
-                                    st.subheader("📥 Archivos disponibles para descargar:")
-                                    for archivo in archivos_descargados:
-                                        with open(archivo, "rb") as f:
-                                            st.download_button(
-                                                label=f"⬇️ Descargar {archivo}",
-                                                data=f,
-                                                file_name=archivo,
-                                                mime="application/octet-stream"
-                                            )                            
-                            
+                           
