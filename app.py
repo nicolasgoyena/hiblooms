@@ -327,7 +327,21 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
             "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
             "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
-            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC")
+            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
+            "Simbolic_Index": lambda: b3.divide(b2).add(0.995).divide(b2.subtract(-0.395)).rename("Simbolic_Index"),
+            "Clorofila_Estimada": lambda: (
+                b3.divide(b2).add(0.995)
+                .divide(b2.subtract(-0.395))
+                .multiply(-1.22)
+                .add(-1.22 * -4.17)
+                .multiply(-1)
+                .exp()
+                .add(1)
+                .pow(-1)
+                .multiply(99)
+                .add(1)
+                .rename("Clorofila_Estimada")
+            )
         }
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
@@ -376,7 +390,10 @@ def generar_leyenda(indices_seleccionados):
         "B5_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]}
+        "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
+        "Simbolic_Index": {"min": 1, "max": 6, "palette": ['blue', 'green', 'yellow', 'red']},
+        "Clorofila_Estimada": {"min": 0, "max": 100, "palette": ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494']}
+
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -686,7 +703,7 @@ with tab2:
                 end_date = end_date.strftime('%Y-%m-%d')
 
                 # Selección de índices
-                available_indices = ["MCI", "B5_div_B4","B5_minus_B4","NDCI", "Toming_Index", "PC"]
+                available_indices = ["MCI", "B5_div_B4", "B5_minus_B4", "NDCI", "Toming_Index", "PC", "Simbolic_Index", "Clorofila_Estimada"]
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
@@ -789,7 +806,9 @@ with tab2:
                                     "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
                                     "NDCI": ['blue', 'green', 'yellow', 'red'],
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Paleta específica para PC
+                                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
+                                    "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
+                                    "Clorofila_Estimada": ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494']
                                 }
 
                                 with row2[0]:
