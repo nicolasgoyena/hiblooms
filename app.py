@@ -808,7 +808,7 @@ with tab2:
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_Estimada": ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494']
+                                    "Clorofila_Estimada": ['blue', 'green', 'yellow', 'red']
                                 }
 
                                 with row2[0]:
@@ -895,6 +895,14 @@ with tab2:
                                                 vis_params["min"] = 0.5
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
+                                            elif index == "Simbolic_Index":
+                                                vis_params["min"] = 2.2
+                                                vis_params["max"] = 4.2
+                                                vis_params["palette"] = ['blue', 'green', 'yellow', 'red']
+                                            elif index == "Clorofila_Estimada":
+                                                vis_params["min"] = 5
+                                                vis_params["max"] = 45
+                                                vis_params["palette"] = ['blue', 'green', 'yellow', 'red']
 
                                             index_layer = folium.raster_layers.TileLayer(
                                                 tiles=indices_image.select(index).visualize(**vis_params).getMapId()[
