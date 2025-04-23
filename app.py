@@ -392,8 +392,7 @@ def generar_leyenda(indices_seleccionados):
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Simbolic_Index": {"min": 1, "max": 6, "palette": ['blue', 'green', 'yellow', 'red']},
-        "Clorofila_Estimada": {"min": 0, "max": 100, "palette": ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494']}
-
+        "Clorofila_Estimada": {"min": 5,"max": 45,"palette": ['#cceeff', '#3399ff', '#003399', '#00cc66']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -902,7 +901,8 @@ with tab2:
                                             elif index == "Clorofila_Estimada":
                                                 vis_params["min"] = 5
                                                 vis_params["max"] = 45
-                                                vis_params["palette"] = ['blue', 'green', 'yellow', 'red']
+                                                vis_params["palette"] = ['#cceeff', '#3399ff', '#003399', '#00cc66']
+
 
                                             index_layer = folium.raster_layers.TileLayer(
                                                 tiles=indices_image.select(index).visualize(**vis_params).getMapId()[
