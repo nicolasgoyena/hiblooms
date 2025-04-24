@@ -327,7 +327,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
     "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
     "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
     "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-    "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_Exp"))
+    "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI"))
 }
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
