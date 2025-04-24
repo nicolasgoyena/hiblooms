@@ -377,7 +377,8 @@ def generar_leyenda(indices_seleccionados):
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Clorofila_NDCI": {"min": 5,"max": 45,"palette": ['#cceeff', '#3399ff', '#003399', '#00cc66']}
+        "Clorofila_NDCI": {"min": 0,"max": 260,"palette": ['#ffffcc', '#a1dab4','#41b6c4','#2c7fb8','#253494']
+}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -792,7 +793,7 @@ with tab2:
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_Estimada": ['blue', 'green', 'yellow', 'red']
+                                    "Clorofila_NDCI": ['#ffffcc', '#a1dab4','#41b6c4', '#2c7fb8','#253494']
                                 }
 
                                 with row2[0]:
