@@ -377,7 +377,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']}
+        "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -792,7 +792,7 @@ with tab2:
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_NDCI": ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                    "Clorofila_NDCI": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
                                 with row2[0]:
@@ -882,7 +882,7 @@ with tab2:
                                             elif index == "Clorofila_NDCI":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 150
-                                                vis_params["palette"] = ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                                vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
 
 
 
