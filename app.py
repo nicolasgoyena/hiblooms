@@ -321,28 +321,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b12 = scaled_image.select('B12')
 
         indices_functions = {
-            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename(
-                'MCI'),
-            "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
-            "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
-            "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
-            "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
-            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-            "Simbolic_Index": lambda: b3.divide(b2).add(0.995).divide(b2.subtract(-0.395)).rename("Simbolic_Index"),
-            "Clorofila_Estimada": lambda: (
-                b3.divide(b2).add(0.995)
-                .divide(b2.subtract(-0.395))
-                .multiply(-1.22)
-                .add(-1.22 * -4.17)
-                .multiply(-1)
-                .exp()
-                .add(1)
-                .pow(-1)
-                .multiply(99)
-                .add(1)
-                .rename("Clorofila_Estimada")
-            )
-        }
+    "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
+    "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
+    "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
+    "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
+    "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
+    "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
+    "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_Exp"))
+}
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
 
@@ -391,8 +377,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Simbolic_Index": {"min": 1, "max": 6, "palette": ['blue', 'green', 'yellow', 'red']},
-        "Clorofila_Estimada": {"min": 5,"max": 45,"palette": ['#cceeff', '#3399ff', '#003399', '#00cc66']}
+        "Clorofila_NDCI": {"min": 5,"max": 45,"palette": ['#cceeff', '#3399ff', '#003399', '#00cc66']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -894,11 +879,7 @@ with tab2:
                                                 vis_params["min"] = 0.5
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
-                                            elif index == "Simbolic_Index":
-                                                vis_params["min"] = 2.2
-                                                vis_params["max"] = 4.2
-                                                vis_params["palette"] = ['blue', 'green', 'yellow', 'red']
-                                            elif index == "Clorofila_Estimada":
+                                            elif index == "Clorofila_NDCI":
                                                 vis_params["min"] = 5
                                                 vis_params["max"] = 45
                                                 vis_params["palette"] = ['#cceeff', '#3399ff', '#003399', '#00cc66']
