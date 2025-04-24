@@ -377,7 +377,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Clorofila_NDCI": {"min": 0,"max": 260,"palette": ['#ffffcc', '#a1dab4','#41b6c4','#2c7fb8','#253494']}
+        "Clorofila_NDCI": {"min": 0,"max": 200,"palette": ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -792,7 +792,7 @@ with tab2:
                                     "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_NDCI": ['#ffffcc', '#a1dab4','#41b6c4', '#2c7fb8','#253494']
+                                    "Clorofila_NDCI": ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
                                 with row2[0]:
@@ -881,14 +881,8 @@ with tab2:
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                                             elif index == "Clorofila_NDCI":
                                                 vis_params["min"] = 0
-                                                vis_params["max"] = 260
-                                                vis_params["palette"] = [
-                                                    '#ffffcc',  # bajo
-                                                    '#a1dab4',
-                                                    '#41b6c4',
-                                                    '#2c7fb8',
-                                                    '#253494'   # muy alto
-                                                ]
+                                                vis_params["max"] = 200
+                                                vis_params["palette"] = ['#c6dbef', '#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
 
 
 
