@@ -399,7 +399,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']},
-        "Clorofila_Bellus": {"min": 0,"max": 70,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#fdae61', '#e31a1c']}
+        "Clorofila_Bellus": {"min": 0,"max": 60,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#fdae61', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -906,7 +906,7 @@ with tab2:
                                                 vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                             elif index == "Clorofila_Bellus":
                                                 vis_params["min"] = 0
-                                                vis_params["max"] = 70
+                                                vis_params["max"] = 60
                                                 vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#fdae61', '#e31a1c']
 
 
