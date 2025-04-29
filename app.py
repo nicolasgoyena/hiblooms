@@ -3,9 +3,8 @@
 import ee
 import streamlit as st
 from streamlit_extras.switch_page_button import switch_page
-st.set_page_config(initial_sidebar_state="collapsed", page_title="HIBLOOMS Login", layout="wide")
 
-# ⬇️ Ocultar la navegación lateral de páginas (menu multipage)
+st.set_page_config(initial_sidebar_state="collapsed", page_title="HIBLOOMS – Visor de embalses", layout="wide")
 st.markdown("""
     <style>
         [data-testid="stSidebarNav"] {
@@ -14,8 +13,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
     switch_page("login")
+
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
