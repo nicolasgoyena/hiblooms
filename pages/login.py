@@ -1,8 +1,7 @@
 import streamlit as st
 from streamlit_extras.switch_page_button import switch_page
-import requests
 
-# Configuración de la página
+# Configuración visual
 st.set_page_config(initial_sidebar_state="collapsed", page_title="Inicio de sesión – HIBLOOMS", layout="wide")
 st.markdown("""
     <style>
@@ -15,30 +14,18 @@ st.markdown("""
 # Datos desde secrets
 USERNAME = st.secrets["auth"]["username"]
 PASSWORD = st.secrets["auth"]["password"]
-MY_IP = st.secrets["auth"]["my_ip"]
 
-# Función para obtener IP pública
-def get_public_ip():
-    try:
-        ip = requests.get('https://api.ipify.org').text
-        return ip
-    except:
-        return None
+# Comprobamos si hay un "admin" en la URL
+query_params = st.experimental_get_query_params()
+admin_mode = query_params.get("admin", ["false"])[0].lower() == "true"
 
-# Obtenemos la IP antes de hacer nada
-visitor_ip = get_public_ip()
-
-if visitor_ip is None:
-    st.error("❌ No se pudo obtener tu IP. Por favor, recarga la página.")
-    st.stop()
-
-# Si es tu IP -> login automático
-if visitor_ip == MY_IP:
+# Si está en modo admin -> acceso automático
+if admin_mode:
     st.session_state["logged_in"] = True
     switch_page("app")
     st.stop()
 
-# Si no es tu IP -> mostrar login normal
+# Si no -> login normal
 st.title("🔒 Iniciar sesión en HIBLOOMS")
 
 with st.form("login_form"):
