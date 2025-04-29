@@ -2,34 +2,10 @@
 
 import ee
 import streamlit as st
+from streamlit_extras.switch_page_button import switch_page
 
-# Obtener usuario y contraseña desde secrets
-USERNAME = st.secrets["auth"]["username"]
-PASSWORD = st.secrets["auth"]["password"]
-
-# Si acabamos de loguearnos, forzamos un rerun limpio
-if st.session_state.get("force_rerun", False):
-    st.session_state["force_rerun"] = False
-    st.experimental_rerun()
-
-# Si no está autenticado, mostrar login
 if not st.session_state.get("logged_in", False):
-    st.title("🔒 Acceso restringido")
-
-    with st.form("login_form"):
-        user = st.text_input("Usuario")
-        pwd = st.text_input("Contraseña", type="password")
-        submit_button = st.form_submit_button("Iniciar sesión")
-
-    if submit_button:
-        if user == USERNAME and pwd == PASSWORD:
-            st.session_state["logged_in"] = True
-            st.session_state["force_rerun"] = True  # marcar para rerun limpio
-            st.success("✅ Acceso concedido. Cargando aplicación...")
-            st.stop()
-        else:
-            st.error("❌ Usuario o contraseña incorrectos")
-            st.stop()
+    switch_page("login")
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
