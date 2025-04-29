@@ -30,7 +30,7 @@ if st.session_state.get("logged_in", False):
     st.stop()
 
 # Mostrar formulario de login normal
-st.title("🔒 Iniciar sesión en HIBLOOMS")
+st.title("🔒 Iniciar sesión en visor HIBLOOMS")
 
 with st.form("login_form"):
     user = st.text_input("Usuario")
