@@ -15,7 +15,7 @@ USERNAME = st.secrets["auth"]["username"]
 PASSWORD = st.secrets["auth"]["password"]
 
 # Detectar si viene con admin=true
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 admin_mode = query_params.get("admin", ["false"])[0].lower() == "true"
 
 # Si es modo admin y no se ha logueado ya
