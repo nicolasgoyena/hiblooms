@@ -20,7 +20,6 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
         if user == USERNAME and pwd == PASSWORD:
             st.session_state["logged_in"] = True
             st.success("✅ Acceso concedido. Recarga si no ves el contenido.")
-            st.experimental_rerun()
         else:
             st.error("❌ Usuario o contraseña incorrectos")
     st.stop()
