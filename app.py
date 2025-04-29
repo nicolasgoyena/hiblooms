@@ -3,6 +3,16 @@
 import ee
 import streamlit as st
 from streamlit_extras.switch_page_button import switch_page
+st.set_page_config(initial_sidebar_state="collapsed", page_title="HIBLOOMS Login", layout="wide")
+
+# ⬇️ Ocultar la navegación lateral de páginas (menu multipage)
+st.markdown("""
+    <style>
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 if not st.session_state.get("logged_in", False):
     switch_page("login")
