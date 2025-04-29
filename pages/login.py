@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_extras.switch_page_button import switch_page
 import requests
 
-# Configuración visual
+# Configuración de la página
 st.set_page_config(initial_sidebar_state="collapsed", page_title="Inicio de sesión – HIBLOOMS", layout="wide")
 st.markdown("""
     <style>
@@ -15,7 +15,7 @@ st.markdown("""
 # Datos desde secrets
 USERNAME = st.secrets["auth"]["username"]
 PASSWORD = st.secrets["auth"]["password"]
-MY_IP = st.secrets["auth"]["my_ip"]  # Tu IP segura en secrets
+MY_IP = st.secrets["auth"]["my_ip"]
 
 # Función para obtener IP pública
 def get_public_ip():
@@ -25,24 +25,31 @@ def get_public_ip():
     except:
         return None
 
+# Obtenemos la IP antes de hacer nada
 visitor_ip = get_public_ip()
 
-# Login automático si IP coincide
+if visitor_ip is None:
+    st.error("❌ No se pudo obtener tu IP. Por favor, recarga la página.")
+    st.stop()
+
+# Si es tu IP -> login automático
 if visitor_ip == MY_IP:
     st.session_state["logged_in"] = True
     switch_page("app")
-else:
-    # Formulario de login normal
-    st.title("🔒 Iniciar sesión en HIBLOOMS")
+    st.stop()
 
-    with st.form("login_form"):
-        user = st.text_input("Usuario")
-        pwd = st.text_input("Contraseña", type="password")
-        submit = st.form_submit_button("Iniciar sesión")
+# Si no es tu IP -> mostrar login normal
+st.title("🔒 Iniciar sesión en HIBLOOMS")
 
-    if submit:
-        if user == USERNAME and pwd == PASSWORD:
-            st.session_state["logged_in"] = True
-            switch_page("app")
-        else:
-            st.error("❌ Usuario o contraseña incorrectos")
+with st.form("login_form"):
+    user = st.text_input("Usuario")
+    pwd = st.text_input("Contraseña", type="password")
+    submit = st.form_submit_button("Iniciar sesión")
+
+if submit:
+    if user == USERNAME and pwd == PASSWORD:
+        st.session_state["logged_in"] = True
+        switch_page("app")
+    else:
+        st.error("❌ Usuario o contraseña incorrectos")
+
