@@ -7,8 +7,13 @@ import streamlit as st
 USERNAME = st.secrets["auth"]["username"]
 PASSWORD = st.secrets["auth"]["password"]
 
-# Solo mostrar formulario si no está autenticado
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+# Si acabamos de loguearnos, forzamos un rerun limpio
+if st.session_state.get("force_rerun", False):
+    st.session_state["force_rerun"] = False
+    st.experimental_rerun()
+
+# Si no está autenticado, mostrar login
+if not st.session_state.get("logged_in", False):
     st.title("🔒 Acceso restringido")
 
     with st.form("login_form"):
@@ -19,10 +24,12 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     if submit_button:
         if user == USERNAME and pwd == PASSWORD:
             st.session_state["logged_in"] = True
-            st.success("✅ Acceso concedido. Recarga si no ves el contenido.")
+            st.session_state["force_rerun"] = True  # marcar para rerun limpio
+            st.success("✅ Acceso concedido. Cargando aplicación...")
+            st.stop()
         else:
             st.error("❌ Usuario o contraseña incorrectos")
-    st.stop()
+            st.stop()
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
