@@ -338,11 +338,19 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         indices_functions = {
     "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
     "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
-    "B5_minus_B4": lambda: b5.subtract(b4).rename('B5_minus_B4'),  # S2_MSI_C2X_R705_R665 (B5-B4)
     "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
-    "Toming_Index": lambda: b5.subtract((b4.add(b6)).divide(2)).rename("Toming_Index"),
     "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-    "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI"))
+    "Clorofila_Val_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI")),
+    "Clorofila_Bellus": lambda: (
+        b5.subtract(b4).divide(b5.add(b4))  # NDCI clásico
+        .multiply(-22).multiply(-1)  # equivalente a aplicar k = 22
+        .subtract(22 * 0.1)  # x0 = 0.1
+        .exp()
+        .add(1)
+        .pow(-0.25)
+        .multiply(45)
+        .rename("Clorofila_Bellus")
+    )   
 }
 
         indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
@@ -388,11 +396,10 @@ def generar_leyenda(indices_seleccionados):
     parametros = {
         "MCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "B5_minus_B4": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "Toming_Index": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']}
+        "Clorofila_Bellus": {"min": 0,"max": 150,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -702,7 +709,7 @@ with tab2:
                 end_date = end_date.strftime('%Y-%m-%d')
 
                 # Selección de índices
-                available_indices = ["MCI", "B5_div_B4", "B5_minus_B4", "NDCI", "Toming_Index", "PC", "Clorofila_NDCI"]
+                available_indices = ["MCI", "B5_div_B4", "NDCI", "PC", "Clorofila_NDCI",'"Clorofila_Bellus"]
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
@@ -802,12 +809,11 @@ with tab2:
                                 index_palettes = {
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
                                     "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
-                                    "B5_minus_B4": ['blue', 'green', 'yellow', 'red'],
                                     "NDCI": ['blue', 'green', 'yellow', 'red'],
-                                    "Toming_Index": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
                                     "Clorofila_NDCI": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                    "Clorofila_Bellus": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
                                 with row2[0]:
@@ -895,6 +901,10 @@ with tab2:
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                                             elif index == "Clorofila_NDCI":
+                                                vis_params["min"] = 0
+                                                vis_params["max"] = 150
+                                                vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                            elif index == "Clorofila_Bellus":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 150
                                                 vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
