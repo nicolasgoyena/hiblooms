@@ -2,22 +2,27 @@
 
 import ee
 import streamlit as st
-# Obtener credenciales desde Streamlit Cloud (secrets)
+
+# Obtener usuario y contraseña desde secrets
 USERNAME = st.secrets["auth"]["username"]
 PASSWORD = st.secrets["auth"]["password"]
 
-# Control de acceso por sesión
-def login():
+# Solo mostrar formulario si no está autenticado
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.title("🔒 Acceso restringido")
-    user = st.text_input("Usuario")
-    pwd = st.text_input("Contraseña", type="password")
-    if user == USERNAME and pwd == PASSWORD:
-        st.session_state["logged_in"] = True
-    elif user and pwd:
-        st.error("❌ Usuario o contraseña incorrectos")
 
-if "logged_in" not in st.session_state:
-    login()
+    with st.form("login_form"):
+        user = st.text_input("Usuario")
+        pwd = st.text_input("Contraseña", type="password")
+        submit_button = st.form_submit_button("Iniciar sesión")
+
+    if submit_button:
+        if user == USERNAME and pwd == PASSWORD:
+            st.session_state["logged_in"] = True
+            st.success("✅ Acceso concedido. Recarga si no ves el contenido.")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Usuario o contraseña incorrectos")
     st.stop()
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
