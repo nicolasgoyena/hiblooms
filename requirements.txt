@@ -11,3 +11,4 @@ setuptools
 bs4
 pydrive2
 streamlit-extras
+requests
