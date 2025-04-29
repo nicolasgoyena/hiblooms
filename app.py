@@ -812,7 +812,7 @@ with tab2:
                                     "NDCI": ['blue', 'green', 'yellow', 'red'],
                                     "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_NDCI": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                    "Clorofila_NDCI": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "Clorofila_Bellus": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
