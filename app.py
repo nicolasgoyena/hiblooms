@@ -994,7 +994,9 @@ with tab2:
                             if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
                                 with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
                                     df_results = pd.DataFrame(st.session_state["cloud_results"])
+                                    df_results["Fecha"] = pd.to_datetime(df_results["Fecha"], errors='coerce').dt.strftime("%d-%m-%Y")
                                     st.dataframe(df_results)
+
 
                             # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
                             if "Media_Embalse" in df_time["Point"].unique():
