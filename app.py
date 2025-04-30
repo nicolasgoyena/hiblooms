@@ -274,6 +274,23 @@ def gdf_to_ee_geometry(gdf):
 
     return ee_geometry
 
+def calcular_media_diaria_embalse(indices_image, index_name, aoi):
+    """Calcula la media del índice dado sobre el embalse solo en píxeles de agua (SCL == 6)."""
+    scl = indices_image.select('SCL')
+    mask_agua = scl.eq(6)
+
+    indice_filtrado = indices_image.select(index_name).updateMask(mask_agua)
+
+    media = indice_filtrado.reduceRegion(
+        reducer=ee.Reducer.mean(),
+        geometry=aoi,
+        scale=20,
+        maxPixels=1e13
+    ).get(index_name)
+
+    return media.getInfo() if media is not None else None
+
+
 
 def calculate_cloud_percentage(image, aoi):
     scl = image.select('SCL')
@@ -816,6 +833,24 @@ with tab2:
                                         registro = {"Point": point_name, "Date": day}
                                         registro.update(values)
                                         data_time.append(registro)
+                                # 1️⃣ Añadir datos de puntos de interés
+                                if reservoir_name in puntos_interes:
+                                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
+                                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
+                                        registro = {"Point": point_name, "Date": day}
+                                        registro.update(values)
+                                        data_time.append(registro)
+                                
+                                # 2️⃣ Añadir media diaria del embalse solo en píxeles con SCL == 6
+                                for index in selected_indices:
+                                    media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
+                                    if media_valor is not None:
+                                        data_time.append({
+                                            "Point": "Media_Embalse",
+                                            "Date": day,
+                                            index: media_valor
+                                        })
+
 
                                 index_palettes = {
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
@@ -1023,6 +1058,26 @@ with tab2:
                                     )
 
                                     st.altair_chart(chart, use_container_width=True)
+                                # Mostrar gráfico de la media del embalse con barras
+                                if "Media_Embalse" in df_time["Point"].unique():
+                                    df_media = df_time[df_time["Point"] == "Media_Embalse"]
+                                    df_media_melted = df_media.melt(id_vars=["Point", "Date"],
+                                                                    value_vars=selected_indices,
+                                                                    var_name="Índice", value_name="Valor")
+                                
+                                    st.subheader("📊 Media diaria de concentración en el embalse (solo píxeles de agua)")
+                                
+                                    chart_media = alt.Chart(df_media_melted).mark_bar().encode(
+                                        x=alt.X('Date:T', title='Fecha'),
+                                        y=alt.Y('Valor:Q', title='Valor medio'),
+                                        color=alt.Color('Índice:N', title='Índice'),
+                                        tooltip=['Date:T', 'Índice:N', 'Valor:Q']
+                                    ).properties(
+                                        title="Evolución temporal de la media del embalse (por índice)"
+                                    )
+                                
+                                    st.altair_chart(chart_media, use_container_width=True)
+
 
                         with tab3:
                             st.subheader("Tabla de Índices Calculados")
