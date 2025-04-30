@@ -1046,7 +1046,7 @@ with tab2:
                                                                       var_name="Índice", value_name="Valor")
                             
                                             chart = alt.Chart(df_melted).mark_line(point=True).encode(
-                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora'),
+                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=0)),
                                                 y=alt.Y('Valor:Q', title='Valor'),
                                                 color=alt.Color('Índice:N', title='Índice'),
                                                 tooltip=['Fecha_formateada:N', 'Índice:N', 'Valor:Q']
