@@ -327,6 +327,37 @@ def calculate_cloud_percentage(image, aoi):
 
     return cloud_percentage
 
+def calculate_coverage_percentage(image, aoi):
+    """Devuelve el % del embalse cubierto por la imagen (basado en la banda B4)."""
+    try:
+        # Capa constante para total de píxeles dentro del embalse
+        total_pixels = ee.Image(1).clip(aoi).reduceRegion(
+            reducer=ee.Reducer.count(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
+        ).get("constant")
+
+        # Píxeles con datos válidos (usamos máscara de B4 como indicador)
+        valid_mask = image.select("B4").mask()
+        valid_pixels = ee.Image(1).updateMask(valid_mask).clip(aoi).reduceRegion(
+            reducer=ee.Reducer.count(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
+        ).get("constant")
+
+        if total_pixels is None or valid_pixels is None:
+            return 0
+
+        coverage = ee.Number(valid_pixels).divide(ee.Number(total_pixels)).multiply(100)
+        return coverage.getInfo()
+
+    except Exception as e:
+        print(f"Error al calcular cobertura de imagen: {e}")
+        return 0
+
+
 def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices):
     with st.spinner("Procesando imágenes de Sentinel-2 para " + selected_date + "..."):
         selected_date_ee = ee.Date(selected_date)
@@ -335,39 +366,41 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
             .filterBounds(aoi) \
             .filterDate(selected_date_ee, end_date_ee)
-        
+
         num_images = sentinel2.size().getInfo()
-        
+
         if num_images == 0:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
-        
-        # Si solo hay una imagen, usamos esa directamente
-        if num_images == 1:
-            sentinel2_image = sentinel2.first()
-        else:
-            # Varias imágenes: elegimos la de menor nubosidad en el embalse
-            images = sentinel2.toList(num_images)
-            min_cloud_score = None
-            best_image = None
-        
-            for i in range(num_images):
-                image = ee.Image(images.get(i))
-                try:
-                    cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
-                    if min_cloud_score is None or cloud_score < min_cloud_score:
-                        min_cloud_score = cloud_score
-                        best_image = image
-                except Exception as e:
-                    st.warning(f"Error al calcular nubosidad en imagen {i}: {e}")
-                    continue
-        
-            if best_image is None:
-                st.warning(f"No se pudo determinar la mejor imagen por nubosidad para {selected_date}")
-                return None, None, None
-        
-            sentinel2_image = best_image
 
+        images = sentinel2.toList(num_images)
+
+        best_image = None
+        best_score = None  # Combinación de baja nubosidad y alta cobertura
+
+        for i in range(num_images):
+            image = ee.Image(images.get(i))
+            try:
+                cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
+                coverage = calculate_coverage_percentage(image, aoi)
+
+                if coverage < 50:
+                    continue  # ❌ Rechazar si cubre menos del 50% del embalse
+
+                # Escoger imagen con MENOR nubosidad (puedes cambiar el criterio si lo deseas)
+                if best_score is None or cloud_score < best_score:
+                    best_score = cloud_score
+                    best_image = image
+
+            except Exception as e:
+                st.warning(f"Error al procesar imagen {i}: {e}")
+                continue
+
+        if best_image is None:
+            st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
+            return None, None, None
+
+        sentinel2_image = best_image
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -376,7 +409,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         for banda in bandas_requeridas:
             if banda not in bandas_disponibles:
-                st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}. Saltando esta fecha.")
+                st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}.")
                 return None, None, None
 
         clipped_image = sentinel2_image.clip(aoi)
@@ -392,7 +425,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),
             "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
             "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-            "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI")),
+            "Clorofila_NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI"),
             "Clorofila_Bellus": lambda: (
                 b5.subtract(b4).divide(b5.add(b4))
                 .multiply(-22).multiply(-1)
@@ -419,6 +452,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         indices_image = scaled_image.addBands(indices_to_add)
         return scaled_image, indices_image, image_date
+
 
 
 
