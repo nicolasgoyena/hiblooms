@@ -10,8 +10,21 @@ st.markdown("""
         [data-testid="stSidebarNav"] {
             display: none;
         }
+
+        /* Ocultar el icono de enlace */
+        h1:hover a.anchor-link,
+        h2:hover a.anchor-link,
+        h3:hover a.anchor-link {
+            display: none !important;
+        }
+
+        /* Desactivar clic en el icono de ancla (por si el HTML sigue ahí) */
+        a.anchor-link {
+            pointer-events: none;
+        }
     </style>
 """, unsafe_allow_html=True)
+
 
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
