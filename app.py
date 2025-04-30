@@ -315,7 +315,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        bandas_requeridas = ['B4', 'B5', 'B6']
+        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
 
         for banda in bandas_requeridas:
