@@ -335,12 +335,39 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
             .filterBounds(aoi) \
             .filterDate(selected_date_ee, end_date_ee)
-
-        if sentinel2.size().getInfo() == 0:
+        
+        num_images = sentinel2.size().getInfo()
+        
+        if num_images == 0:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
+        
+        # Si solo hay una imagen, usamos esa directamente
+        if num_images == 1:
+            sentinel2_image = sentinel2.first()
+        else:
+            # Varias imágenes: elegimos la de menor nubosidad en el embalse
+            images = sentinel2.toList(num_images)
+            min_cloud_score = None
+            best_image = None
+        
+            for i in range(num_images):
+                image = ee.Image(images.get(i))
+                try:
+                    cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
+                    if min_cloud_score is None or cloud_score < min_cloud_score:
+                        min_cloud_score = cloud_score
+                        best_image = image
+                except Exception as e:
+                    st.warning(f"Error al calcular nubosidad en imagen {i}: {e}")
+                    continue
+        
+            if best_image is None:
+                st.warning(f"No se pudo determinar la mejor imagen por nubosidad para {selected_date}")
+                return None, None, None
+        
+            sentinel2_image = best_image
 
-        sentinel2_image = sentinel2.first()
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
