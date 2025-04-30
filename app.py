@@ -203,12 +203,13 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
             if max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage:
                 available_dates.add(formatted_date)
             
-            # 🔹 Guardar SIEMPRE el resultado en la tabla
+            image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
             results_list.append({
                 "Fecha": formatted_date,
+                "Hora": image_time,
                 "Nubosidad aproximada (%)": round(cloud_percentage, 2)
             })
-    
+
         fin_iter = time.time()
         print(f"Tiempo en procesar imagen {formatted_date}: {fin_iter - inicio_iter:.2f} seg")
 
