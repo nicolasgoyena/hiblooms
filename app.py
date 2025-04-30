@@ -690,6 +690,9 @@ with tab2:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
+                gdf_4326 = gdf.to_crs(epsg=4326)
+                bounds = gdf_4326.total_bounds  # (minx, miny, maxx, maxy)
+                map_embalses.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad")
