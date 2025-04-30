@@ -724,7 +724,7 @@ with tab2:
                     value=(datetime.today() - timedelta(days=15), datetime.today()),  # Últimos 15 días hasta hoy
                     min_value=datetime(2017, 7, 1),  # Fecha mínima permitida
                     max_value=datetime.today(),  # Restringe la selección hasta el día actual
-                    format="YYYY-MM-DD"
+                    format="DD-MM-YYYY"
                 )
 
                 # Extraer fechas seleccionadas
@@ -863,7 +863,8 @@ with tab2:
                                 }
 
                                 with row2[0]:
-                                    with st.expander(f"📅 Mapa de Índices para {image_date}"):
+                                    image_date_fmt = datetime.strptime(image_date, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y")
+                                    with st.expander(f"📅 Mapa de Índices para {image_date_fmt}"):
                                         gdf_4326 = gdf.to_crs(epsg=4326)
                                         map_center = [gdf_4326.geometry.centroid.y.mean(),
                                                       gdf_4326.geometry.centroid.x.mean()]
