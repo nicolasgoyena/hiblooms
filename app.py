@@ -986,96 +986,88 @@ with tab2:
                             st.info("🔧 Puedes descargar todos los archivos y luego comprimirlos en ZIP en tu ordenador.")
 
                         with row2[1]:
-                            generar_leyenda(selected_indices)
+                            # 🔽 Leyenda de índices y capas
+                            with st.expander("🗺️ Leyenda de índices y capas", expanded=False):
+                                generar_leyenda(selected_indices)
+                        
+                            # 🔽 Tabla de nubosidad estimada por imagen
                             if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
-                                df_results = pd.DataFrame(st.session_state["cloud_results"])
-                                st.write("### ☁️ Nubosidad aproximada:")
-                                st.dataframe(df_results)
-
+                                with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
+                                    df_results = pd.DataFrame(st.session_state["cloud_results"])
+                                    st.dataframe(df_results)
+                        
+                            # 🔽 Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val":
-                                st.subheader("📈 Concentración real de ficocianina (sonda SAICA)")
-                            
-                                # URLs de los CSV en Google Drive
-                                urls_csv = [
-                                    "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
-                                    "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
-                                ]
-                            
-                                # Cargar y concatenar los CSV válidos
-                                df_list = [cargar_csv_desde_url(url) for url in urls_csv]
-                                df_list = [df for df in df_list if not df.empty]
-                            
-                                if df_list:
-                                    df_fico = pd.concat(df_list).sort_values('Fecha-hora')
-                            
-                                    # Filtrar por rango de fechas definido en la app
-                                    start_dt = pd.to_datetime(start_date)
-                                    end_dt = pd.to_datetime(end_date)
-                                    df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
-                            
-                                    if df_filtrado.empty:
-                                        st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
+                                    urls_csv = [
+                                        "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
+                                        "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
+                                    ]
+                                    df_list = [cargar_csv_desde_url(url) for url in urls_csv]
+                                    df_list = [df for df in df_list if not df.empty]
+                        
+                                    if df_list:
+                                        df_fico = pd.concat(df_list).sort_values('Fecha-hora')
+                                        start_dt = pd.to_datetime(start_date)
+                                        end_dt = pd.to_datetime(end_date)
+                                        df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
+                        
+                                        if df_filtrado.empty:
+                                            st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                        else:
+                                            max_puntos_grafico = 500
+                                            step = max(1, len(df_filtrado) // max_puntos_grafico)
+                                            df_subsample = df_filtrado.iloc[::step]
+                                            df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
+                        
+                                            chart_fico = alt.Chart(df_subsample).mark_line().encode(
+                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
+                                                y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
+                                                tooltip=[
+                                                    alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
+                                                    alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
+                                                ]
+                                            ).properties(
+                                                title="Evolución de la concentración de ficocianina (µg/L)"
+                                            )
+                        
+                                            st.altair_chart(chart_fico, use_container_width=True)
                                     else:
-                                        # Submuestreo si hay demasiados puntos
-                                        max_puntos_grafico = 500
-                                        step = max(1, len(df_filtrado) // max_puntos_grafico)
-                                        df_subsample = df_filtrado.iloc[::step]
-                                        df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
-
-                                        chart_fico = alt.Chart(df_subsample).mark_line().encode(
-                                            x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
-                                            y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
-                                            tooltip=[
-                                                alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
-                                                alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
-                                            ]
-                                        ).properties(
-                                            title="Evolución de la concentración de ficocianina (µg/L)"
-                                        )
-
-                                        st.altair_chart(chart_fico, use_container_width=True)
-                                else:
-                                    st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
-
-                            st.subheader("Gráficos de Líneas por Punto de Interés")
-
-                            if df_time.empty:
-                                st.warning("No hay datos de puntos de interés para este embalse.")
-                            else:
-                                for point in df_time["Point"].unique():
-                                    df_point = df_time[df_time["Point"] == point]
-
-                                    df_melted = df_point.melt(id_vars=["Point", "Date"],
-                                                              value_vars=selected_indices,
-                                                              var_name="Índice", value_name="Valor")
-
-                                    chart = alt.Chart(df_melted).mark_line(point=True).encode(
-                                        x=alt.X('Date:T', title='Fecha'),
-                                        y=alt.Y('Valor:Q', title='Valor'),
-                                        color=alt.Color('Índice:N', title='Índice')
-                                    ).properties(
-                                        title=f"Valores de índices en {point}"
-                                    )
-
-                                    st.altair_chart(chart, use_container_width=True)
-
-                                if "Media_Embalse" in df_time["Point"].unique():
+                                        st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
+                        
+                            # 🔽 Gráficos por punto de interés
+                            if not df_time.empty:
+                                with st.expander("📉 Gráficos de valores por punto de interés", expanded=False):
+                                    for point in df_time["Point"].unique():
+                                        if point != "Media_Embalse":
+                                            df_point = df_time[df_time["Point"] == point]
+                                            df_melted = df_point.melt(id_vars=["Point", "Date"],
+                                                                      value_vars=selected_indices,
+                                                                      var_name="Índice", value_name="Valor")
+                        
+                                            chart = alt.Chart(df_melted).mark_line(point=True).encode(
+                                                x=alt.X('Date:T', title='Fecha'),
+                                                y=alt.Y('Valor:Q', title='Valor'),
+                                                color=alt.Color('Índice:N', title='Índice')
+                                            ).properties(
+                                                title=f"Valores de índices en {point}"
+                                            )
+                        
+                                            st.altair_chart(chart, use_container_width=True)
+                        
+                            # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
+                            if "Media_Embalse" in df_time["Point"].unique():
+                                with st.expander("📊 Evolución de la media diaria del embalse (solo píxeles de agua)", expanded=False):
                                     df_media = df_time[df_time["Point"] == "Media_Embalse"]
                                     df_media_melted = df_media.melt(id_vars=["Point", "Date"],
                                                                     value_vars=selected_indices,
                                                                     var_name="Índice", value_name="Valor")
-                                
-                                    # ✅ Asegurarse de que la columna Date es datetime
                                     df_media_melted["Date"] = pd.to_datetime(df_media_melted["Date"], errors='coerce')
-                                
-                                    # ✅ Crear columna de texto para agrupar correctamente en X
                                     df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%Y-%m-%d")
-                                
-                                    st.subheader("📊 Media diaria de concentración en el embalse (solo píxeles de agua)")
-                                
+                        
                                     chart_media = alt.Chart(df_media_melted).mark_bar().encode(
                                         x=alt.X('Fecha_str:N', title='Fecha'),
-                                        xOffset='Índice:N',  # 🔁 barras lado a lado
+                                        xOffset='Índice:N',
                                         y=alt.Y('Valor:Q', title='Valor medio'),
                                         color=alt.Color('Índice:N', title='Índice'),
                                         tooltip=['Fecha_str:N', 'Índice:N', 'Valor:Q']
@@ -1086,9 +1078,9 @@ with tab2:
                                     ).configure_axis(
                                         labelAngle=-45
                                     )
-                                
+                        
                                     st.altair_chart(chart_media, use_container_width=True)
-
+                        
 
 
                         with tab3:
