@@ -1065,26 +1065,29 @@ with tab2:
                                                                     value_vars=selected_indices,
                                                                     var_name="Índice", value_name="Valor")
                                 
-                                    # 🔁 Convertimos la fecha a string para agrupar correctamente
+                                    # ✅ Asegurarse de que la columna Date es datetime
+                                    df_media_melted["Date"] = pd.to_datetime(df_media_melted["Date"], errors='coerce')
+                                
+                                    # ✅ Crear columna de texto para agrupar correctamente en X
                                     df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%Y-%m-%d")
                                 
                                     st.subheader("📊 Media diaria de concentración en el embalse (solo píxeles de agua)")
                                 
                                     chart_media = alt.Chart(df_media_melted).mark_bar().encode(
                                         x=alt.X('Fecha_str:N', title='Fecha'),
+                                        xOffset='Índice:N',  # 🔁 barras lado a lado
                                         y=alt.Y('Valor:Q', title='Valor medio'),
                                         color=alt.Color('Índice:N', title='Índice'),
-                                        column=alt.Column('Índice:N', title=None),  # O elimina esto si prefieres todo en un gráfico
                                         tooltip=['Fecha_str:N', 'Índice:N', 'Valor:Q']
                                     ).properties(
-                                        title="Evolución temporal de la media del embalse",
-                                        width=40  # Ancho de cada grupo de barras
+                                        title="Evolución temporal de la media del embalse (barras por índice)",
+                                        width=500,
+                                        height=400
                                     ).configure_axis(
                                         labelAngle=-45
                                     )
                                 
                                     st.altair_chart(chart_media, use_container_width=True)
-
 
 
 
