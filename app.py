@@ -298,72 +298,72 @@ def calculate_cloud_percentage(image, aoi):
 
     return cloud_percentage
 
-
-
-    return cloud_percentage
 def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices):
     with st.spinner("Procesando imágenes de Sentinel-2 para " + selected_date + "..."):
         selected_date_ee = ee.Date(selected_date)
         end_date_ee = selected_date_ee.advance(1, 'day')
 
-        # Filtrar imágenes por fecha y ubicación
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
             .filterBounds(aoi) \
             .filterDate(selected_date_ee, end_date_ee)
 
         if sentinel2.size().getInfo() == 0:
-            st.warning("No hay imágenes disponibles para la fecha {}".format(selected_date))
+            st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
 
         sentinel2_image = sentinel2.first()
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
+        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
+        bandas_disponibles = sentinel2_image.bandNames().getInfo()
+
+        for banda in bandas_requeridas:
+            if banda not in bandas_disponibles:
+                st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}. Saltando esta fecha.")
+                return None, None, None
+
         clipped_image = sentinel2_image.clip(aoi)
-
-
-        # Procesamiento de bandas e índices
-        optical_bands = clipped_image.select(['B2', 'B3', 'B4', 'B5', 'B6', 'B8', 'B11', 'B12']).divide(10000)
+        optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
-        b2 = scaled_image.select('B2')
-        b3 = scaled_image.select('B3')
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8 = scaled_image.select('B8')
-        b11 = scaled_image.select('B11')
-        b12 = scaled_image.select('B12')
 
         indices_functions = {
-    "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
-    "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),  # PCI (B5/B4)
-    "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
-    "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-    "Clorofila_Val_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI")),
-    "Clorofila_Bellus": lambda: (
-        b5.subtract(b4).divide(b5.add(b4))  # NDCI clásico
-        .multiply(-22).multiply(-1)  # equivalente a aplicar k = 22
-        .subtract(22 * 0.1)  # x0 = 0.1
-        .exp()
-        .add(1)
-        .pow(-0.25)
-        .multiply(45)
-        .rename("Clorofila_Bellus")
-    )   
-}
+            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
+            "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),
+            "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
+            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
+            "Clorofila_NDCI": lambda: (b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI")),
+            "Clorofila_Bellus": lambda: (
+                b5.subtract(b4).divide(b5.add(b4))
+                .multiply(-22).multiply(-1)
+                .subtract(22 * 0.1)
+                .exp()
+                .add(1)
+                .pow(-0.25)
+                .multiply(45)
+                .rename("Clorofila_Bellus")
+            )
+        }
 
-        indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
+        indices_to_add = []
+        for index in selected_indices:
+            try:
+                if index in indices_functions:
+                    indices_to_add.append(indices_functions[index]())
+            except Exception as e:
+                st.warning(f"⚠️ No se pudo calcular el índice {index} en {selected_date}: {e}")
+
+        if not indices_to_add:
+            st.warning(f"⚠️ No se generó ningún índice válido para la fecha {selected_date}.")
+            return scaled_image, None, image_date
 
         indices_image = scaled_image.addBands(indices_to_add)
-
         return scaled_image, indices_image, image_date
 
-        indices_to_add = [indices_functions[index]() for index in selected_indices if index in indices_functions]
-
-        indices_image = scaled_image.addBands(indices_to_add)
-
-        return scaled_image, indices_image, image_date
 
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
