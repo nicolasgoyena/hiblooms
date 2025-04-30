@@ -315,7 +315,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
+        bandas_requeridas = ['B4', 'B5', 'B6']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
 
         for banda in bandas_requeridas:
@@ -398,7 +398,7 @@ def generar_leyenda(indices_seleccionados):
         "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']},
+        "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
         "Clorofila_Bellus": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
@@ -903,7 +903,7 @@ with tab2:
                                             elif index == "Clorofila_NDCI":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 150
-                                                vis_params["palette"] = ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                                vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index == "Clorofila_Bellus":
                                                 vis_params["min"] = 5
                                                 vis_params["max"] = 55
