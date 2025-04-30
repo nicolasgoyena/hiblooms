@@ -11,16 +11,11 @@ st.markdown("""
             display: none;
         }
 
-        /* Ocultar el icono de enlace */
-        h1:hover a.anchor-link,
-        h2:hover a.anchor-link,
-        h3:hover a.anchor-link {
+        /* Ocultar completamente los enlaces automáticos de encabezados (ícono + funcionalidad) */
+        h1 a, h2 a, h3 a {
             display: none !important;
-        }
-
-        /* Desactivar clic en el icono de ancla (por si el HTML sigue ahí) */
-        a.anchor-link {
-            pointer-events: none;
+            pointer-events: none !important;
+            text-decoration: none !important;
         }
     </style>
 """, unsafe_allow_html=True)
