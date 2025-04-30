@@ -995,6 +995,32 @@ with tab2:
                                 with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
                                     df_results = pd.DataFrame(st.session_state["cloud_results"])
                                     st.dataframe(df_results)
+
+                            # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
+                            if "Media_Embalse" in df_time["Point"].unique():
+                                with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
+                                    df_media = df_time[df_time["Point"] == "Media_Embalse"]
+                                    df_media_melted = df_media.melt(id_vars=["Point", "Date"],
+                                                                    value_vars=selected_indices,
+                                                                    var_name="Índice", value_name="Valor")
+                                    df_media_melted["Date"] = pd.to_datetime(df_media_melted["Date"], errors='coerce')
+                                    df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%d-%m-%Y")
+                        
+                                    chart_media = alt.Chart(df_media_melted).mark_bar().encode(
+                                        x=alt.X('Fecha_str:N', title='Fecha'),
+                                        xOffset='Índice:N',
+                                        y=alt.Y('Valor:Q', title='Valor medio'),
+                                        color=alt.Color('Índice:N', title='Índice'),
+                                        tooltip=['Fecha_str:N', 'Índice:N', 'Valor:Q']
+                                    ).properties(
+                                        title="Evolución temporal de la media del embalse",
+                                        width=500,
+                                        height=400
+                                    ).configure_axis(
+                                        labelAngle=0
+                                    )
+                        
+                                    st.altair_chart(chart_media, use_container_width=True)
                         
                             # 🔽 Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val":
@@ -1055,35 +1081,6 @@ with tab2:
                                             )
                             
                                             st.altair_chart(chart, use_container_width=True)
-
-                        
-                            # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
-                            if "Media_Embalse" in df_time["Point"].unique():
-                                with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
-                                    df_media = df_time[df_time["Point"] == "Media_Embalse"]
-                                    df_media_melted = df_media.melt(id_vars=["Point", "Date"],
-                                                                    value_vars=selected_indices,
-                                                                    var_name="Índice", value_name="Valor")
-                                    df_media_melted["Date"] = pd.to_datetime(df_media_melted["Date"], errors='coerce')
-                                    df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%d-%m-%Y")
-                        
-                                    chart_media = alt.Chart(df_media_melted).mark_bar().encode(
-                                        x=alt.X('Fecha_str:N', title='Fecha'),
-                                        xOffset='Índice:N',
-                                        y=alt.Y('Valor:Q', title='Valor medio'),
-                                        color=alt.Color('Índice:N', title='Índice'),
-                                        tooltip=['Fecha_str:N', 'Índice:N', 'Valor:Q']
-                                    ).properties(
-                                        title="Evolución temporal de la media del embalse",
-                                        width=500,
-                                        height=400
-                                    ).configure_axis(
-                                        labelAngle=0
-                                    )
-                        
-                                    st.altair_chart(chart_media, use_container_width=True)
-                        
-
 
                         with tab3:
                             st.subheader("Tabla de Índices Calculados")
