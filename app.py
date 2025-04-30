@@ -1035,35 +1035,37 @@ with tab2:
                                     else:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
                         
-                            # 🔽 Gráficos por punto de interés
                             if not df_time.empty:
                                 with st.expander("📉 Gráficos de valores por punto de interés", expanded=False):
+                                    df_time["Fecha_formateada"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
                                     for point in df_time["Point"].unique():
                                         if point != "Media_Embalse":
                                             df_point = df_time[df_time["Point"] == point]
-                                            df_melted = df_point.melt(id_vars=["Point", "Date"],
+                                            df_melted = df_point.melt(id_vars=["Point", "Fecha_formateada"],
                                                                       value_vars=selected_indices,
                                                                       var_name="Índice", value_name="Valor")
-                        
+                            
                                             chart = alt.Chart(df_melted).mark_line(point=True).encode(
-                                                x=alt.X('Date:T', title='Fecha'),
+                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora'),
                                                 y=alt.Y('Valor:Q', title='Valor'),
-                                                color=alt.Color('Índice:N', title='Índice')
+                                                color=alt.Color('Índice:N', title='Índice'),
+                                                tooltip=['Fecha_formateada:N', 'Índice:N', 'Valor:Q']
                                             ).properties(
                                                 title=f"Valores de índices en {point}"
                                             )
-                        
+                            
                                             st.altair_chart(chart, use_container_width=True)
+
                         
                             # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
                             if "Media_Embalse" in df_time["Point"].unique():
-                                with st.expander("📊 Evolución de la media diaria del embalse (solo píxeles de agua)", expanded=False):
+                                with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
                                     df_media = df_time[df_time["Point"] == "Media_Embalse"]
                                     df_media_melted = df_media.melt(id_vars=["Point", "Date"],
                                                                     value_vars=selected_indices,
                                                                     var_name="Índice", value_name="Valor")
                                     df_media_melted["Date"] = pd.to_datetime(df_media_melted["Date"], errors='coerce')
-                                    df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%Y-%m-%d")
+                                    df_media_melted["Fecha_str"] = df_media_melted["Date"].dt.strftime("%d-%m-%Y")
                         
                                     chart_media = alt.Chart(df_media_melted).mark_bar().encode(
                                         x=alt.X('Fecha_str:N', title='Fecha'),
@@ -1072,11 +1074,11 @@ with tab2:
                                         color=alt.Color('Índice:N', title='Índice'),
                                         tooltip=['Fecha_str:N', 'Índice:N', 'Valor:Q']
                                     ).properties(
-                                        title="Evolución temporal de la media del embalse (barras por índice)",
+                                        title="Evolución temporal de la media del embalse",
                                         width=500,
                                         height=400
                                     ).configure_axis(
-                                        labelAngle=-45
+                                        labelAngle=0
                                     )
                         
                                     st.altair_chart(chart_media, use_container_width=True)
