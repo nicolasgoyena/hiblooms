@@ -685,7 +685,7 @@ with tab2:
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad")
-                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 20-25%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 10)
+                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 25%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 10)
                 if max_cloud_percentage == 100:
                     st.info("🔁 Has seleccionado un 100 % de nubosidad permitida: se mostrarán todas las imágenes del periodo. Aun así, se estimará la nubosidad de cada imagen.")
 
