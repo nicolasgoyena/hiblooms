@@ -134,25 +134,13 @@ def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
 
 
 # Función combinada para cargar el shapefile, ajustar el zoom y mostrar los embalses con tooltip
-def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE", reservoir_name=None):
+def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE"):
     if os.path.exists(shapefile_path):
         gdf_embalses = gpd.read_file(shapefile_path).to_crs(epsg=4326)  # Convertir a WGS84
 
-        # Ajustar el zoom solo al embalse seleccionado (si se proporciona)
-        if reservoir_name:
-            selected_gdf = gdf_embalses[gdf_embalses[nombre_columna].str.lower() == reservoir_name.lower()]
-            if not selected_gdf.empty:
-                bounds = selected_gdf.total_bounds
-                map_object.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-            else:
-                # Si no se encuentra, ajustar a todos
-                bounds = gdf_embalses.total_bounds
-                map_object.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-        else:
-            # Si no hay embalse seleccionado, ajustar a todos
-            bounds = gdf_embalses.total_bounds
-            map_object.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-
+        # Ajustar el zoom automáticamente a la extensión de los embalses
+        bounds = gdf_embalses.total_bounds  # (minx, miny, maxx, maxy)
+        map_object.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
         for _, row in gdf_embalses.iterrows():
             nombre_embalse = row.get(nombre_columna, "Embalse desconocido")  # Obtener el nombre real
@@ -683,6 +671,11 @@ with tab2:
     with row1[0]:
         st.subheader("Mapa de Embalses")
         map_embalses = geemap.Map(center=[42.0, 0.5], zoom=8)
+        cargar_y_mostrar_embalses(
+            map_embalses,
+            shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
+            nombre_columna="NOMBRE"
+        )
         folium_static(map_embalses)
 
     with row1[1]:
@@ -692,18 +685,12 @@ with tab2:
 
         # Seleccionar embalse
         reservoir_name = st.selectbox("Selecciona un embalse", nombres_embalses)
-        cargar_y_mostrar_embalses(
-            map_embalses,
-            shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
-            nombre_columna="NOMBRE",
-            reservoir_name=reservoir_name
-        )
-
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
+
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad")
                 max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 25%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 10)
