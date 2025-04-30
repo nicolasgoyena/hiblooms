@@ -670,7 +670,7 @@ with tab2:
 
     with row1[0]:
         st.subheader("Mapa de Embalses")
-        map_embalses = geemap.Map(center=[42.0, 0.5], zoom=18)
+        map_embalses = geemap.Map(center=[42.0, 0.5], zoom=6)
         cargar_y_mostrar_embalses(
             map_embalses,
             shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
