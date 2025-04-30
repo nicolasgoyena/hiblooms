@@ -683,12 +683,6 @@ with tab2:
     with row1[0]:
         st.subheader("Mapa de Embalses")
         map_embalses = geemap.Map(center=[42.0, 0.5], zoom=8)
-        cargar_y_mostrar_embalses(
-            map_embalses,
-            shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
-            nombre_columna="NOMBRE",
-            reservoir_name=reservoir_name
-        )
         folium_static(map_embalses)
 
     with row1[1]:
@@ -698,6 +692,13 @@ with tab2:
 
         # Seleccionar embalse
         reservoir_name = st.selectbox("Selecciona un embalse", nombres_embalses)
+        cargar_y_mostrar_embalses(
+            map_embalses,
+            shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
+            nombre_columna="NOMBRE",
+            reservoir_name=reservoir_name
+        )
+
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
