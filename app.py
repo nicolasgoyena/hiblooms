@@ -383,10 +383,10 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             try:
                 cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
                 coverage = calculate_coverage_percentage(image, aoi)
-
-                if coverage < 50:
-                    continue  # ❌ Rechazar si cubre menos del 50% del embalse
                 
+                if coverage < 50 or cloud_score > max_cloud_percentage:
+                    continue  # ❌ Rechazar si cubre menos del 50% o supera nubosidad máxima
+   
                 # Escoger imagen con MENOR nubosidad
                 if best_score is None or cloud_score < best_score:
                     best_score = cloud_score
