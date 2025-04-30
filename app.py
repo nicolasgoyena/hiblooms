@@ -1058,7 +1058,8 @@ with tab2:
                                     )
 
                                     st.altair_chart(chart, use_container_width=True)
-                                # Mostrar gráfico de la media del embalse con barras
+
+                                # Mostrar gráfico de la media del embalse con barras (barras lado a lado por índice)
                                 if "Media_Embalse" in df_time["Point"].unique():
                                     df_media = df_time[df_time["Point"] == "Media_Embalse"]
                                     df_media_melted = df_media.melt(id_vars=["Point", "Date"],
@@ -1069,14 +1070,16 @@ with tab2:
                                 
                                     chart_media = alt.Chart(df_media_melted).mark_bar().encode(
                                         x=alt.X('Date:T', title='Fecha'),
+                                        xOffset='Índice:N',
                                         y=alt.Y('Valor:Q', title='Valor medio'),
                                         color=alt.Color('Índice:N', title='Índice'),
                                         tooltip=['Date:T', 'Índice:N', 'Valor:Q']
                                     ).properties(
-                                        title="Evolución temporal de la media del embalse (por índice)"
+                                        title="Evolución temporal de la media del embalse (barras por índice)"
                                     )
                                 
                                     st.altair_chart(chart_media, use_container_width=True)
+
 
 
                         with tab3:
