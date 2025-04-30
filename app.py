@@ -1056,9 +1056,12 @@ with tab2:
                             # 🔽 Tabla de nubosidad estimada por imagen
                             if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
                                 with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
+                                    used_dates = st.session_state.get("available_dates", [])
                                     df_results = pd.DataFrame(st.session_state["cloud_results"])
+                                    df_results = df_results[df_results["Fecha"].isin(used_dates)].copy()
                                     df_results["Fecha"] = pd.to_datetime(df_results["Fecha"], errors='coerce').dt.strftime("%d-%m-%Y")
                                     st.dataframe(df_results)
+
 
 
                             # 🔽 Gráfico de barras con la media diaria del embalse (solo agua)
