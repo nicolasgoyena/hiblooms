@@ -386,11 +386,23 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
                 if coverage < 50:
                     continue  # ❌ Rechazar si cubre menos del 50% del embalse
-
-                # Escoger imagen con MENOR nubosidad (puedes cambiar el criterio si lo deseas)
+                
+                # Escoger imagen con MENOR nubosidad
                 if best_score is None or cloud_score < best_score:
                     best_score = cloud_score
                     best_image = image
+                
+                    # Registrar el resultado de nubosidad solo para la mejor imagen
+                    image_time = image.get('system:time_start').getInfo()
+                    hora = datetime.utcfromtimestamp(image_time / 1000).strftime('%H:%M')
+                    if "used_cloud_results" not in st.session_state:
+                        st.session_state["used_cloud_results"] = []
+                    st.session_state["used_cloud_results"].append({
+                        "Fecha": selected_date,
+                        "Hora": hora,
+                        "Nubosidad aproximada (%)": round(cloud_score, 2)
+                    })
+                
 
             except Exception as e:
                 st.warning(f"Error al procesar imagen {i}: {e}")
@@ -1054,11 +1066,9 @@ with tab2:
                                 generar_leyenda(selected_indices)
                         
                             # 🔽 Tabla de nubosidad estimada por imagen
-                            if "cloud_results" in st.session_state and st.session_state["cloud_results"]:
+                            if "used_cloud_results" in st.session_state and st.session_state["used_cloud_results"]:
                                 with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
-                                    used_dates = st.session_state.get("available_dates", [])
-                                    df_results = pd.DataFrame(st.session_state["cloud_results"])
-                                    df_results = df_results[df_results["Fecha"].isin(used_dates)].copy()
+                                    df_results = pd.DataFrame(st.session_state["used_cloud_results"])
                                     df_results["Fecha"] = pd.to_datetime(df_results["Fecha"], errors='coerce').dt.strftime("%d-%m-%Y")
                                     st.dataframe(df_results)
 
