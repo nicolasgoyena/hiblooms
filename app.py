@@ -815,10 +815,16 @@ with tab2:
                 selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
 
                 if st.button("Calcular y mostrar resultados"):
-                    spinner_placeholder = st.empty()
-                    with spinner_placeholder.container():
-                        with st.spinner("Calculando fechas disponibles..."):
-                            available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                # 🔁 Limpiar resultados anteriores
+                st.session_state["data_time"] = []
+                st.session_state["urls_exportacion"] = []
+                st.session_state["used_cloud_results"] = []
+                st.session_state["cloud_results"] = []
+            
+                spinner_placeholder = st.empty()
+                with spinner_placeholder.container():
+                    with st.spinner("Calculando fechas disponibles..."):
+                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
 
                     spinner_placeholder.empty() 
                     if not available_dates:
@@ -875,6 +881,33 @@ with tab2:
 
                             # Procesar y visualizar resultados
                             data_time = []
+                            # Añadir datos de la sonda SAICA solo si el embalse es El Val
+                            # Añadir datos de la sonda SAICA solo si el embalse es El Val
+                            if reservoir_name.lower() == "val":
+                                urls_csv = [
+                                    "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
+                                    "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
+                                ]
+                                df_list = [cargar_csv_desde_url(url) for url in urls_csv]
+                                df_list = [df for df in df_list if not df.empty]
+                            
+                                if df_list:
+                                    df_fico = pd.concat(df_list).sort_values('Fecha-hora')
+                                    start_dt = pd.to_datetime(start_date)
+                                    end_dt = pd.to_datetime(end_date)
+                                    df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
+                            
+                                    for _, row in df_filtrado.iterrows():
+                                        data_time.append({
+                                            "Point": "SAICA_Val",
+                                            "Date": row["Fecha-hora"],
+                                            "Ficocianina (µg/L)": row["Ficocianina (µg/L)"]
+                                        })
+                            
+                            # ✅ Guardar data_time *solo después* de añadir (o no) los datos SAICA
+                            st.session_state['data_time'] = data_time
+
+
 
                             # Paleta de colores para SCL con una mejor diferenciación
                             scl_palette = {
