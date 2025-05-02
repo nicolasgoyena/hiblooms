@@ -1268,17 +1268,21 @@ with tab2:
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # Fusionar columnas dispersas en una sola para Clorofila y Ficocianina
                                 def fusionar_columnas(df, posibles_nombres, nombre_final):
                                     cols = [col for col in df.columns if any(n.lower() in col.lower() for n in posibles_nombres)]
                                     if not cols:
-                                        return
-                                    # Inicializar columna de destino con valores nulos solo si no existe
-                                    if nombre_final not in df.columns:
-                                        df[nombre_final] = pd.NA
-                                    for col in cols:
+                                        return  # No hay columnas que coincidan
+                                
+                                    # Crear la columna destino con los valores de la primera columna encontrada
+                                    df[nombre_final] = df[cols[0]]
+                                
+                                    # Combinar con el resto de columnas, si las hay
+                                    for col in cols[1:]:
                                         df[nombre_final] = df[nombre_final].combine_first(df[col])
-                                        df.drop(columns=col, inplace=True)
+                                    
+                                    # Eliminar las columnas originales
+                                    df.drop(columns=cols, inplace=True)
+
 
                                 # Aplicar fusión robusta
                                 fusionar_columnas(df_time, ["clorofila", "ndci"], "Clorofila (µg/L)")
