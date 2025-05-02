@@ -940,6 +940,7 @@ with tab2:
                             
                                 df_fico_bellus.rename(columns={'PC_IVF (ug/l)': 'Ficocianina (µg/L)'}, inplace=True)
                                 df_cloro_bellus.rename(columns={'CHLA_IVF (ug/l)': 'Clorofila (µg/L)'}, inplace=True)
+
                             
                                 if not df_fico_bellus.empty and not df_cloro_bellus.empty:
                                     df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
