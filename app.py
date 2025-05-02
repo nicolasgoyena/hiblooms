@@ -1192,7 +1192,7 @@ with tab2:
                             
                                         chart = alt.Chart(df_indice).mark_bar().encode(
                                             x=alt.X('Date:T', title='Fecha', axis=alt.Axis(format="%d-%b", labelAngle=0)),
-                                            y=alt.Y(f'{indice}:Q', title='Valor medio'),
+                                            y=alt.Y(f'{indice}:Q', title='Concentración (µg/L)'),
                                             tooltip=[
                                                 alt.Tooltip('Date:T', title='Fecha'),
                                                 alt.Tooltip(f'{indice}:Q', title=f'{indice}')
@@ -1204,6 +1204,7 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
+                            
 
 
                             # 🔽 Serie temporal real de ficocianina (solo si embalse es VAL)
