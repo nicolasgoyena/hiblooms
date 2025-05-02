@@ -1173,6 +1173,19 @@ with tab2:
                                         folium_static(map_indices)
 
                             st.session_state['data_time'] = data_time
+                            # 🔁 Unificar duplicados de medias de embalse por fecha
+                            if "data_time" in st.session_state:
+                                df_time = pd.DataFrame(st.session_state["data_time"])
+                    
+                                # Solo para "Media_Embalse", agrupar por fecha y tipo
+                                df_time = df_time.groupby(["Point", "Date", "Tipo"], as_index=False).agg({
+                                    "Ficocianina (µg/L)": "max",
+                                    "Clorofila (µg/L)": "max",
+                                    **{col: "first" for col in df_time.columns if col not in ["Point", "Date", "Tipo", "Ficocianina (µg/L)", "Clorofila (µg/L)"]}
+                                })
+                    
+                                st.session_state["data_time"] = df_time.to_dict(orient="records")
+
 
                         df_time = pd.DataFrame(data_time)
                         if "urls_exportacion" in st.session_state and st.session_state["urls_exportacion"]:
