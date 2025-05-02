@@ -913,6 +913,30 @@ with tab2:
                                             "Date": row["Fecha-hora"],
                                             "Ficocianina (µg/L)": row["Ficocianina (µg/L)"]
                                         })
+
+                            # Añadir datos de la sonda de Bellús si el embalse es Bellús
+                            if reservoir_name.lower() == "bellus":
+                                url_fico_bellus = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
+                                url_cloro_bellus = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
+                            
+                                df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
+                                df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
+                            
+                                if not df_fico_bellus.empty and not df_cloro_bellus.empty:
+                                    df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
+                                    df_bellus = df_bellus.sort_values("Fecha-hora")
+                            
+                                    start_dt = pd.to_datetime(start_date)
+                                    end_dt = pd.to_datetime(end_date)
+                                    df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
+                            
+                                    for _, row in df_bellus_filtrado.iterrows():
+                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"]}
+                                        if "Ficocianina (µg/L)" in row:
+                                            entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
+                                        if "Clorofila (µg/L)" in row:
+                                            entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
+                                        data_time.append(entry)
                             
                             # ✅ Guardar data_time *solo después* de añadir (o no) los datos SAICA
                             st.session_state['data_time'] = data_time
