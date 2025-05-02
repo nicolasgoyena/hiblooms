@@ -911,8 +911,10 @@ with tab2:
                                         data_time.append({
                                             "Point": "SAICA_Val",
                                             "Date": row["Fecha-hora"],
-                                            "Ficocianina (µg/L)": row["Ficocianina (µg/L)"]
+                                            "Ficocianina (µg/L)": row["Ficocianina (µg/L)"],
+                                            "Tipo": "Valor Real"  # 🔹 Se marca como dato real
                                         })
+
 
                             # Añadir datos de la sonda de Bellús si el embalse es Bellús
                             if reservoir_name.lower() == "bellus":
@@ -931,12 +933,13 @@ with tab2:
                                     df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
                             
                                     for _, row in df_bellus_filtrado.iterrows():
-                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"]}
-                                        if "Ficocianina (µg/L)" in row:
+                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Valor Real"}  # 🔹 Aquí también
+                                        if "Ficocianina (µg/L)" in row and pd.notna(row["Ficocianina (µg/L)"]):
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
-                                        if "Clorofila (µg/L)" in row:
+                                        if "Clorofila (µg/L)" in row and pd.notna(row["Clorofila (µg/L)"]):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
                                         data_time.append(entry)
+
                             
                             # ✅ Guardar data_time *solo después* de añadir (o no) los datos SAICA
                             st.session_state['data_time'] = data_time
@@ -968,20 +971,12 @@ with tab2:
                                 if indices_image is None:
                                     continue
 
-                                if reservoir_name in puntos_interes:
-                                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
-                                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
-                                        registro = {"Point": point_name, "Date": day}
-                                        registro.update(values)
-                                        data_time.append(registro)
-                                # 1️⃣ Añadir datos de puntos de interés
-                                if reservoir_name in puntos_interes:
-                                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
-                                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
-                                        registro = {"Point": point_name, "Date": day}
-                                        registro.update(values)
-                                        data_time.append(registro)
-                                
+                                for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
+                                    values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
+                                    registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"} 
+                                    registro.update(values)
+                                    data_time.append(registro)
+
                                 # 2️⃣ Añadir media diaria del embalse solo en píxeles con SCL == 6
                                 for index in selected_indices:
                                     media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
@@ -989,7 +984,8 @@ with tab2:
                                         data_time.append({
                                             "Point": "Media_Embalse",
                                             "Date": day,
-                                            index: media_valor
+                                            index: media_valor,
+                                            "Tipo": "Valor Estimado" 
                                         })
 
 
