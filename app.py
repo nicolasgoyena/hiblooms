@@ -818,7 +818,7 @@ with tab2:
                     st.markdown("""
                     - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
                     - **NDCI (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
-                    - **PC (Phycocyanin Estimator):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, a partir de mediciones de ficocianina en el Embalse de El Val y Bellús.
+                    - **PC (Phycocyanin Estimator):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val y Bellús.
                     - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), útil como indicador de biomasa y ficocianina.
                     - **Clorofila_NDCI:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
                     - **Clorofila_Bellus:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
