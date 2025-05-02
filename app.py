@@ -1020,23 +1020,20 @@ with tab2:
                                         data_time.append(registro)
 
 
-                                # 2️⃣ Añadir media diaria del embalse (siempre), incluso si no hay valor
+                                # 2️⃣ Añadir media diaria del embalse solo en píxeles con SCL == 6
                                 for index in selected_indices:
                                     if (hay_clorofila and index in clorofila_indices) or (hay_ficocianina and index in ficocianina_indices):
-                                        try:
-                                            media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
-                                        except:
-                                            media_valor = None  # Si falla el cálculo
-                                
-                                        # 🧱 Asegurarse de que se añade una fila, aunque media_valor sea None
-                                        data_time.append({
-                                            "Point": "Media_Embalse",
-                                            "Date": day,
-                                            index: media_valor,
-                                            "Tipo": "Valor Estimado"
-                                        })
-                                
-                                
+                                        media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
+                                        if media_valor is None:
+                                            st.warning(f"📅 En el día {day} no se ha podido calcular la media del índice '{index}' porque el embalse estaba completamente cubierto de nubes.")
+                                        if media_valor is not None:
+                                            data_time.append({
+                                                "Point": "Media_Embalse",
+                                                "Date": day,
+                                                index: media_valor,
+                                                "Tipo": "Valor Estimado"
+                                            })
+
 
 
                                 index_palettes = {
@@ -1332,7 +1329,3 @@ with tab2:
                         
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
-
-
-                        
-
