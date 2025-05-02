@@ -932,35 +932,50 @@ with tab2:
                             
                             # Bellús: cargar datos solo si se ha seleccionado algún índice relacionado
                             if reservoir_name.lower() == "bellus" and (hay_clorofila or hay_ficocianina):
+                                # 🔽 Cargar los CSV de Bellús
                                 url_fico_bellus = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
                                 url_cloro_bellus = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
-                            
+                                
                                 df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
                                 df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
-                            
-                                df_fico_bellus.rename(columns={'PC_IVF (ug/l)': 'Ficocianina (µg/L)'}, inplace=True)
-                                df_cloro_bellus.rename(columns={'CHLA_IVF (ug/l)': 'Clorofila (µg/L)'}, inplace=True)
-
-                            
+                                
+                                # 🔍 Mostrar columnas originales
+                                st.write("📄 Columnas originales (ficocianina):", df_fico_bellus.columns.tolist())
+                                st.write("📄 Columnas originales (clorofila):", df_cloro_bellus.columns.tolist())
+                                
+                                # 🔁 Renombrado flexible
+                                for col in df_fico_bellus.columns:
+                                    if "pc_ivf" in col.lower():
+                                        df_fico_bellus.rename(columns={col: "Ficocianina (µg/L)"}, inplace=True)
+                                
+                                for col in df_cloro_bellus.columns:
+                                    if "chla_ivf" in col.lower():
+                                        df_cloro_bellus.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
+                                
+                                # 🧬 Comprobación post-renombrado
+                                st.write("✅ Columnas tras renombrar:", df_fico_bellus.columns.tolist(), df_cloro_bellus.columns.tolist())
+                                
+                                # 🔗 Fusionar y filtrar por fechas
                                 if not df_fico_bellus.empty and not df_cloro_bellus.empty:
                                     df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
                                     df_bellus = df_bellus.sort_values("Fecha-hora")
-                            
+                                
+                                    # Filtrado por fechas
                                     start_dt = pd.to_datetime(start_date)
                                     end_dt = pd.to_datetime(end_date)
                                     df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
-                            
+                                
                                     for _, row in df_bellus_filtrado.iterrows():
                                         entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
-                            
+                                
                                         if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
                                         if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
-                            
-                                        # Solo añadir si hay al menos un valor
+                                
                                         if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
                                             data_time.append(entry)
+
 
 
                             
