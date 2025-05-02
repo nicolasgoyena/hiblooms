@@ -1176,15 +1176,21 @@ with tab2:
                             # 🔁 Unificar duplicados de medias de embalse por fecha
                             if "data_time" in st.session_state:
                                 df_time = pd.DataFrame(st.session_state["data_time"])
-                    
-                                # Solo para "Media_Embalse", agrupar por fecha y tipo
-                                df_time = df_time.groupby(["Point", "Date", "Tipo"], as_index=False).agg({
-                                    "Ficocianina (µg/L)": "max",
-                                    "Clorofila (µg/L)": "max",
-                                    **{col: "first" for col in df_time.columns if col not in ["Point", "Date", "Tipo", "Ficocianina (µg/L)", "Clorofila (µg/L)"]}
-                                })
-                    
+                            
+                                # Separar medias y otros puntos
+                                df_medias = df_time[df_time["Point"] == "Media_Embalse"]
+                                df_otros = df_time[df_time["Point"] != "Media_Embalse"]
+                            
+                                # Agrupar medias por fecha y tipo, combinando columnas numéricas
+                                if not df_medias.empty:
+                                    columnas_valor = [col for col in df_medias.columns if col not in ["Point", "Date", "Tipo"]]
+                                    df_medias_agrupado = df_medias.groupby(["Point", "Date", "Tipo"], as_index=False).agg({col: "max" for col in columnas_valor})
+                                    df_time = pd.concat([df_medias_agrupado, df_otros], ignore_index=True)
+                                else:
+                                    df_time = df_otros
+                            
                                 st.session_state["data_time"] = df_time.to_dict(orient="records")
+
 
 
                         df_time = pd.DataFrame(data_time)
