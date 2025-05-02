@@ -1267,15 +1267,20 @@ with tab2:
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # Crear columnas unificadas
-                                df_time["Clorofila (µg/L)"] = df_time[["Clorofila_NDCI", "Clorofila_Bellus"]].bfill(axis=1).iloc[:, 0]
-                                df_time["Ficocianina (µg/L)"] = df_time[["PC", "B5_div_B4"]].bfill(axis=1).iloc[:, 0]
+                                # Unificar columnas de clorofila y ficocianina solo si existen
+                                cols_clorofila = [col for col in ["Clorofila_NDCI", "Clorofila_Bellus"] if col in df_time.columns]
+                                cols_ficocianina = [col for col in ["PC", "B5_div_B4"] if col in df_time.columns]
                         
-                                # Eliminar columnas de índices específicos
+                                if cols_clorofila:
+                                    df_time["Clorofila (µg/L)"] = df_time[cols_clorofila].bfill(axis=1).iloc[:, 0]
+                                if cols_ficocianina:
+                                    df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina].bfill(axis=1).iloc[:, 0]
+                        
+                                # Eliminar columnas específicas si están presentes
                                 columnas_a_eliminar = ["MCI", "NDCI", "PC", "B5_div_B4", "Clorofila_NDCI", "Clorofila_Bellus"]
                                 df_time.drop(columns=[col for col in columnas_a_eliminar if col in df_time.columns], inplace=True)
                         
-                                # Reordenar columnas: Ubicación, Fecha, Tipo, Clorofila, Ficocianina, ...
+                                # Reordenar columnas
                                 columnas = list(df_time.columns)
                                 orden = ["Ubicación", "Fecha", "Tipo"]
                                 for col in ["Clorofila (µg/L)", "Ficocianina (µg/L)"]:
@@ -1285,7 +1290,7 @@ with tab2:
                                 columnas_ordenadas = orden + otras
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # Mostrar tablas separadas
+                                # Mostrar tablas
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
@@ -1298,6 +1303,7 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
 
 
                         
