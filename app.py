@@ -1275,11 +1275,18 @@ with tab2:
                                 columnas_ordenadas = ["Ubicación", "Fecha"] + columnas
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # ✅ Mostrar una tabla por cada ubicación
-                                ubicaciones = df_time["Ubicación"].unique()
-                                for ubicacion in ubicaciones:
-                                    st.markdown(f"### 📍 Datos para: {ubicacion}")
-                                    st.dataframe(df_time[df_time["Ubicación"] == ubicacion].reset_index(drop=True))
+                                # ✅ Mostrar tabla separada según si es "Media del Embalse" u otro punto
+                                df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
+                                df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
+                        
+                                if not df_puntos.empty:
+                                    st.markdown("### 📌 Datos en los puntos de interés")
+                                    st.dataframe(df_puntos.reset_index(drop=True))
+                        
+                                if not df_medias.empty:
+                                    st.markdown("### 💧 Datos de medias del embalse")
+                                    st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
 
