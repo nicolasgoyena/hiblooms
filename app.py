@@ -1273,11 +1273,13 @@ with tab2:
                                     cols = [col for col in df.columns if any(n.lower() in col.lower() for n in posibles_nombres)]
                                     if not cols:
                                         return
-                                    df[nombre_final] = None
+                                    # Inicializar columna de destino con valores nulos solo si no existe
+                                    if nombre_final not in df.columns:
+                                        df[nombre_final] = pd.NA
                                     for col in cols:
                                         df[nombre_final] = df[nombre_final].combine_first(df[col])
                                         df.drop(columns=col, inplace=True)
-                                
+
                                 # Aplicar fusión robusta
                                 fusionar_columnas(df_time, ["clorofila", "ndci"], "Clorofila (µg/L)")
                                 fusionar_columnas(df_time, ["ficocianina", "pc", "b5_div_b4"], "Ficocianina (µg/L)")
