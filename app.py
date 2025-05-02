@@ -1245,30 +1245,25 @@ with tab2:
                                             st.altair_chart(chart_fico, use_container_width=True)
                                     else:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
-                        
-                            if not df_time.empty:
+                            if df_time.empty:
+                                st.warning("No hay datos de puntos de interés para este embalse.")
+                            else:
                                 for point in df_time["Point"].unique():
-                                    if point != "Media_Embalse":
-                                        df_point = df_time[df_time["Point"] == point].copy()
-                                        df_point["Fecha_dt"] = pd.to_datetime(df_point["Date"], errors='coerce')
-                                
-                                        df_melted = df_point.melt(
-                                            id_vars=["Point", "Fecha_dt"],
-                                            value_vars=selected_indices,
-                                            var_name="Índice",
-                                            value_name="Valor"
-                                        ).dropna()
-                                
-                                        chart = alt.Chart(df_melted).mark_line().encode(
-                                            x=alt.X('Fecha_dt:T', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
-                                            y=alt.Y('Valor:Q', title='Valor'),
-                                            color=alt.Color('Índice:N', title='Índice'),
-                                            tooltip=['Fecha_dt:T', 'Índice:N', 'Valor:Q']
-                                        ) + alt.Chart(df_melted).mark_point()
-                                
-                                        st.altair_chart(chart.properties(title=f"Valores de índices en {point}"), use_container_width=True)
+                                    df_point = df_time[df_time["Point"] == point]
 
+                                    df_melted = df_point.melt(id_vars=["Point", "Date"],
+                                                              value_vars=selected_indices,
+                                                              var_name="Índice", value_name="Valor")
 
+                                    chart = alt.Chart(df_melted).mark_line(point=True).encode(
+                                        x=alt.X('Date:T', title='Fecha'),
+                                        y=alt.Y('Valor:Q', title='Valor'),
+                                        color=alt.Color('Índice:N', title='Índice')
+                                    ).properties(
+                                        title=f"Valores de índices en {point}"
+                                    )
+
+                                    st.altair_chart(chart, use_container_width=True)
 
                         with tab3:
                             st.subheader("Tablas de Índices Calculados")
