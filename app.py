@@ -1184,31 +1184,27 @@ with tab2:
 
                             with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
                                 df_media = df_time[df_time["Point"] == "Media_Embalse"].copy()
-                                
-                                # Convertir a datetime real
                                 df_media["Date"] = pd.to_datetime(df_media["Date"], errors='coerce')
                             
-                                # Reformatear para Altair
-                                df_media_melted = df_media.melt(
-                                    id_vars=["Point", "Date"],
-                                    value_vars=selected_indices,
-                                    var_name="Índice",
-                                    value_name="Valor"
-                                )
+                                for indice in selected_indices:
+                                    if indice in df_media.columns:
+                                        df_indice = df_media[["Date", indice]].dropna()
                             
-                                chart_media = alt.Chart(df_media_melted).mark_bar().encode(
-                                    x=alt.X('Date:T', title='Fecha', axis=alt.Axis(format="%d-%b", labelAngle=0)),
-                                    xOffset='Índice:N',
-                                    y=alt.Y('Valor:Q', title='Valor medio'),
-                                    color=alt.Color('Índice:N', title='Índice'),
-                                    tooltip=[alt.Tooltip('Date:T', title='Fecha'), 'Índice:N', 'Valor:Q']
-                                ).properties(
-                                    title="Evolución temporal de la media del embalse",
-                                    width=500,
-                                    height=400
-                                )
+                                        chart = alt.Chart(df_indice).mark_bar().encode(
+                                            x=alt.X('Date:T', title='Fecha', axis=alt.Axis(format="%d-%b", labelAngle=0)),
+                                            y=alt.Y(f'{indice}:Q', title='Valor medio'),
+                                            tooltip=[
+                                                alt.Tooltip('Date:T', title='Fecha'),
+                                                alt.Tooltip(f'{indice}:Q', title=f'{indice}')
+                                            ]
+                                        ).properties(
+                                            title=f"🧪 Índice: {indice}",
+                                            width=500,
+                                            height=300
+                                        )
                             
-                                st.altair_chart(chart_media, use_container_width=True)
+                                        st.altair_chart(chart, use_container_width=True)
+
 
                             # 🔽 Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val":
