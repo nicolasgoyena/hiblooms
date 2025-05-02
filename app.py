@@ -114,10 +114,13 @@ def cargar_csv_desde_url(url: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(url)
 
-        # Renombrar automáticamente la columna de fecha si se llama 'Time'
+        # Renombrar si la columna de fecha es 'Time'
         if 'Time' in df.columns:
             df.rename(columns={'Time': 'Fecha-hora'}, inplace=True)
-        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], dayfirst=True)
+
+        # Parsear fecha sin dayfirst para evitar errores con formato ISO
+        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], format='mixed')
+
         return df
     except Exception as e:
         st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
