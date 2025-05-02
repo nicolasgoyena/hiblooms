@@ -1262,11 +1262,24 @@ with tab2:
                             st.subheader("Tablas de Índices Calculados")
                         
                             if not df_time.empty:
-                                # ✅ Renombrar y limpiar columnas
+                                # ✅ Copiar y preparar
                                 df_time = df_time.copy()
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
+                        
+                                # ✅ Fusionar todas las columnas de Clorofila y Ficocianina en sus columnas únicas
+                                def fusionar_columnas(df, nombre_final, contiene):
+                                    cols = [c for c in df.columns if contiene.lower() in c.lower() and c != nombre_final]
+                                    for col in cols:
+                                        if nombre_final in df.columns:
+                                            df[nombre_final] = df[nombre_final].combine_first(df[col])
+                                        else:
+                                            df[nombre_final] = df[col]
+                                        df.drop(columns=col, inplace=True)
+                        
+                                fusionar_columnas(df_time, "Clorofila (µg/L)", "clorofila")
+                                fusionar_columnas(df_time, "Ficocianina (µg/L)", "ficocianina")
                         
                                 # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
                                 columnas = list(df_time.columns)
@@ -1275,7 +1288,7 @@ with tab2:
                                 columnas_ordenadas = ["Ubicación", "Fecha"] + columnas
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # ✅ Mostrar tabla separada según si es "Media del Embalse" u otro punto
+                                # ✅ Dividir en dos tablas
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
@@ -1288,5 +1301,5 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
-
+                        
 
