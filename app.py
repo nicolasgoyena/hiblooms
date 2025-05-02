@@ -1318,6 +1318,7 @@ with tab2:
                         
                                 if not df_puntos.empty:
                                     st.markdown("### 📌 Datos en los puntos de interés")
+                                    df_puntos = df_puntos.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_puntos.reset_index(drop=True))
                         
                                 if not df_medias.empty:
