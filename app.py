@@ -811,8 +811,10 @@ with tab2:
                 end_date = end_date.strftime('%Y-%m-%d')
 
                 # Selección de índices
-                available_indices = ["MCI", "B5_div_B4", "NDCI", "PC", "Clorofila_NDCI","Clorofila_Bellus"]
-                selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices)
+                st.subheader("Selecciona los índices a visualizar:")
+                available_indices = ["MCI", "B5_div_B4", "NDCI", "PC", "Clorofila_NDCI", "Clorofila_Bellus"]
+                selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
+
 
                 if st.button("Calcular y mostrar resultados"):
                     # 🔁 Limpiar resultados anteriores
