@@ -814,7 +814,15 @@ with tab2:
                 st.subheader("Selecciona los índices a visualizar:")
                 available_indices = ["MCI", "B5_div_B4", "NDCI", "PC", "Clorofila_NDCI", "Clorofila_Bellus"]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
-
+                with st.expander("ℹ️ ¿Qué significa cada índice?"):
+                    st.markdown("""
+                    - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
+                    - **NDCI (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
+                    - **PC (Phycocyanin Estimator):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias.
+                    - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), útil como proxy de biomasa.
+                    - **Clorofila_NDCI:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial.
+                    - **Clorofila_Bellus:** Modelo específico calibrado para el embalse de Bellús.
+                    """)
 
                 if st.button("Calcular y mostrar resultados"):
                     # 🔁 Limpiar resultados anteriores
