@@ -113,11 +113,16 @@ reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 def cargar_csv_desde_url(url: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(url)
+
+        # Renombrar automáticamente la columna de fecha si se llama 'Time'
+        if 'Time' in df.columns:
+            df.rename(columns={'Time': 'Fecha-hora'}, inplace=True)
         df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], dayfirst=True)
         return df
     except Exception as e:
         st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
         return pd.DataFrame()
+
 
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
@@ -916,13 +921,16 @@ with tab2:
                                         })
 
 
-                            # Añadir datos de la sonda de Bellús si el embalse es Bellús
                             if reservoir_name.lower() == "bellus":
                                 url_fico_bellus = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
                                 url_cloro_bellus = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
                             
                                 df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
                                 df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
+                            
+                                # Asegurarte de que los nombres están correctamente renombrados
+                                df_fico_bellus.rename(columns={'PC_IVF (ug/l)': 'Ficocianina (µg/L)'}, inplace=True)
+                                df_cloro_bellus.rename(columns={'CHLA_IVF (ug/l)': 'Clorofila (µg/L)'}, inplace=True)
                             
                                 if not df_fico_bellus.empty and not df_cloro_bellus.empty:
                                     df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
@@ -933,11 +941,13 @@ with tab2:
                                     df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
                             
                                     for _, row in df_bellus_filtrado.iterrows():
-                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Valor Real"}  # 🔹 Aquí también
+                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
+                            
                                         if "Ficocianina (µg/L)" in row and pd.notna(row["Ficocianina (µg/L)"]):
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
                                         if "Clorofila (µg/L)" in row and pd.notna(row["Clorofila (µg/L)"]):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
+                            
                                         data_time.append(entry)
 
                             
