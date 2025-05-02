@@ -770,7 +770,7 @@ with tab2:
             shapefile_path=custom_shapefile_path if custom_shapefile_path else "shapefiles/embalses_hiblooms.shp",
             nombre_columna="NOMBRE"
         )
-        folium_static(map_embalses)
+        folium_static(map_embalses, width=1000, height=600)
 
     with row1[1]:
         st.subheader("Selección de Embalse")
