@@ -1268,18 +1268,20 @@ with tab2:
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # ✅ Fusionar todas las columnas de Clorofila y Ficocianina en sus columnas únicas
-                                def fusionar_columnas(df, nombre_final, contiene):
-                                    cols = [c for c in df.columns if contiene.lower() in c.lower() and c != nombre_final]
+                                # Fusionar columnas dispersas en una sola para Clorofila y Ficocianina
+                                def fusionar_columnas(df, posibles_nombres, nombre_final):
+                                    cols = [col for col in df.columns if any(n.lower() in col.lower() for n in posibles_nombres)]
+                                    if not cols:
+                                        return
+                                    df[nombre_final] = None
                                     for col in cols:
-                                        if nombre_final in df.columns:
-                                            df[nombre_final] = df[nombre_final].combine_first(df[col])
-                                        else:
-                                            df[nombre_final] = df[col]
+                                        df[nombre_final] = df[nombre_final].combine_first(df[col])
                                         df.drop(columns=col, inplace=True)
-                        
-                                fusionar_columnas(df_time, "Clorofila (µg/L)", "clorofila")
-                                fusionar_columnas(df_time, "Ficocianina (µg/L)", "ficocianina")
+                                
+                                # Aplicar fusión robusta
+                                fusionar_columnas(df_time, ["clorofila", "ndci"], "Clorofila (µg/L)")
+                                fusionar_columnas(df_time, ["ficocianina", "pc", "b5_div_b4"], "Ficocianina (µg/L)")
+
                         
                                 # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
                                 columnas = list(df_time.columns)
