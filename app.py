@@ -1262,20 +1262,30 @@ with tab2:
                             st.subheader("Tablas de Índices Calculados")
                         
                             if not df_time.empty:
-                                # ✅ Renombrar y limpiar columnas
                                 df_time = df_time.copy()
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
+                                # Crear columnas unificadas
+                                df_time["Clorofila (µg/L)"] = df_time[["Clorofila_NDCI", "Clorofila_Bellus"]].bfill(axis=1).iloc[:, 0]
+                                df_time["Ficocianina (µg/L)"] = df_time[["PC", "B5_div_B4"]].bfill(axis=1).iloc[:, 0]
+                        
+                                # Eliminar columnas de índices específicos
+                                columnas_a_eliminar = ["MCI", "NDCI", "PC", "B5_div_B4", "Clorofila_NDCI", "Clorofila_Bellus"]
+                                df_time.drop(columns=[col for col in columnas_a_eliminar if col in df_time.columns], inplace=True)
+                        
+                                # Reordenar columnas: Ubicación, Fecha, Tipo, Clorofila, Ficocianina, ...
                                 columnas = list(df_time.columns)
-                                columnas.remove("Ubicación")
-                                columnas.remove("Fecha")
-                                columnas_ordenadas = ["Ubicación", "Fecha"] + columnas
+                                orden = ["Ubicación", "Fecha", "Tipo"]
+                                for col in ["Clorofila (µg/L)", "Ficocianina (µg/L)"]:
+                                    if col in columnas:
+                                        orden.append(col)
+                                otras = [col for col in columnas if col not in orden]
+                                columnas_ordenadas = orden + otras
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # ✅ Mostrar tabla separada según si es "Media del Embalse" u otro punto
+                                # Mostrar tablas separadas
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
