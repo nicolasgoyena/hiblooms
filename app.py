@@ -899,9 +899,16 @@ with tab2:
 
                             # Procesar y visualizar resultados
                             data_time = []
-                            # Añadir datos de la sonda SAICA solo si el embalse es El Val
-                            # Añadir datos de la sonda SAICA solo si el embalse es El Val
-                            if reservoir_name.lower() == "val":
+
+                            # Determinar si se seleccionaron índices de clorofila o de ficocianina
+                            clorofila_indices = {"MCI", "NDCI", "Clorofila_NDCI", "Clorofila_Bellus"}
+                            ficocianina_indices = {"PC", "B5_div_B4"}
+                            
+                            hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
+                            hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
+                            
+                            # El Val: añadir datos de SAICA solo si se han seleccionado índices de ficocianina
+                            if reservoir_name.lower() == "val" and hay_ficocianina:
                                 urls_csv = [
                                     "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
                                     "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
@@ -920,18 +927,17 @@ with tab2:
                                             "Point": "SAICA_Val",
                                             "Date": row["Fecha-hora"],
                                             "Ficocianina (µg/L)": row["Ficocianina (µg/L)"],
-                                            "Tipo": "Valor Real"  # 🔹 Se marca como dato real
+                                            "Tipo": "Valor Real"
                                         })
-
-
-                            if reservoir_name.lower() == "bellus":
+                            
+                            # Bellús: cargar datos solo si se ha seleccionado algún índice relacionado
+                            if reservoir_name.lower() == "bellus" and (hay_clorofila or hay_ficocianina):
                                 url_fico_bellus = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
                                 url_cloro_bellus = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
                             
                                 df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
                                 df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
                             
-                                # Asegurarte de que los nombres están correctamente renombrados
                                 df_fico_bellus.rename(columns={'PC_IVF (ug/l)': 'Ficocianina (µg/L)'}, inplace=True)
                                 df_cloro_bellus.rename(columns={'CHLA_IVF (ug/l)': 'Clorofila (µg/L)'}, inplace=True)
                             
@@ -946,12 +952,15 @@ with tab2:
                                     for _, row in df_bellus_filtrado.iterrows():
                                         entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
                             
-                                        if "Ficocianina (µg/L)" in row and pd.notna(row["Ficocianina (µg/L)"]):
+                                        if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
-                                        if "Clorofila (µg/L)" in row and pd.notna(row["Clorofila (µg/L)"]):
+                                        if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
                             
-                                        data_time.append(entry)
+                                        # Solo añadir si hay al menos un valor
+                                        if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
+                                            data_time.append(entry)
+
 
                             
                             # ✅ Guardar data_time *solo después* de añadir (o no) los datos SAICA
@@ -986,20 +995,33 @@ with tab2:
 
                                 for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
                                     values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
-                                    registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"} 
-                                    registro.update(values)
-                                    data_time.append(registro)
+                                    registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
+                                
+                                    if hay_clorofila:
+                                        for indice in clorofila_indices:
+                                            if indice in values and values[indice] is not None:
+                                                registro[indice] = values[indice]
+                                    if hay_ficocianina:
+                                        for indice in ficocianina_indices:
+                                            if indice in values and values[indice] is not None:
+                                                registro[indice] = values[indice]
+                                
+                                    if any(k in registro for k in clorofila_indices.union(ficocianina_indices)):
+                                        data_time.append(registro)
+
 
                                 # 2️⃣ Añadir media diaria del embalse solo en píxeles con SCL == 6
                                 for index in selected_indices:
-                                    media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
-                                    if media_valor is not None:
-                                        data_time.append({
-                                            "Point": "Media_Embalse",
-                                            "Date": day,
-                                            index: media_valor,
-                                            "Tipo": "Valor Estimado" 
-                                        })
+                                    if (hay_clorofila and index in clorofila_indices) or (hay_ficocianina and index in ficocianina_indices):
+                                        media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
+                                        if media_valor is not None:
+                                            data_time.append({
+                                                "Point": "Media_Embalse",
+                                                "Date": day,
+                                                index: media_valor,
+                                                "Tipo": "Valor Estimado"
+                                            })
+
 
 
                                 index_palettes = {
