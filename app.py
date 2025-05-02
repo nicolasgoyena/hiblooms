@@ -1296,10 +1296,13 @@ with tab2:
                                 cols_clorofila = [col for col in ["Clorofila_NDCI", "Clorofila_Bellus"] if col in df_time.columns]
                                 cols_ficocianina = [col for col in ["PC", "B5_div_B4"] if col in df_time.columns]
                         
-                                if cols_clorofila:
+                                # Solo combinar si aún no existen las columnas finales y hay intermedias
+                                if "Clorofila (µg/L)" not in df_time.columns and cols_clorofila:
                                     df_time["Clorofila (µg/L)"] = df_time[cols_clorofila].bfill(axis=1).iloc[:, 0]
-                                if cols_ficocianina:
+                                
+                                if "Ficocianina (µg/L)" not in df_time.columns and cols_ficocianina:
                                     df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina].bfill(axis=1).iloc[:, 0]
+
                         
                                 # Eliminar columnas específicas si están presentes
                                 columnas_a_eliminar = ["MCI", "NDCI", "PC", "B5_div_B4", "Clorofila_NDCI", "Clorofila_Bellus"]
