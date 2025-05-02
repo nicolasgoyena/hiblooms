@@ -1259,9 +1259,27 @@ with tab2:
                                             st.altair_chart(chart, use_container_width=True)
 
                         with tab3:
-                            st.subheader("Tabla de Índices Calculados")
+                            st.subheader("Tablas de Índices Calculados")
+                        
                             if not df_time.empty:
-                                st.dataframe(df_time)
+                                # ✅ Renombrar y limpiar columnas
+                                df_time = df_time.copy()
+                                df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
+                                df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
+                                df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
+                        
+                                # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
+                                columnas = list(df_time.columns)
+                                columnas.remove("Ubicación")
+                                columnas.remove("Fecha")
+                                columnas_ordenadas = ["Ubicación", "Fecha"] + columnas
+                                df_time = df_time[columnas_ordenadas]
+                        
+                                # ✅ Mostrar una tabla por cada ubicación
+                                ubicaciones = df_time["Ubicación"].unique()
+                                for ubicacion in ubicaciones:
+                                    st.markdown(f"### 📍 Datos para: {ubicacion}")
+                                    st.dataframe(df_time[df_time["Ubicación"] == ubicacion].reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
 
