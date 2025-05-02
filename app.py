@@ -965,16 +965,25 @@ with tab2:
                                     end_dt = pd.to_datetime(end_date)
                                     df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
                                 
+                                    # 📋 Verifica qué datos reales se han cargado y filtrado
+                                    st.subheader("🧪 Depuración de datos reales de Bellús")
+                                    st.write("📄 Filtrado final de datos de Bellús:")
+                                    st.dataframe(df_bellus_filtrado)
+                                    
                                     for _, row in df_bellus_filtrado.iterrows():
                                         entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
-                                
+                                    
                                         if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
                                         if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
-                                
+                                    
+                                        # 👁 Mostrar cada entrada añadida
+                                        st.write("🔍 Entrada añadida:", entry)
+                                    
                                         if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
                                             data_time.append(entry)
+
 
 
 
