@@ -1268,20 +1268,25 @@ with tab2:
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                def fusionar_columnas(df, posibles_nombres, nombre_final):
-                                    cols = [col for col in df.columns if any(n.lower() in col.lower() for n in posibles_nombres)]
-                                    if not cols:
-                                        return  # No hay columnas que coincidan
+                                def fusionar_columnas(df, columnas_origen, nombre_final, debug=False):
+                                    if debug:
+                                        print(f"Fusionando columnas {columnas_origen} en '{nombre_final}'")
+                                        print("Columnas actuales en df:", df.columns.tolist())
                                 
-                                    # Crear la columna destino con los valores de la primera columna encontrada
-                                    df[nombre_final] = df[cols[0]]
+                                    columnas_presentes = [col for col in columnas_origen if col in df.columns]
                                 
-                                    # Combinar con el resto de columnas, si las hay
-                                    for col in cols[1:]:
+                                    if not columnas_presentes:
+                                        if debug:
+                                            print(f"No se encontraron columnas de {nombre_final} en df")
+                                        return df
+                                
+                                    df[nombre_final] = pd.NA
+                                    for col in columnas_presentes:
                                         df[nombre_final] = df[nombre_final].combine_first(df[col])
-                                    
-                                    # Eliminar las columnas originales
-                                    df.drop(columns=cols, inplace=True)
+                                
+                                    df.drop(columns=columnas_presentes, inplace=True)
+                                    return df
+
 
 
                                 # Aplicar fusión robusta
