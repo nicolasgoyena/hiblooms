@@ -1285,8 +1285,8 @@ with tab2:
 
 
                                 # Aplicar fusión robusta
-                                fusionar_columnas(df_time, ["clorofila", "ndci"], "Clorofila (µg/L)")
-                                fusionar_columnas(df_time, ["ficocianina", "pc", "b5_div_b4"], "Ficocianina (µg/L)")
+                                fusionar_columnas(df_time, ["Clorofila_NDCI", "Clorofila_Bellus", "NDCI", "MCI"], "Clorofila (µg/L)", debug=True)
+                                fusionar_columnas(df_time, ["PC", "B5_div_B4", "Ficocianina (µg/L)"], "Ficocianina (µg/L)", debug=True)
 
                         
                                 # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
