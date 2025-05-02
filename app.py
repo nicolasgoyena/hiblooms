@@ -1247,30 +1247,27 @@ with tab2:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
                         
                             if not df_time.empty:
-                                with st.expander("📉 Gráficos de valores por punto de interés", expanded=False):
-                                    df_time["Fecha_dt"] = pd.to_datetime(df_time["Date"], errors='coerce')
+                                for point in df_time["Point"].unique():
+                                    if point != "Media_Embalse":
+                                        df_point = df_time[df_time["Point"] == point].copy()
+                                        df_point["Fecha_dt"] = pd.to_datetime(df_point["Date"], errors='coerce')
                                 
-                                    for point in df_time["Point"].unique():
-                                        if point != "Media_Embalse":
-                                            df_point = df_time[df_time["Point"] == point]
-                                            df_melted = df_point.melt(id_vars=["Point", "Fecha_dt"],
-                                                                      value_vars=selected_indices,
-                                                                      var_name="Índice", value_name="Valor")
+                                        df_melted = df_point.melt(
+                                            id_vars=["Point", "Fecha_dt"],
+                                            value_vars=selected_indices,
+                                            var_name="Índice",
+                                            value_name="Valor"
+                                        ).dropna()
                                 
-                                            chart = alt.Chart(df_melted).mark_line(point=True).encode(
-                                                x=alt.X('Fecha_dt:T', title='Fecha y hora',
-                                                        axis=alt.Axis(format="%d-%b %H:%M", labelAngle=45)),
-                                                y=alt.Y('Valor:Q', title='Valor'),
-                                                color=alt.Color('Índice:N', title='Índice'),
-                                                tooltip=[
-                                                    alt.Tooltip('Fecha_dt:T', title='Fecha y hora', format="%d-%m-%Y %H:%M"),
-                                                    'Índice:N', 'Valor:Q'
-                                                ]
-                                            ).properties(
-                                                title=f"Valores de índices en {point}"
-                                            )
+                                        chart = alt.Chart(df_melted).mark_line().encode(
+                                            x=alt.X('Fecha_dt:T', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
+                                            y=alt.Y('Valor:Q', title='Valor'),
+                                            color=alt.Color('Índice:N', title='Índice'),
+                                            tooltip=['Fecha_dt:T', 'Índice:N', 'Valor:Q']
+                                        ) + alt.Chart(df_melted).mark_point()
                                 
-                                            st.altair_chart(chart, use_container_width=True)
+                                        st.altair_chart(chart.properties(title=f"Valores de índices en {point}"), use_container_width=True)
+
 
 
                         with tab3:
