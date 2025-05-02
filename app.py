@@ -1303,6 +1303,14 @@ with tab2:
                                 if "Ficocianina (µg/L)" not in df_time.columns and cols_ficocianina:
                                     df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina].bfill(axis=1).iloc[:, 0]
 
+                                # Completar valores estimados en columnas finales si están vacíos
+                                if "Clorofila (µg/L)" in df_time.columns and "Clorofila_Bellus" in df_time.columns:
+                                    df_time["Clorofila (µg/L)"].fillna(df_time["Clorofila_Bellus"], inplace=True)
+                                
+                                if "Ficocianina (µg/L)" in df_time.columns and "PC" in df_time.columns:
+                                    df_time["Ficocianina (µg/L)"].fillna(df_time["PC"], inplace=True)
+
+
                         
                                 # Eliminar columnas específicas si están presentes
                                 columnas_a_eliminar = ["MCI", "NDCI", "PC", "B5_div_B4", "Clorofila_NDCI", "Clorofila_Bellus"]
