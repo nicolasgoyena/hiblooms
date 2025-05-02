@@ -939,10 +939,6 @@ with tab2:
                                 df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
                                 df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
                                 
-                                # 🔍 Mostrar columnas originales
-                                st.write("📄 Columnas originales (ficocianina):", df_fico_bellus.columns.tolist())
-                                st.write("📄 Columnas originales (clorofila):", df_cloro_bellus.columns.tolist())
-                                
                                 # 🔁 Renombrado flexible
                                 for col in df_fico_bellus.columns:
                                     if "pc_ivf" in col.lower():
@@ -951,9 +947,6 @@ with tab2:
                                 for col in df_cloro_bellus.columns:
                                     if "chla_ivf" in col.lower():
                                         df_cloro_bellus.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
-                                
-                                # 🧬 Comprobación post-renombrado
-                                st.write("✅ Columnas tras renombrar:", df_fico_bellus.columns.tolist(), df_cloro_bellus.columns.tolist())
                                 
                                 # 🔗 Fusionar y filtrar por fechas
                                 if not df_fico_bellus.empty and not df_cloro_bellus.empty:
@@ -964,12 +957,7 @@ with tab2:
                                     start_dt = pd.to_datetime(start_date)
                                     end_dt = pd.to_datetime(end_date)
                                     df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
-                                
-                                    # 📋 Verifica qué datos reales se han cargado y filtrado
-                                    st.subheader("🧪 Depuración de datos reales de Bellús")
-                                    st.write("📄 Filtrado final de datos de Bellús:")
-                                    st.dataframe(df_bellus_filtrado)
-                                    
+                                                               
                                     for _, row in df_bellus_filtrado.iterrows():
                                         entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
                                     
@@ -977,9 +965,6 @@ with tab2:
                                             entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
                                         if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
                                             entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
-                                    
-                                        # 👁 Mostrar cada entrada añadida
-                                        st.write("🔍 Entrada añadida:", entry)
                                     
                                         if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
                                             data_time.append(entry)
