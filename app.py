@@ -1262,37 +1262,11 @@ with tab2:
                             st.subheader("Tablas de Índices Calculados")
                         
                             if not df_time.empty:
-                                # ✅ Copiar y preparar
+                                # ✅ Renombrar y limpiar columnas
                                 df_time = df_time.copy()
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
                                 df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
-                        
-                                def fusionar_columnas(df, columnas_origen, nombre_final, debug=False):
-                                    if debug:
-                                        print(f"Fusionando columnas {columnas_origen} en '{nombre_final}'")
-                                        print("Columnas actuales en df:", df.columns.tolist())
-                                
-                                    columnas_presentes = [col for col in columnas_origen if col in df.columns]
-                                
-                                    if not columnas_presentes:
-                                        if debug:
-                                            print(f"No se encontraron columnas de {nombre_final} en df")
-                                        return df
-                                
-                                    df[nombre_final] = pd.NA
-                                    for col in columnas_presentes:
-                                        df[nombre_final] = df[nombre_final].combine_first(df[col])
-                                
-                                    df.drop(columns=columnas_presentes, inplace=True)
-                                    return df
-
-
-
-                                # Aplicar fusión robusta
-                                fusionar_columnas(df_time, ["Clorofila_NDCI", "Clorofila_Bellus", "NDCI", "MCI"], "Clorofila (µg/L)", debug=True)
-                                fusionar_columnas(df_time, ["PC", "B5_div_B4", "Ficocianina (µg/L)"], "Ficocianina (µg/L)", debug=True)
-
                         
                                 # ✅ Reordenar columnas: Ubicación, Fecha, luego el resto
                                 columnas = list(df_time.columns)
@@ -1301,7 +1275,7 @@ with tab2:
                                 columnas_ordenadas = ["Ubicación", "Fecha"] + columnas
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # ✅ Dividir en dos tablas
+                                # ✅ Mostrar tabla separada según si es "Media del Embalse" u otro punto
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
@@ -1314,5 +1288,7 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
+
                         
 
