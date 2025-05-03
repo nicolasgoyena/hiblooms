@@ -1260,7 +1260,7 @@ with tab2:
                                             chart = alt.Chart(df_melted).mark_line(point=True).encode(
                                                 x=alt.X('Fecha_dt:T', title='Fecha y hora',
                                                         axis=alt.Axis(format="%d-%b %H:%M", labelAngle=45)),
-                                                y=alt.Y('Valor:Q', title='Valor'),
+                                                y=alt.Y('Valor:Q', title='Concentración (µg/L)'),
                                                 color=alt.Color('Índice:N', title='Índice'),
                                                 tooltip=[
                                                     alt.Tooltip('Fecha_dt:T', title='Fecha y hora', format="%d-%m-%Y %H:%M"),
