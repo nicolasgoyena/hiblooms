@@ -177,58 +177,56 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     inicio_total = time.time()
 
-    # Comprobar si ya hay resultados guardados en st.session_state
     if "cloud_results" not in st.session_state:
         st.session_state["cloud_results"] = []
 
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
-    
+
     if sentinel2.size().getInfo() == 0:
         st.warning("❌ No se encontraron imágenes de Sentinel-2 para este embalse y rango de fechas.")
         return []
 
     images = sentinel2.toList(sentinel2.size())
-    available_dates = set()  # Usar un conjunto para evitar duplicados
+    available_dates = set()
     results_list = []
 
     for i in range(images.size().getInfo()):
         inicio_iter = time.time()
-    
+
         image = ee.Image(images.get(i)).clip(aoi)
         image_date = image.get('system:time_start').getInfo()
         formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
-    
+        image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
+
         # Evitar duplicados
         if formatted_date in available_dates:
             continue
-    
+
         with st.spinner(f"**🕒 Analizando imagen del {formatted_date}...**"):
             cloud_percentage = calculate_cloud_percentage(image, aoi).getInfo()
-    
-            # 🔁 NUEVA LÓGICA: si el usuario permite 100%, guardamos siempre
-            if max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage:
+            coverage = calculate_coverage_percentage(image, aoi)
+
+            # Solo conservar fechas que pasen los filtros
+            if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
                 available_dates.add(formatted_date)
-            
-            image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
-            results_list.append({
-                "Fecha": formatted_date,
-                "Hora": image_time,
-                "Nubosidad aproximada (%)": round(cloud_percentage, 2)
-            })
+                results_list.append({
+                    "Fecha": formatted_date,
+                    "Hora": image_time,
+                    "Nubosidad aproximada (%)": round(cloud_percentage, 2),
+                    "Cobertura (%)": round(coverage, 2)
+                })
 
         fin_iter = time.time()
         print(f"Tiempo en procesar imagen {formatted_date}: {fin_iter - inicio_iter:.2f} seg")
 
-
     fin_total = time.time()
     print(f"Tiempo total en get_available_dates: {fin_total - inicio_total:.2f} seg")
 
-    # Guardar los resultados en st.session_state
     st.session_state["cloud_results"] = results_list
 
-    return sorted(available_dates)  # Convertir el conjunto a una lista ordenada
+    return sorted(available_dates)
 
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
