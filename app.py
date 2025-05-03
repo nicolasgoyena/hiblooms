@@ -1056,7 +1056,7 @@ with tab2:
                                 }
 
                                 with row2[0]:
-                                    image_date_fmt = datetime.strptime(image_date, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y")
+                                    image_date_fmt = datetime.strptime(image_date, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y %H:%M")
                                     with st.expander(f"📅 Mapa de Índices para {image_date_fmt}"):
                                         gdf_4326 = gdf.to_crs(epsg=4326)
                                         map_center = [gdf_4326.geometry.centroid.y.mean(),
