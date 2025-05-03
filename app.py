@@ -1289,10 +1289,13 @@ with tab2:
                         
                             if not df_time.empty:
                                 df_time = df_time.copy()
+                                
+                                # Reformatear la fecha principal
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
-                                df_time.drop(columns=["Date", "Fecha_formateada"], errors='ignore', inplace=True)
-                                df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
-                        
+                                
+                                # 🔥 Eliminar todas las columnas innecesarias de fecha
+                                df_time.drop(columns=["Date", "Fecha_formateada", "Fecha_dt", "Fecha-hora"], errors='ignore', inplace=True)
+
                                 # 🔁 Unificar duplicados de medias de embalse por fecha
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_otros = df_time[df_time["Ubicación"] != "Media_Embalse"]
