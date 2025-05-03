@@ -1282,22 +1282,35 @@ with tab2:
                                             st.altair_chart(chart, use_container_width=True)
 
 
+                        df_time = pd.DataFrame(data_time)
+                        
+                        # 💾 Guardar la tabla procesada para poder exportarla después sin perder el estado
+                        st.session_state["df_time_resultado"] = df_time.copy()
+                        
                         with tab3:
                             st.subheader("Tablas de Índices Calculados")
+                        
+                            # ✅ Botones para exportar CSV
+                            col_a, col_b = st.columns([1, 1])
+                            with col_a:
+                                if st.session_state.get("df_time_resultado") is not None:
+                                    csv_all = st.session_state["df_time_resultado"].to_csv(index=False).encode("utf-8")
+                                    st.download_button("⬇️ Exportar todos los datos (CSV)", csv_all, file_name="hiblooms_todos_los_datos.csv", mime="text/csv")
+                        
+                            with col_b:
+                                df_medias_export = st.session_state["df_time_resultado"]
+                                if "Ubicación" in df_medias_export.columns:
+                                    df_medias_export = df_medias_export[df_medias_export["Ubicación"] == "Media_Embalse"]
+                                csv_medias = df_medias_export.to_csv(index=False).encode("utf-8")
+                                st.download_button("💧 Exportar medias del embalse (CSV)", csv_medias, file_name="hiblooms_medias_embalse.csv", mime="text/csv")
                         
                             if not df_time.empty:
                                 df_time = df_time.copy()
                         
-                                # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
-                        
-                                # Reformatear la fecha principal
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
-                        
-                                # 🔥 Eliminar todas las columnas innecesarias de fecha
                                 df_time.drop(columns=["Date", "Fecha_formateada", "Fecha_dt", "Fecha-hora"], errors='ignore', inplace=True)
                         
-                                # 🔁 Unificar duplicados de medias de embalse por fecha
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_otros = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
@@ -1306,7 +1319,6 @@ with tab2:
                                     df_medias_agrupado = df_medias.groupby(["Ubicación", "Fecha", "Tipo"], as_index=False).agg({col: "max" for col in columnas_valor})
                                     df_time = pd.concat([df_medias_agrupado, df_otros], ignore_index=True)
                         
-                                # Unificar columnas de clorofila y ficocianina solo si existen
                                 cols_clorofila = [col for col in ["Clorofila_NDCI", "Clorofila_Bellus"] if col in df_time.columns]
                                 cols_ficocianina = [col for col in ["PC", "B5_div_B4"] if col in df_time.columns]
                         
@@ -1342,29 +1354,12 @@ with tab2:
                                     df_puntos = df_puntos.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_puntos.reset_index(drop=True))
                         
-                                    # 🔽 Botón de descarga para puntos
-                                    csv_puntos = df_puntos.to_csv(index=False).encode("utf-8")
-                                    st.download_button(
-                                        label="⬇️ Descargar tabla de puntos de interés (CSV)",
-                                        data=csv_puntos,
-                                        file_name="HIBLOOMS_puntos_interes.csv",
-                                        mime="text/csv"
-                                    )
-                        
                                 if not df_medias.empty:
                                     st.markdown("### 💧 Datos de medias del embalse")
                                     st.dataframe(df_medias.reset_index(drop=True))
                         
-                                    # 🔽 Botón de descarga para medias
-                                    csv_medias = df_medias.to_csv(index=False).encode("utf-8")
-                                    st.download_button(
-                                        label="⬇️ Descargar tabla de medias del embalse (CSV)",
-                                        data=csv_medias,
-                                        file_name="HIBLOOMS_media_embalse.csv",
-                                        mime="text/csv"
-                                    )
-                        
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
 
                         
