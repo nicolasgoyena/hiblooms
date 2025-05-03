@@ -1342,10 +1342,29 @@ with tab2:
                                     df_puntos = df_puntos.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_puntos.reset_index(drop=True))
                         
+                                    # 🔽 Botón de descarga para puntos
+                                    csv_puntos = df_puntos.to_csv(index=False).encode("utf-8")
+                                    st.download_button(
+                                        label="⬇️ Descargar tabla de puntos de interés (CSV)",
+                                        data=csv_puntos,
+                                        file_name="HIBLOOMS_puntos_interes.csv",
+                                        mime="text/csv"
+                                    )
+                        
                                 if not df_medias.empty:
                                     st.markdown("### 💧 Datos de medias del embalse")
                                     st.dataframe(df_medias.reset_index(drop=True))
                         
+                                    # 🔽 Botón de descarga para medias
+                                    csv_medias = df_medias.to_csv(index=False).encode("utf-8")
+                                    st.download_button(
+                                        label="⬇️ Descargar tabla de medias del embalse (CSV)",
+                                        data=csv_medias,
+                                        file_name="HIBLOOMS_media_embalse.csv",
+                                        mime="text/csv"
+                                    )
+                        
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
                         
