@@ -476,28 +476,41 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
 
 
-def get_values_at_point(lat, lon, indices_image, selected_indices):
-    if indices_image is None:
-        return None
+def get_values_at_points_vectorizado(puntos_dict, indices_image, selected_indices):
+    """Calcula de forma eficiente los valores medios de índices sobre buffers de 30 m alrededor de los puntos de interés."""
+    features = []
 
-    # Sentinel-2 tiene 20 m de resolución para estas bandas -> 3x3 píxeles ~ 60x60 m
-    buffer_radius_meters = 30  # Radio que cubre un área de 60x60 m
-    point = ee.Geometry.Point([lon, lat]).buffer(buffer_radius_meters)
+    for point_name, (lat, lon) in puntos_dict.items():
+        point_geom = ee.Geometry.Point([lon, lat]).buffer(30)
+        feature = ee.Feature(point_geom, {"name": point_name})
+        features.append(feature)
 
-    values = {}
+    fc = ee.FeatureCollection(features)
+
+    results = {}
     for index in selected_indices:
         try:
-            mean_value = indices_image.select(index).reduceRegion(
+            reduced = indices_image.select(index).reduceRegions(
+                collection=fc,
                 reducer=ee.Reducer.mean(),
-                geometry=point,
                 scale=20,
                 maxPixels=1e13
-            ).get(index)
-            values[index] = mean_value.getInfo() if mean_value is not None else None
+            )
+
+            # Convertir a diccionario para extraer resultados
+            values = reduced.aggregate_array("mean").getInfo()
+            names = reduced.aggregate_array("name").getInfo()
+
+            for name, val in zip(names, values):
+                if name not in results:
+                    results[name] = {}
+                results[name][index] = val
+
         except Exception as e:
-            print(f"⚠️ Error al obtener valor para {index} en punto ({lat}, {lon}): {e}")
-            values[index] = None
-    return values
+            print(f"⚠️ Error al procesar índice {index}: {e}")
+
+    return results
+
 
 
 
@@ -1014,18 +1027,18 @@ with tab2:
                                 if indices_image is None:
                                     continue
 
-                                for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
-                                    values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
+                                values_dict = get_values_at_points_vectorizado(puntos_interes[reservoir_name], indices_image, selected_indices)
+                                for point_name, index_values in values_dict.items():
                                     registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
-                                
+                                    
                                     if hay_clorofila:
                                         for indice in clorofila_indices:
-                                            if indice in values and values[indice] is not None:
-                                                registro[indice] = values[indice]
+                                            if indice in index_values and index_values[indice] is not None:
+                                                registro[indice] = index_values[indice]
                                     if hay_ficocianina:
                                         for indice in ficocianina_indices:
-                                            if indice in values and values[indice] is not None:
-                                                registro[indice] = values[indice]
+                                            if indice in index_values and index_values[indice] is not None:
+                                                registro[indice] = index_values[indice]
                                 
                                     if any(k in registro for k in clorofila_indices.union(ficocianina_indices)):
                                         data_time.append(registro)
