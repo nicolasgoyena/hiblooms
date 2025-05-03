@@ -478,16 +478,27 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
     if indices_image is None:
-        return None  # Evita errores si la imagen no existe
+        return None
 
-    point = ee.Geometry.Point([lon, lat])
+    # Sentinel-2 tiene 20 m de resolución para estas bandas -> 3x3 píxeles ~ 60x60 m
+    buffer_radius_meters = 30  # Radio que cubre un área de 60x60 m
+    point = ee.Geometry.Point([lon, lat]).buffer(buffer_radius_meters)
+
     values = {}
     for index in selected_indices:
         try:
-            values[index] = indices_image.select(index).sample(point, 1).first().get(index).getInfo()
-        except:
-            values[index] = None  # Si hay algún error, asigna None
+            mean_value = indices_image.select(index).reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=point,
+                scale=20,
+                maxPixels=1e13
+            ).get(index)
+            values[index] = mean_value.getInfo() if mean_value is not None else None
+        except Exception as e:
+            print(f"⚠️ Error al obtener valor para {index} en punto ({lat}, {lon}): {e}")
+            values[index] = None
     return values
+
 
 
 def get_index_value(lon, lat, index_name, indices_image):
