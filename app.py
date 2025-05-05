@@ -637,7 +637,7 @@ with col2:
     st.markdown(
         """
         <h1 style="text-align: center; line-height: 1.2em;">
-            Visor del estado de eutrofización en embalses españoles:
+            Visor de indicadores de la calidad del agua en embalses españoles:
             <br> <span style="display: block; text-align: center;">Proyecto HIBLOOMS</span>
         </h1>
         """,
