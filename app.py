@@ -205,13 +205,19 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
             continue
 
         with st.spinner(f"**🕒 Analizando imagen del {formatted_date}...**"):
-            cloud_percentage = calculate_cloud_percentage(image, aoi)
-            if cloud_percentage is None:
+            cloud_obj = calculate_cloud_percentage(image, aoi)
+            if cloud_obj is None:
                 print(f"⚠️ Imagen del {formatted_date} descartada: no tiene SCL ni MSK_CLDPRB.")
-                continue  # Saltar esta imagen
+                continue
             
-            cloud_percentage = cloud_percentage.getInfo()
+            try:
+                cloud_percentage = cloud_obj.getInfo()
+            except Exception as e:
+                print(f"⚠️ Error al obtener cloud_percentage en {formatted_date}: {e}")
+                continue
+            
             coverage = calculate_coverage_percentage(image, aoi)
+            
 
 
             # Solo conservar fechas que pasen los filtros
