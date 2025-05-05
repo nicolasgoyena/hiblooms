@@ -205,8 +205,14 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
             continue
 
         with st.spinner(f"**🕒 Analizando imagen del {formatted_date}...**"):
-            cloud_percentage = calculate_cloud_percentage(image, aoi).getInfo()
+            cloud_percentage = calculate_cloud_percentage(image, aoi)
+            if cloud_percentage is None:
+                print(f"⚠️ Imagen del {formatted_date} descartada: no tiene SCL ni MSK_CLDPRB.")
+                continue  # Saltar esta imagen
+            
+            cloud_percentage = cloud_percentage.getInfo()
             coverage = calculate_coverage_percentage(image, aoi)
+
 
             # Solo conservar fechas que pasen los filtros
             if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
@@ -301,22 +307,16 @@ def calcular_media_diaria_embalse(indices_image, index_name, aoi):
 
 def calculate_cloud_percentage(image, aoi):
     scl = image.select('SCL')
-
-    # 🔹 Método SCL: Detectar píxeles nubosos según la clasificación
     cloud_mask_scl = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
 
-    # Calcular la fracción de píxeles nubosos dentro del embalse usando SCL
     cloud_fraction_scl = cloud_mask_scl.reduceRegion(
-        reducer=ee.Reducer.mean(),  # Calcula el promedio en el AOI (ponderación)
+        reducer=ee.Reducer.mean(),
         geometry=aoi,
-        scale=20,  # Resolución Sentinel-2
+        scale=20,
         maxPixels=1e13
     ).get('SCL')
 
-    # 🔹 Método MSK_CLDPRB: Detectar píxeles con ≥10% de probabilidad de nube
-    cloud_mask_prob = image.select('MSK_CLDPRB').gte(10)  # Se consideran nubes desde el 10%
-
-    # Calcular la fracción de píxeles nubosos dentro del embalse usando MSK_CLDPRB
+    cloud_mask_prob = image.select('MSK_CLDPRB').gte(10)
     cloud_fraction_prob = cloud_mask_prob.reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=aoi,
@@ -324,14 +324,25 @@ def calculate_cloud_percentage(image, aoi):
         maxPixels=1e13
     ).get('MSK_CLDPRB')
 
-    # 🔹 Suma ponderada de ambas estimaciones
-    cloud_percentage = (
-        ee.Number(cloud_fraction_scl).multiply(0.95)  # 70% de SCL
-        .add(ee.Number(cloud_fraction_prob).multiply(0.05))  # 30% de MSK_CLDPRB
-        .multiply(100)  # Convertir a porcentaje
-    )
+    scl_ok = cloud_fraction_scl is not None
+    prob_ok = cloud_fraction_prob is not None
 
-    return cloud_percentage
+    if not scl_ok and not prob_ok:
+        return None  # ❌ No se puede calcular nubosidad con ninguna de las bandas
+
+    if scl_ok and prob_ok:
+        return (
+            ee.Number(cloud_fraction_scl).multiply(0.95)
+            .add(ee.Number(cloud_fraction_prob).multiply(0.05))
+            .multiply(100)
+        )
+
+    elif scl_ok:
+        return ee.Number(cloud_fraction_scl).multiply(100)
+
+    else:  # prob_ok
+        return ee.Number(cloud_fraction_prob).multiply(100)
+
 
 def calculate_coverage_percentage(image, aoi):
     """Devuelve el % del embalse cubierto por la imagen (basado en la banda B4)."""
