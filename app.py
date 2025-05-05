@@ -1300,30 +1300,24 @@ with tab2:
                                 # 🔁 Unificar duplicados de medias de embalse por fecha
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_otros = df_time[df_time["Ubicación"] != "Media_Embalse"]
-                        
+                                
                                 if not df_medias.empty:
                                     columnas_valor = [col for col in df_medias.columns if col not in ["Ubicación", "Fecha", "Tipo"]]
                                     df_medias_agrupado = df_medias.groupby(["Ubicación", "Fecha", "Tipo"], as_index=False).agg({col: "max" for col in columnas_valor})
                                     df_time = pd.concat([df_medias_agrupado, df_otros], ignore_index=True)
-                        
-                                # Unificar columnas de clorofila y ficocianina solo si existen
+                                
+                                # Unificar columnas solo si hay un único índice seleccionado por sustancia
                                 cols_clorofila = [col for col in ["Clorofila_NDCI", "Clorofila_Bellus"] if col in df_time.columns]
                                 cols_ficocianina = [col for col in ["PC", "B5_div_B4"] if col in df_time.columns]
-                        
-                                if "Clorofila (µg/L)" not in df_time.columns and cols_clorofila:
-                                    df_time["Clorofila (µg/L)"] = df_time[cols_clorofila].bfill(axis=1).iloc[:, 0]
-                        
-                                if "Ficocianina (µg/L)" not in df_time.columns and cols_ficocianina:
-                                    df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina].bfill(axis=1).iloc[:, 0]
-                        
-                                if "Clorofila (µg/L)" in df_time.columns and "Clorofila_Bellus" in df_time.columns:
-                                    df_time["Clorofila (µg/L)"].fillna(df_time["Clorofila_Bellus"], inplace=True)
-                        
-                                if "Ficocianina (µg/L)" in df_time.columns and "PC" in df_time.columns:
-                                    df_time["Ficocianina (µg/L)"].fillna(df_time["PC"], inplace=True)
-                        
-                                columnas_a_eliminar = ["MCI", "NDCI", "PC", "B5_div_B4", "Clorofila_NDCI", "Clorofila_Bellus"]
-                                df_time.drop(columns=[col for col in columnas_a_eliminar if col in df_time.columns], inplace=True)
+                                
+                                if len(cols_clorofila) == 1 and "Clorofila (µg/L)" not in df_time.columns:
+                                    df_time["Clorofila (µg/L)"] = df_time[cols_clorofila[0]]
+                                
+                                if len(cols_ficocianina) == 1 and "Ficocianina (µg/L)" not in df_time.columns:
+                                    df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina[0]]
+                                
+                                # Ya no eliminamos columnas específicas
+
                         
                                 columnas = list(df_time.columns)
                                 orden = ["Ubicación", "Fecha", "Tipo"]
