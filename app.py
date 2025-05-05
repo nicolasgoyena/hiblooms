@@ -441,10 +441,10 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).rename('MCI'),
             "B5_div_B4": lambda: b5.divide(b4).rename('B5_div_B4'),
-            "NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI'),
-            "PC": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC"),
-            "Clorofila_NDCI": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Clorofila_NDCI"),
-            "Clorofila_Bellus": lambda: (
+            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI_ind'),
+            "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC_Val_cal"),
+            "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Chla_Val_cal"),
+            "Chla_Bellus_cal": lambda: (
                 b5.subtract(b4).divide(b5.add(b4))
                 .multiply(-22).multiply(-1)
                 .subtract(22 * 0.1)
@@ -452,7 +452,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .add(1)
                 .pow(-0.25)
                 .multiply(45)
-                .rename("Clorofila_Bellus")
+                .rename("Chla_Bellus_cal")
             )
         }
 
@@ -515,10 +515,10 @@ def generar_leyenda(indices_seleccionados):
     parametros = {
         "MCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "NDCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "PC": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
-        "Clorofila_NDCI": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "Clorofila_Bellus": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
+        "NDCI_ind": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
+        "PC_Val_cal": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
+        "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
+        "Chla_Bellus_cal": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -829,16 +829,16 @@ with tab2:
 
                 # Selección de índices
                 st.subheader("Selecciona los índices a visualizar:")
-                available_indices = ["MCI", "B5_div_B4", "NDCI", "PC", "Clorofila_NDCI", "Clorofila_Bellus"]
+                available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal"]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
                     - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
-                    - **NDCI (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
-                    - **PC (Phycocyanin Estimator):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val y Bellús.
+                    - **NDCI_ind (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
+                    - **PC_Val_cal (Phycocyanin Estimator):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val.
                     - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), útil como indicador de biomasa y ficocianina.
-                    - **Clorofila_NDCI:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
-                    - **Clorofila_Bellus:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
+                    - **Chla_Val_cal:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
+                    - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
                     """)
 
                 if st.button("Calcular y mostrar resultados"):
@@ -910,8 +910,8 @@ with tab2:
                             data_time = []
 
                             # Determinar si se seleccionaron índices de clorofila o de ficocianina
-                            clorofila_indices = {"MCI", "NDCI", "Clorofila_NDCI", "Clorofila_Bellus"}
-                            ficocianina_indices = {"PC", "B5_div_B4"}
+                            clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
+                            ficocianina_indices = {PC_Val_cal, "B5_div_B4"}
                             
                             hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
                             hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
@@ -1048,11 +1048,11 @@ with tab2:
                                 index_palettes = {
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
                                     "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
-                                    "NDCI": ['blue', 'green', 'yellow', 'red'],
-                                    "PC": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
+                                    "NDCI_ind": ['blue', 'green', 'yellow', 'red'],
+                                    "PC_Val_cal": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
-                                    "Clorofila_NDCI": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
-                                    "Clorofila_Bellus": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                    "Chla_Val_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
+                                    "Chla_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
                                 with row2[0]:
@@ -1132,7 +1132,7 @@ with tab2:
                                                                                                                      'green',
                                                                                                                      'yellow',
                                                                                                                      'red'])}
-                                            if index == "PC":
+                                            if index == "PC_Val_cal":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 7
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
@@ -1140,11 +1140,11 @@ with tab2:
                                                 vis_params["min"] = 0.5
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
-                                            elif index == "Clorofila_NDCI":
+                                            elif index == "Chla_Val_cal":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 150
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
-                                            elif index == "Clorofila_Bellus":
+                                            elif index == "Chla_Bellus_cal":
                                                 vis_params["min"] = 5
                                                 vis_params["max"] = 55
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
@@ -1307,8 +1307,8 @@ with tab2:
                                     df_time = pd.concat([df_medias_agrupado, df_otros], ignore_index=True)
                                 
                                 # Unificar columnas solo si hay un único índice seleccionado por sustancia
-                                cols_clorofila = [col for col in ["Clorofila_NDCI", "Clorofila_Bellus"] if col in df_time.columns]
-                                cols_ficocianina = [col for col in ["PC", "B5_div_B4"] if col in df_time.columns]
+                                cols_clorofila = [col for col in ["Chla_Val_cal", "Chla_Bellus_cal"] if col in df_time.columns]
+                                cols_ficocianina = [col for col in ["PC_Val_cal", "B5_div_B4"] if col in df_time.columns]
                                 
                                 if len(cols_clorofila) == 1 and "Clorofila (µg/L)" not in df_time.columns:
                                     df_time["Clorofila (µg/L)"] = df_time[cols_clorofila[0]]
