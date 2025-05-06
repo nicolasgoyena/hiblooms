@@ -680,7 +680,7 @@ with col3:
         st.image("images/logo_jucar.png", width=150)
 
 
-tab1, tab2, tab3 = st.tabs(["Introducción", "Visualización", "Tablas"])
+tab1, tab2, tab3, tab4 = st.tabs(["Introducción", "Visualización", "Tablas", "Gráficas"])
 with tab1:
     st.markdown("""
         <style>
@@ -1364,7 +1364,7 @@ with tab2:
                         
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
-                        with tab4:
+with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
                         
                             st.info("Este modo solo genera gráficas a partir de los parámetros seleccionados, sin mapas ni exportaciones.")
