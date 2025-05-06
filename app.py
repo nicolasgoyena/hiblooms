@@ -1524,4 +1524,42 @@ with tab4:
                                                         tooltip=["Fecha_dt", "Índice", "Valor"]
                                                     ).properties(title=f"{point} – evolución de índices")
                                                     st.altair_chart(chart, use_container_width=True)
+                                        # Mostrar tablas de resultados igual que en la pestaña "Tablas"
+                                        st.subheader("📄 Resultados en tabla")
+                                        
+                                        # Copia del DataFrame y limpieza básica
+                                        df_tabla = df_time.copy()
+                                        df_tabla.rename(columns={"Point": "Ubicación"}, inplace=True)
+                                        df_tabla["Fecha"] = pd.to_datetime(df_tabla["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
+                                        df_tabla.drop(columns=["Date", "Fecha_formateada", "Fecha_dt", "Fecha-hora"], errors='ignore', inplace=True)
+                                        
+                                        # Agrupar valores medios si hay duplicados
+                                        df_medias = df_tabla[df_tabla["Ubicación"] == "Media_Embalse"]
+                                        df_otros = df_tabla[df_tabla["Ubicación"] != "Media_Embalse"]
+                                        
+                                        if not df_medias.empty:
+                                            columnas_valor = [col for col in df_medias.columns if col not in ["Ubicación", "Fecha", "Tipo"]]
+                                            df_medias = df_medias.groupby(["Ubicación", "Fecha", "Tipo"], as_index=False).agg({col: "max" for col in columnas_valor})
+                                        
+                                        df_tabla = pd.concat([df_medias, df_otros], ignore_index=True)
+                                        
+                                        # Ordenar columnas
+                                        columnas = list(df_tabla.columns)
+                                        orden = ["Ubicación", "Fecha", "Tipo"]
+                                        otras = [col for col in columnas if col not in orden]
+                                        columnas_ordenadas = orden + otras
+                                        df_tabla = df_tabla[columnas_ordenadas]
+                                        
+                                        # Separar y mostrar
+                                        df_puntos = df_tabla[df_tabla["Ubicación"] != "Media_Embalse"]
+                                        df_medias = df_tabla[df_tabla["Ubicación"] == "Media_Embalse"]
+                                        
+                                        if not df_puntos.empty:
+                                            st.markdown("### 📌 Datos en los puntos de interés")
+                                            st.dataframe(df_puntos.reset_index(drop=True))
+                                        
+                                        if not df_medias.empty:
+                                            st.markdown("### 💧 Datos de medias del embalse")
+                                            st.dataframe(df_medias.reset_index(drop=True))
+
 
