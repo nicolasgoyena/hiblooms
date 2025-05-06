@@ -865,18 +865,12 @@ with tab2:
                     st.session_state["used_cloud_results"] = []
                     st.session_state["cloud_results"] = []
                 
-                    spinner_placeholder = st.empty()
-                    with spinner_placeholder.container():
-                        with st.spinner("Calculando fechas disponibles..."):
-                            available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-
-                    spinner_placeholder.empty() 
-                    if not available_dates:
-                        st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
-                        st.session_state["data_time"] = []
-                        st.stop()
                     with st.spinner("Calculando fechas disponibles..."):
                         available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                        if not available_dates:
+                            st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
+                            st.session_state["data_time"] = []
+                            st.stop()
 
                         if available_dates:
                             st.session_state['available_dates'] = available_dates
