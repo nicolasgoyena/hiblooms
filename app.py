@@ -1364,4 +1364,164 @@ with tab2:
                         
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+                        with tab4:
+                            st.subheader("📈 Modo rápido: generación de gráficas")
                         
+                            st.info("Este modo solo genera gráficas a partir de los parámetros seleccionados, sin mapas ni exportaciones.")
+                        
+                            # Selección de embalse
+                            nombres_embalses = obtener_nombres_embalses()
+                            reservoir_name = st.selectbox("Selecciona un embalse:", nombres_embalses, key="graficas_embalse")
+                        
+                            if reservoir_name:
+                                gdf = load_reservoir_shapefile(reservoir_name)
+                                if gdf is not None:
+                                    aoi = gdf_to_ee_geometry(gdf)
+                        
+                                    max_cloud_percentage = st.slider("Porcentaje máximo de nubosidad permitido:", 0, 100, 10, key="graficas_nubosidad")
+                        
+                                    date_range = st.date_input(
+                                        "Selecciona el rango de fechas:",
+                                        value=(datetime.today() - timedelta(days=15), datetime.today()),
+                                        min_value=datetime(2017, 7, 1),
+                                        max_value=datetime.today(),
+                                        key="graficas_fecha"
+                                    )
+                        
+                                    if isinstance(date_range, tuple) and len(date_range) == 2:
+                                        start_date, end_date = date_range
+                                    else:
+                                        start_date, end_date = datetime(2017, 7, 1), datetime.today()
+                        
+                                    start_date = start_date.strftime('%Y-%m-%d')
+                                    end_date = end_date.strftime('%Y-%m-%d')
+                        
+                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal"]
+                                    selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices, key="graficas_indices")
+                        
+                                    if st.button("Ejecutar modo rápido"):
+                                        st.session_state["data_time"] = []
+                        
+                                        with st.spinner("Obteniendo fechas disponibles..."):
+                                            available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                                            if not available_dates:
+                                                st.warning("No se encontraron imágenes en ese rango de fechas.")
+                                                st.stop()
+                        
+                                        data_time = []
+                                        clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
+                                        ficocianina_indices = {"PC_Val_cal", "B5_div_B4"}
+                        
+                                        hay_clorofila = any(i in selected_indices for i in clorofila_indices)
+                                        hay_ficocianina = any(i in selected_indices for i in ficocianina_indices)
+                        
+                                        if reservoir_name.lower() == "val" and hay_ficocianina:
+                                            urls = [
+                                                "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
+                                                "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
+                                            ]
+                                            df_list = [cargar_csv_desde_url(u) for u in urls]
+                                            df_list = [df for df in df_list if not df.empty]
+                                            if df_list:
+                                                df_fico = pd.concat(df_list).sort_values('Fecha-hora')
+                                                start_dt = pd.to_datetime(start_date)
+                                                end_dt = pd.to_datetime(end_date)
+                                                df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
+                                                for _, row in df_filtrado.iterrows():
+                                                    data_time.append({
+                                                        "Point": "SAICA_Val",
+                                                        "Date": row["Fecha-hora"],
+                                                        "Ficocianina (µg/L)": row["Ficocianina (µg/L)"],
+                                                        "Tipo": "Valor Real"
+                                                    })
+                        
+                                        if reservoir_name.lower() == "bellus" and (hay_clorofila or hay_ficocianina):
+                                            url_fico = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
+                                            url_cloro = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
+                                            df_fico = cargar_csv_desde_url(url_fico)
+                                            df_cloro = cargar_csv_desde_url(url_cloro)
+                        
+                                            for col in df_fico.columns:
+                                                if "pc_ivf" in col.lower():
+                                                    df_fico.rename(columns={col: "Ficocianina (µg/L)"}, inplace=True)
+                                            for col in df_cloro.columns:
+                                                if "chla_ivf" in col.lower():
+                                                    df_cloro.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
+                        
+                                            if not df_fico.empty and not df_cloro.empty:
+                                                df_bellus = pd.merge(df_fico, df_cloro, on="Fecha-hora", how="outer")
+                                                df_bellus = df_bellus.sort_values("Fecha-hora")
+                                                start_dt = pd.to_datetime(start_date)
+                                                end_dt = pd.to_datetime(end_date)
+                                                df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
+                                                for _, row in df_bellus_filtrado.iterrows():
+                                                    entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
+                                                    if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
+                                                        entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
+                                                    if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
+                                                        entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
+                                                    if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
+                                                        data_time.append(entry)
+                        
+                                        for day in available_dates:
+                                            _, indices_image, _ = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
+                                            if indices_image is None:
+                                                continue
+                        
+                                            for point_name, (lat, lon) in puntos_interes[reservoir_name].items():
+                                                values = get_values_at_point(lat, lon, indices_image, selected_indices)
+                                                registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
+                                                for i in selected_indices:
+                                                    if i in values and values[i] is not None:
+                                                        registro[i] = values[i]
+                                                if any(i in registro for i in selected_indices):
+                                                    data_time.append(registro)
+                        
+                                            for i in selected_indices:
+                                                media_valor = calcular_media_diaria_embalse(indices_image, i, aoi)
+                                                if media_valor is not None:
+                                                    data_time.append({
+                                                        "Point": "Media_Embalse",
+                                                        "Date": day,
+                                                        i: media_valor,
+                                                        "Tipo": "Valor Estimado"
+                                                    })
+                        
+                                        df_time = pd.DataFrame(data_time)
+                                        if df_time.empty:
+                                            st.warning("No se generaron datos válidos.")
+                                            st.stop()
+                        
+                                        st.session_state["data_time"] = data_time
+                        
+                                        st.success("✅ Datos procesados correctamente. Mostrando gráficas:")
+                        
+                                        df_time["Fecha_dt"] = pd.to_datetime(df_time["Date"], errors='coerce')
+                        
+                                        with st.expander("📊 Evolución de la media diaria del embalse", expanded=True):
+                                            df_media = df_time[df_time["Point"] == "Media_Embalse"]
+                                            for i in selected_indices:
+                                                if i in df_media.columns:
+                                                    df_ind = df_media[["Fecha_dt", i]].dropna()
+                                                    chart = alt.Chart(df_ind).mark_bar().encode(
+                                                        x=alt.X("Fecha_dt:T", title="Fecha"),
+                                                        y=alt.Y(f"{i}:Q", title="Concentración"),
+                                                        tooltip=["Fecha_dt", i]
+                                                    ).properties(title=f"{i} – Media embalse")
+                                                    st.altair_chart(chart, use_container_width=True)
+                        
+                                        with st.expander("📍 Valores por punto de interés", expanded=True):
+                                            for point in df_time["Point"].unique():
+                                                if point != "Media_Embalse":
+                                                    df_p = df_time[df_time["Point"] == point]
+                                                    df_melt = df_p.melt(id_vars=["Point", "Fecha_dt"],
+                                                                        value_vars=selected_indices,
+                                                                        var_name="Índice", value_name="Valor")
+                                                    chart = alt.Chart(df_melt).mark_line(point=True).encode(
+                                                        x=alt.X("Fecha_dt:T", title="Fecha"),
+                                                        y=alt.Y("Valor:Q", title="Valor"),
+                                                        color="Índice:N",
+                                                        tooltip=["Fecha_dt", "Índice", "Valor"]
+                                                    ).properties(title=f"{point} – evolución de índices")
+                                                    st.altair_chart(chart, use_container_width=True)
+
