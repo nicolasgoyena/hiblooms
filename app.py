@@ -868,6 +868,7 @@ with tab2:
                     with st.spinner("Calculando fechas disponibles..."):
                         available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                         if not available_dates:
+                            spinner_placeholder.empty() 
                             st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
                             st.session_state["data_time"] = []
                             st.stop()
