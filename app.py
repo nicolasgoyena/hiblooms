@@ -1463,10 +1463,14 @@ with tab4:
                                                     if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
                                                         data_time.append(entry)
                         
-                                        for day in available_dates:
+                                        progress_bar = st.progress(0, text="Procesando imágenes...")
+                                        total = len(available_dates)
+                                        for i, day in enumerate(available_dates):
+                                            progress_bar.progress((i + 1) / total, text=f"Procesando imagen del {day} ({i+1}/{total})")
                                             _, indices_image, _ = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                             if indices_image is None:
                                                 continue
+
                         
                                             for point_name, (lat, lon) in puntos_interes[reservoir_name].items():
                                                 values = get_values_at_point(lat, lon, indices_image, selected_indices)
