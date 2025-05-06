@@ -859,61 +859,49 @@ with tab2:
                     """)
 
                 if st.button("Calcular y mostrar resultados"):
-                    # 🔁 Limpiar resultados anteriores
+                # 🔁 Limpiar resultados anteriores
+                st.session_state["data_time"] = []
+                st.session_state["urls_exportacion"] = []
+                st.session_state["used_cloud_results"] = []
+                st.session_state["cloud_results"] = []
+            
+                # ✅ Spinner SOLO durante get_available_dates
+                with st.spinner("Calculando fechas disponibles..."):
+                    available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+            
+                if not available_dates:
+                    st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
                     st.session_state["data_time"] = []
-                    st.session_state["urls_exportacion"] = []
-                    st.session_state["used_cloud_results"] = []
-                    st.session_state["cloud_results"] = []
-                
-                    with st.spinner("Calculando fechas disponibles..."):
-                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-                        if not available_dates:
-                            st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
-                            st.session_state["data_time"] = []
-                            st.stop()
-
-                        if available_dates:
-                            st.session_state['available_dates'] = available_dates
-                            st.session_state['selected_indices'] = selected_indices
-
-                            st.subheader("📅 Fechas disponibles dentro del rango seleccionado:")
-
-                            df_available = pd.DataFrame(available_dates, columns=["Fecha"])
-                            df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
-                            df_available["Fecha_str"] = df_available["Fecha"].dt.strftime("%d-%b")
-                            
-                            # Línea base ficticia para separar los ticks visualmente
-                            df_available["y_base"] = 0
-                            
-                            # Ticks más bajos
-                            timeline_chart = alt.Chart(df_available).mark_tick(thickness=2, size=20).encode(
-                                x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=0, format="%d-%b")),
-                                y=alt.Y("y_base:Q", axis=None),
-                                tooltip=alt.Tooltip("Fecha:T", title="Fecha")
-                            ).properties(
-                                height=100,
-                                width="container"
-                            )
-                            
-                            # Etiquetas más arriba
-                            text_layer = alt.Chart(df_available).mark_text(
-                                align="center",
-                                baseline="bottom",
-                                dy=-15,  # Más separación vertical
-                                fontSize=11
-                            ).encode(
-                                x="Fecha:T",
-                                y=alt.value(30),  # Coloca el texto más arriba que el tick
-                                text="Fecha_str:N"
-                            )
-                            
-                            # Combina y configura
-                            final_chart = (timeline_chart + text_layer).configure_axis(
-                                labelFontSize=12,
-                                tickSize=5
-                            )
-                            
-                            st.altair_chart(final_chart, use_container_width=True)
+                    st.stop()
+            
+                if available_dates:
+                    st.session_state['available_dates'] = available_dates
+                    st.session_state['selected_indices'] = selected_indices
+            
+                    st.subheader("📅 Fechas disponibles dentro del rango seleccionado:")
+            
+                    df_available = pd.DataFrame(available_dates, columns=["Fecha"])
+                    df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
+                    df_available["Fecha_str"] = df_available["Fecha"].dt.strftime("%d-%b")
+                    df_available["y_base"] = 0
+            
+                    timeline_chart = alt.Chart(df_available).mark_tick(thickness=2, size=20).encode(
+                        x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=0, format="%d-%b")),
+                        y=alt.Y("y_base:Q", axis=None),
+                        tooltip=alt.Tooltip("Fecha:T", title="Fecha")
+                    ).properties(height=100, width="container")
+            
+                    text_layer = alt.Chart(df_available).mark_text(
+                        align="center", baseline="bottom", dy=-15, fontSize=11
+                    ).encode(
+                        x="Fecha:T", y=alt.value(30), text="Fecha_str:N"
+                    )
+            
+                    final_chart = (timeline_chart + text_layer).configure_axis(
+                        labelFontSize=12, tickSize=5
+                    )
+            
+                    st.altair_chart(final_chart, use_container_width=True)
 
 
 
