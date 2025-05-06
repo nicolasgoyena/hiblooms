@@ -5,7 +5,7 @@ from streamlit_extras.switch_page_button import switch_page
 import ee
 import json
 
-from layout.introduccion import mostrar_pestana_introduccion
+from layout.introduction import mostrar_pestana_introduccion
 from layout.visualizacion import mostrar_pestana_visualizacion
 from layout.tablas import mostrar_pestana_tablas
 
