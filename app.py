@@ -922,7 +922,7 @@ with tab2:
 
                             # Determinar si se seleccionaron índices de clorofila o de ficocianina
                             clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                            ficocianina_indices = {PC_Val_cal, "B5_div_B4"}
+                            ficocianina_indices = {"PC_Val_cal", "B5_div_B4"}
                             
                             hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
                             hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
