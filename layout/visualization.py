@@ -2,13 +2,12 @@
 
 import streamlit as st
 from datetime import datetime, timedelta
-from logic.shapefiles import obtener_nombres_embalses, cargar_y_mostrar_embalses, load_reservoir_shapefile, gdf_to_ee_geometry
-from logic.dates import get_available_dates
-from logic.image_processing import process_sentinel2, calcular_media_diaria_embalse
-from logic.points import get_values_at_point
-from logic.download import generar_url_geotiff_multibanda
-from logic.leyendas import generar_leyenda
-from logic.datos_sonda import cargar_csv_desde_url
+from logic.sentinel_processing import obtener_nombres_embalses, cargar_y_mostrar_embalses, load_reservoir_shapefile, gdf_to_ee_geometry
+from logic.sentinel_processing import get_available_dates, calcular_media_diaria_embalse, generar_url_geotiff_multibanda
+from logic.sentinel_processing import process_sentinel2
+from logic.point_values import get_values_at_point
+from logic.csv_utils import cargar_csv_desde_url
+from logic.download import generar_leyenda
 from streamlit_folium import folium_static
 import geemap
 import altair as alt
