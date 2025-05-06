@@ -294,9 +294,19 @@ def gdf_to_ee_geometry(gdf):
     return ee_geometry
 
 def calcular_media_diaria_embalse(indices_image, index_name, aoi):
-    """Calcula la media del índice dado sobre el embalse solo en píxeles de agua (SCL == 6)."""
+    """Calcula la media del índice dado sobre el embalse solo en píxeles de agua (SCL == 6 o SCL == 2 para el año 2018)."""
     scl = indices_image.select('SCL')
-    mask_agua = scl.eq(6)
+
+    # Extraer la fecha de la imagen
+    fecha_millis = indices_image.get('system:time_start').getInfo()
+    fecha_dt = datetime.utcfromtimestamp(fecha_millis / 1000)
+    year = fecha_dt.year
+
+    if year == 2018:
+        # Considerar SCL 6 (agua) y 2 (área oscura)
+        mask_agua = scl.eq(6).Or(scl.eq(2))
+    else:
+        mask_agua = scl.eq(6)
 
     indice_filtrado = indices_image.select(index_name).updateMask(mask_agua)
 
@@ -308,6 +318,7 @@ def calcular_media_diaria_embalse(indices_image, index_name, aoi):
     ).get(index_name)
 
     return media.getInfo() if media is not None else None
+
 
 
 
