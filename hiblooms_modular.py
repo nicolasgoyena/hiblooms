@@ -6,7 +6,7 @@ import ee
 import json
 
 from layout.introduction import mostrar_pestana_introduccion
-from layout.visualizacion import mostrar_pestana_visualizacion
+from layout.visualization import mostrar_pestana_visualizacion
 from layout.tablas import mostrar_pestana_tablas
 
 # Configuración inicial de la app
