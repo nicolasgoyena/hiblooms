@@ -1313,6 +1313,20 @@ with tab2:
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
+                                # ✅ Verificar y crear la columna 'Fecha' si no existe
+                                if "Fecha" not in df_time.columns:
+                                    # Prioridad de columnas de fecha (si existen)
+                                    posibles_fechas = ["Date", "Fecha-hora"]
+                                    for col in posibles_fechas:
+                                        if col in df_time.columns:
+                                            df_time["Fecha"] = df_time[col]
+                                            break
+                        
+                                # ✅ Verificar que la columna 'Fecha' se haya creado correctamente
+                                if "Fecha" not in df_time.columns:
+                                    st.error("❌ No se encontró ninguna columna de fecha válida.")
+                                    st.stop()
+                        
                                 # ✅ Mantener solo la columna 'Fecha' eliminando cualquier otra columna de fecha
                                 fecha_cols = [col for col in df_time.columns if "Fecha" in col and col != "Fecha"]
                                 df_time.drop(columns=fecha_cols, errors='ignore', inplace=True)
@@ -1322,6 +1336,7 @@ with tab2:
                                     df_time["Fecha"] = pd.to_datetime(df_time["Fecha"], errors='coerce')
                                 except:
                                     st.error("Error al convertir las fechas. Revisando el formato...")
+                                    st.stop()
                         
                                 # ✅ Filtrar solo las filas donde la fecha es válida
                                 df_time = df_time.dropna(subset=["Fecha"])
@@ -1355,6 +1370,7 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+                        
 
                         
 
