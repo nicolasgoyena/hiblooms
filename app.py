@@ -1313,9 +1313,9 @@ with tab2:
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # ✅ Crear la columna 'Fecha' y eliminar cualquier otra columna de fecha
+                                # ✅ Crear la columna 'Fecha' si no existe, basada en las posibles columnas de fecha
                                 if "Fecha" not in df_time.columns:
-                                    posibles_fechas = ["Date", "Fecha-hora"]
+                                    posibles_fechas = ["Date", "Fecha-hora", "Fecha_dt"]
                                     for col in posibles_fechas:
                                         if col in df_time.columns:
                                             df_time["Fecha"] = df_time[col]
@@ -1327,7 +1327,7 @@ with tab2:
                                     st.stop()
                         
                                 # ✅ Eliminar cualquier otra columna relacionada con fechas
-                                df_time = df_time.drop(columns=[col for col in df_time.columns if col in ["Date", "Fecha-hora"]], errors='ignore')
+                                df_time = df_time.drop(columns=[col for col in df_time.columns if col in ["Date", "Fecha-hora", "Fecha_dt"]], errors='ignore')
                         
                                 # ✅ Convertir la columna 'Fecha' a datetime y manejar errores
                                 df_time["Fecha"] = pd.to_datetime(df_time["Fecha"], errors='coerce')
@@ -1365,7 +1365,8 @@ with tab2:
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
                         
-                                    
+                                                
+                                                            
 with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
                         
