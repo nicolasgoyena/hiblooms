@@ -1313,11 +1313,14 @@ with tab2:
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # Reformatear la fecha principal
-                                df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
+                                # Reformatear la fecha principal a datetime para ordenar correctamente
+                                df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce', format="%d-%m-%Y %H:%M")
                         
-                                # 🔧 Agrupar por 'Ubicación' y 'Fecha' para evitar duplicados
+                                # 🔧 Agrupar por 'Ubicación' y 'Fecha' para evitar duplicados y ordenar por fecha
                                 df_time = df_time.sort_values(by=["Ubicación", "Fecha"]).drop_duplicates(subset=["Ubicación", "Fecha"], keep="last")
+                        
+                                # ✅ Convertir la fecha de nuevo a texto para visualización
+                                df_time["Fecha"] = df_time["Fecha"].dt.strftime("%d-%m-%Y %H:%M")
                         
                                 # 🔧 Ordenar las columnas
                                 columnas = list(df_time.columns)
@@ -1342,6 +1345,7 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+                        
 
 with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
