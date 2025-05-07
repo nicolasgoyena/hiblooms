@@ -1329,14 +1329,14 @@ with tab2:
                                 # ✅ Eliminar cualquier otra columna relacionada con fechas
                                 df_time = df_time.drop(columns=[col for col in df_time.columns if col in ["Date", "Fecha-hora", "Fecha_dt"]], errors='ignore')
                         
-                                # ✅ Convertir la columna 'Fecha' a datetime y manejar errores
-                                df_time["Fecha"] = pd.to_datetime(df_time["Fecha"], errors='coerce')
+                                # ✅ Convertir la columna 'Fecha' a datetime para asegurar el orden cronológico
+                                df_time["Fecha"] = pd.to_datetime(df_time["Fecha"], format="%d-%m-%Y %H:%M", errors='coerce')
                         
                                 # ✅ Filtrar solo las filas donde la fecha es válida
                                 df_time = df_time.dropna(subset=["Fecha"])
                         
-                                # ✅ Ordenar por 'Ubicación' y 'Fecha' y eliminar duplicados
-                                df_time = df_time.sort_values(by=["Ubicación", "Fecha"]).drop_duplicates(subset=["Ubicación", "Fecha"], keep="last")
+                                # ✅ Ordenar por 'Ubicación' y 'Fecha' (orden cronológico)
+                                df_time = df_time.sort_values(by=["Ubicación", "Fecha"])
                         
                                 # ✅ Convertir la fecha a texto para visualización final
                                 df_time["Fecha"] = df_time["Fecha"].dt.strftime("%d-%m-%Y %H:%M")
@@ -1365,6 +1365,7 @@ with tab2:
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
                         
+                                                
                                                 
                                                             
 with tab4:
