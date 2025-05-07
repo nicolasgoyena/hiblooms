@@ -1313,33 +1313,28 @@ with tab2:
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # ✅ Crear la columna 'Fecha' si no existe, basada en las posibles columnas de fecha
+                                # ✅ Crear una única columna 'Fecha' en formato datetime para ordenar
                                 if "Fecha" not in df_time.columns:
                                     posibles_fechas = ["Date", "Fecha-hora", "Fecha_dt"]
                                     for col in posibles_fechas:
                                         if col in df_time.columns:
-                                            df_time["Fecha"] = df_time[col]
+                                            df_time["Fecha"] = pd.to_datetime(df_time[col], errors='coerce')
                                             break
                         
-                                # ✅ Verificar que 'Fecha' existe, si no, detener
+                                # ✅ Verificar que 'Fecha' existe y eliminar duplicados
                                 if "Fecha" not in df_time.columns:
                                     st.error("❌ No se encontró ninguna columna de fecha válida.")
                                     st.stop()
                         
-                                # ✅ Eliminar cualquier otra columna relacionada con fechas
-                                df_time = df_time.drop(columns=[col for col in df_time.columns if col in ["Date", "Fecha-hora", "Fecha_dt"]], errors='ignore')
-                        
-                                # ✅ Convertir la columna 'Fecha' a datetime para asegurar el orden cronológico
-                                df_time["Fecha"] = pd.to_datetime(df_time["Fecha"], format="%d-%m-%Y %H:%M", errors='coerce')
-                        
-                                # ✅ Filtrar solo las filas donde la fecha es válida
-                                df_time = df_time.dropna(subset=["Fecha"])
-                        
                                 # ✅ Ordenar por 'Ubicación' y 'Fecha' (orden cronológico)
-                                df_time = df_time.sort_values(by=["Ubicación", "Fecha"])
+                                df_time = df_time.dropna(subset=["Fecha"]).sort_values(by=["Ubicación", "Fecha"])
                         
-                                # ✅ Convertir la fecha a texto para visualización final
+                                # ✅ Convertir la fecha a texto para visualización
                                 df_time["Fecha"] = df_time["Fecha"].dt.strftime("%d-%m-%Y %H:%M")
+                        
+                                # ✅ Eliminar columnas de fecha duplicadas si existen
+                                columnas_fecha = ["Date", "Fecha-hora", "Fecha_dt"]
+                                df_time.drop(columns=[col for col in columnas_fecha if col in df_time.columns], errors='ignore', inplace=True)
                         
                                 # 🔧 Ordenar las columnas
                                 columnas = list(df_time.columns)
@@ -1355,18 +1350,17 @@ with tab2:
                                 # ✅ Mostrar las tablas corregidas
                                 if not df_puntos.empty:
                                     st.markdown("### 📌 Datos en los puntos de interés")
-                                    df_puntos = df_puntos.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_puntos.reset_index(drop=True))
                         
                                 if not df_medias.empty:
                                     st.markdown("### 💧 Datos de medias del embalse")
-                                    df_medias = df_medias.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
                         
                                                 
-                                                
+                                                                        
+                                                                        
                                                             
 with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
