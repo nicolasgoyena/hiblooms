@@ -1313,14 +1313,30 @@ with tab2:
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # Reformatear la fecha principal a datetime para ordenar correctamente
-                                df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce', format="%d-%m-%Y %H:%M")
+                                # ✅ Mantener una copia de la fecha original para no perder datos
+                                df_time["Fecha_Original"] = df_time["Date"].copy()
                         
-                                # 🔧 Agrupar por 'Ubicación' y 'Fecha' para evitar duplicados y ordenar por fecha
+                                # ✅ Intentar convertir la fecha a datetime, si falla, mantener la original
+                                try:
+                                    df_time["Fecha"] = pd.to_datetime(df_time["Fecha_Original"], errors='coerce')
+                                except:
+                                    st.error("Error al convertir las fechas. Revisando el formato...")
+                        
+                                # ✅ Eliminar cualquier columna duplicada de fecha que no sea 'Fecha_Original' o 'Fecha'
+                                columnas_a_eliminar = [col for col in df_time.columns if "Fecha" in col and col not in ["Fecha", "Fecha_Original"]]
+                                df_time.drop(columns=columnas_a_eliminar, errors='ignore', inplace=True)
+                        
+                                # ✅ Filtrar solo las filas donde la fecha es válida
+                                df_time = df_time.dropna(subset=["Fecha"])
+                        
+                                # ✅ Agrupar por 'Ubicación' y 'Fecha' para evitar duplicados y ordenar por fecha
                                 df_time = df_time.sort_values(by=["Ubicación", "Fecha"]).drop_duplicates(subset=["Ubicación", "Fecha"], keep="last")
                         
                                 # ✅ Convertir la fecha de nuevo a texto para visualización
                                 df_time["Fecha"] = df_time["Fecha"].dt.strftime("%d-%m-%Y %H:%M")
+                        
+                                # ✅ Eliminar la columna 'Fecha_Original' antes de mostrar
+                                df_time.drop(columns=["Fecha_Original"], inplace=True)
                         
                                 # 🔧 Ordenar las columnas
                                 columnas = list(df_time.columns)
@@ -1345,6 +1361,7 @@ with tab2:
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
                         
 
 with tab4:
