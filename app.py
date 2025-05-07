@@ -1316,43 +1316,21 @@ with tab2:
                                 # Reformatear la fecha principal
                                 df_time["Fecha"] = pd.to_datetime(df_time["Date"], errors='coerce').dt.strftime("%d-%m-%Y %H:%M")
                         
-                                # 🔥 Eliminar todas las columnas innecesarias de fecha
-                                df_time.drop(columns=["Date", "Fecha_formateada", "Fecha_dt", "Fecha-hora"], errors='ignore', inplace=True)
+                                # 🔧 Agrupar por 'Ubicación' y 'Fecha' para evitar duplicados
+                                df_time = df_time.sort_values(by=["Ubicación", "Fecha"]).drop_duplicates(subset=["Ubicación", "Fecha"], keep="last")
                         
-                                # 🔁 Unificar duplicados de medias de embalse por fecha
-                                df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
-                                df_otros = df_time[df_time["Ubicación"] != "Media_Embalse"]
-                                
-                                if not df_medias.empty:
-                                    columnas_valor = [col for col in df_medias.columns if col not in ["Ubicación", "Fecha", "Tipo"]]
-                                    df_medias_agrupado = df_medias.groupby(["Ubicación", "Fecha", "Tipo"], as_index=False).agg({col: "max" for col in columnas_valor})
-                                    df_time = pd.concat([df_medias_agrupado, df_otros], ignore_index=True)
-                                
-                                # Unificar columnas solo si hay un único índice seleccionado por sustancia
-                                cols_clorofila = [col for col in ["Chla_Val_cal", "Chla_Bellus_cal"] if col in df_time.columns]
-                                cols_ficocianina = [col for col in ["PC_Val_cal", "B5_div_B4"] if col in df_time.columns]
-                                
-                                if len(cols_clorofila) == 1 and "Clorofila (µg/L)" not in df_time.columns:
-                                    df_time["Clorofila (µg/L)"] = df_time[cols_clorofila[0]]
-                                
-                                if len(cols_ficocianina) == 1 and "Ficocianina (µg/L)" not in df_time.columns:
-                                    df_time["Ficocianina (µg/L)"] = df_time[cols_ficocianina[0]]
-                                
-                                # Ya no eliminamos columnas específicas
-
-                        
+                                # 🔧 Ordenar las columnas
                                 columnas = list(df_time.columns)
                                 orden = ["Ubicación", "Fecha", "Tipo"]
-                                for col in ["Clorofila (µg/L)", "Ficocianina (µg/L)"]:
-                                    if col in columnas:
-                                        orden.append(col)
                                 otras = [col for col in columnas if col not in orden]
                                 columnas_ordenadas = orden + otras
                                 df_time = df_time[columnas_ordenadas]
                         
+                                # 🔧 Dividir en puntos de interés y medias del embalse
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
+                                # ✅ Mostrar las tablas corregidas
                                 if not df_puntos.empty:
                                     st.markdown("### 📌 Datos en los puntos de interés")
                                     df_puntos = df_puntos.sort_values(by="Fecha", ascending=True)
@@ -1360,10 +1338,11 @@ with tab2:
                         
                                 if not df_medias.empty:
                                     st.markdown("### 💧 Datos de medias del embalse")
+                                    df_medias = df_medias.sort_values(by="Fecha", ascending=True)
                                     st.dataframe(df_medias.reset_index(drop=True))
-                        
                             else:
                                 st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
+
 with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
                         
