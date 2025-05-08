@@ -472,13 +472,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI_ind'),
             "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC_Val_cal"),
             "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Chla_Val_cal"),
-            "Chla_Bellus_cal" : lambda: (
-                (
-                    (df_merge['B5'] / df_merge['B3']) + (0.995 / (df_merge['B3'] + 0.395))  # Índice simbólico
-                )
-                .pipe(lambda x: 45 / (1 + np.exp(-22 * (x - 0.1)))**0.25)  # Aplicar la logística asimétrica directamente
+            "Chla_Bellus_cal": lambda: (
+                (b5.divide(b3)  # B5 / B3
+                .add(0.995.divide(b3.add(0.395))))  # 0.995 / (B3 + 0.395)
+                .pipe(lambda x: 45 / (x.multiply(-22).subtract(0.1).exp()).pow(0.25))  # Logística asimétrica
                 .rename("Chla_Bellus_cal")
             )
+
+
         }
 
         indices_to_add = []
