@@ -472,7 +472,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI_ind'),
             "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC_Val_cal"),
             "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Chla_Val_cal"),
-            Chla_Bellus_cal = lambda: (
+            "Chla_Bellus_cal" : lambda: (
                 (
                     (df_merge['B5'] / df_merge['B3']) + (0.995 / (df_merge['B3'] + 0.395))  # Índice simbólico
                 )
