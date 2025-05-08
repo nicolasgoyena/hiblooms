@@ -462,6 +462,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
+        b3 = scaled_image.select('B3')
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
