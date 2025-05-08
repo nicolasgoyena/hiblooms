@@ -474,13 +474,17 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).rename("PC_Val_cal"),
             "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).rename("Chla_Val_cal"),
             "Chla_Bellus_cal": lambda: (
-                (
-                    b5.divide(b3)  # B5 / B3
-                    .add(ee.Image(0.995).divide(b3.add(0.395)))  # 0.995 / (B3 + 0.395)
-                )
-                .pipe(lambda x: 428055.70 / (1 + np.exp(-1.13 * (x.subtract(11.87)))))  # Función logística
-                .rename("Chla_Bellus_cal")  # Renombramos el resultado
+                ee.Image(428055.70).divide(
+                    ee.Image(1).add(
+                        (b5.divide(b3)  # B5 / B3
+                        .add(ee.Image(0.995).divide(b3.add(0.395))))  # 0.995 / (B3 + 0.395)
+                        .subtract(11.87)  # Restamos el parámetro c
+                        .multiply(-1.13)  # Multiplicamos por -b
+                        .exp()  # Exponencial
+                    )
+                ).rename("Chla_Bellus_cal")  # Renombramos el resultado
             )
+
 
 
 
