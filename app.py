@@ -476,9 +476,15 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "Chla_Bellus_cal": lambda: (
                 (b5.divide(b3)  # B5 / B3
                 .add(0.995.divide(b3.add(0.395))))  # 0.995 / (B3 + 0.395)
-                .pipe(lambda x: 45 / (x.multiply(-22).subtract(0.1).exp()).pow(0.25))  # Logística asimétrica
-                .rename("Chla_Bellus_cal")
+                .multiply(-22)  # Multiplicamos por -22
+                .subtract(0.1)  # Restamos 0.1
+                .exp()  # Aplicamos la exponencial
+                .add(1)  # Sumamos 1
+                .pow(0.25)  # Potenciamos a la -0.25
+                .multiply(45)  # Multiplicamos por 45
+                .rename("Chla_Bellus_cal")  # Renombramos el resultado
             )
+
 
 
         }
