@@ -11,8 +11,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-USERNAME = st.secrets["auth"]["username"]
-PASSWORD = st.secrets["auth"]["password"]
+# Función para cargar usuarios desde secrets.toml
+def cargar_usuarios():
+    usuarios = {}
+    for key, value in st.secrets["auth"].items():
+        if key.startswith("username"):
+            user_index = key.replace("username", "")
+            password_key = f"password{user_index}"
+            if password_key in st.secrets["auth"]:
+                usuarios[value] = st.secrets["auth"][password_key]
+    return usuarios
+
+# Obtener el diccionario de usuarios y contraseñas
+users = cargar_usuarios()
 
 # Detectar si viene con admin=true
 query_params = st.query_params
@@ -38,10 +49,11 @@ with st.form("login_form"):
     submit = st.form_submit_button("Iniciar sesión")
 
 if submit:
-    if user == USERNAME and pwd == PASSWORD:
+    if user in users and pwd == users[user]:
         st.session_state["logged_in"] = True
         switch_page("app")
     else:
         st.error("❌ Usuario o contraseña incorrectos")
+
 
 
