@@ -444,7 +444,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         # ⚡ Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
         scl = sentinel2_image.select('SCL')
-        cloud_mask = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))
+        cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
