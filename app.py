@@ -402,42 +402,34 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             .filterDate(selected_date_ee, end_date_ee)
 
         num_images = sentinel2.size().getInfo()
-
         if num_images == 0:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
 
         images = sentinel2.toList(num_images)
-
         best_image = None
-        best_score = None  # Combinación de baja nubosidad y alta cobertura
+        best_score = None  
 
         for i in range(num_images):
             image = ee.Image(images.get(i))
             try:
                 cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
                 coverage = calculate_coverage_percentage(image, aoi)
-                
+
                 if coverage < 50 or cloud_score > max_cloud_percentage:
-                    continue  # ❌ Rechazar si cubre menos del 50% o supera nubosidad máxima
-   
-                # Escoger imagen con MENOR nubosidad
+                    continue
+
                 if best_score is None or cloud_score < best_score:
                     best_score = cloud_score
                     best_image = image
-                
-                    # Registrar el resultado de nubosidad solo para la mejor imagen
+
                     image_time = image.get('system:time_start').getInfo()
                     hora = datetime.utcfromtimestamp(image_time / 1000).strftime('%H:%M')
-                    if "used_cloud_results" not in st.session_state:
-                        st.session_state["used_cloud_results"] = []
-                    st.session_state["used_cloud_results"].append({
+                    st.session_state.setdefault("used_cloud_results", []).append({
                         "Fecha": selected_date,
                         "Hora": hora,
                         "Nubosidad aproximada (%)": round(cloud_score, 2)
                     })
-                
-
             except Exception as e:
                 st.warning(f"Error al procesar imagen {i}: {e}")
                 continue
@@ -450,15 +442,20 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
+        # Aplicación de máscara de nubes
+        scl = sentinel2_image.select('SCL')
+        cloud_mask = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))
+        masked_image = sentinel2_image.updateMask(cloud_mask)
+
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
-        bandas_disponibles = sentinel2_image.bandNames().getInfo()
+        bandas_disponibles = masked_image.bandNames().getInfo()
 
         for banda in bandas_requeridas:
             if banda not in bandas_disponibles:
                 st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}.")
                 return None, None, None
 
-        clipped_image = sentinel2_image.clip(aoi)
+        clipped_image = masked_image.clip(aoi)
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
@@ -476,18 +473,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "Chla_Bellus_cal": lambda: (
                 ee.Image(428055.70).divide(
                     ee.Image(1).add(
-                        (b5.divide(b3)  # B5 / B3
-                        .add(ee.Image(0.995).divide(b3.add(0.395))))  # 0.995 / (B3 + 0.395)
-                        .subtract(11.87)  # Restamos el parámetro c
-                        .multiply(-1.13)  # Multiplicamos por -b
-                        .exp()  # Exponencial
+                        (b5.divide(b3)
+                        .add(ee.Image(0.995).divide(b3.add(0.395))))
+                        .subtract(11.87)
+                        .multiply(-1.13)
+                        .exp()
                     )
-                ).rename("Chla_Bellus_cal")  # Renombramos el resultado
+                ).rename("Chla_Bellus_cal")
             )
-
-
-
-
         }
 
         indices_to_add = []
