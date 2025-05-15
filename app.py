@@ -462,7 +462,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8a = scaled_image.select('B8A') 
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
@@ -473,28 +472,15 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "Chla_Bellus_cal": lambda: (
                 ee.Image(428055.70).divide(
                     ee.Image(1).add(
-                        (b5.divide(b3).add(ee.Image(0.995).divide(b3.add(0.395))))
+                        (b5.divide(b3)
+                        .add(ee.Image(0.995).divide(b3.add(0.395))))
                         .subtract(11.87)
                         .multiply(-1.13)
                         .exp()
                     )
                 ).updateMask(cloud_mask).rename("Chla_Bellus_cal")
-            ),
-            "PC_Bellus_cal": lambda: (
-                ee.Image(16957)
-                .multiply(
-                    b6.subtract(
-                        b8A.multiply(0.96).add(
-                            (b3.subtract(b8A)).multiply(0.51)
-                        )
-                    )
-                )
-                .add(571)
-                .updateMask(cloud_mask)
-                .rename("PC_Bellus_cal")
             )
         }
-
 
         indices_to_add = []
         for index in selected_indices:
@@ -559,8 +545,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI_ind": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC_Val_cal": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "Chla_Bellus_cal": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "PC_Bellus_cal": {"min": 25,"max": 200,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
+        "Chla_Bellus_cal": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -871,7 +856,7 @@ with tab2:
 
                 # Selección de índices
                 st.subheader("Selecciona los índices a visualizar:")
-                available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
+                available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal"]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
@@ -881,7 +866,6 @@ with tab2:
                     - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), útil como indicador de biomasa y ficocianina.
                     - **Chla_Val_cal:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
                     - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
-                    - **PC_Bellus_cal (Ficocianina Bellús):** Ajuste específico para el embalse de Bellús, basado en la fórmula empírica derivada de la relación espectral MCI. Se estima la concentración de ficocianina en µg/L.
                     """)
 
                 if st.button("Calcular y mostrar resultados"):
@@ -948,7 +932,7 @@ with tab2:
 
                             # Determinar si se seleccionaron índices de clorofila o de ficocianina
                             clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                            ficocianina_indices = {"PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                            ficocianina_indices = {"PC_Val_cal", "B5_div_B4"}
                             
                             hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
                             hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
@@ -1089,8 +1073,7 @@ with tab2:
                                     "PC_Val_cal": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
                                     "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
                                     "Chla_Val_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
-                                    "Chla_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
-                                    "PC_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
+                                    "Chla_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
 
                                 with row2[0]:
@@ -1185,10 +1168,6 @@ with tab2:
                                             elif index == "Chla_Bellus_cal":
                                                 vis_params["min"] = 5
                                                 vis_params["max"] = 55
-                                                vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
-                                            elif index == "PC_Bellus_cal":
-                                                vis_params["min"] = 25
-                                                vis_params["max"] = 200
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
 
 
@@ -1414,7 +1393,7 @@ with tab4:
                                     start_date = start_date.strftime('%Y-%m-%d')
                                     end_date = end_date.strftime('%Y-%m-%d')
                         
-                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
+                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal"]
                                     selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices, key="graficas_indices")
                         
                                     if st.button("Ejecutar modo rápido"):
@@ -1428,7 +1407,7 @@ with tab4:
                         
                                         data_time = []
                                         clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                                        ficocianina_indices = {"PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                                        ficocianina_indices = {"PC_Val_cal", "B5_div_B4"}
                         
                                         hay_clorofila = any(i in selected_indices for i in clorofila_indices)
                                         hay_ficocianina = any(i in selected_indices for i in ficocianina_indices)
@@ -1579,4 +1558,3 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
-
