@@ -1234,7 +1234,7 @@ with tab2:
                                     st.dataframe(df_results)
 
                             with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
-                                df_media = df_time[df_time.get("Point", df_time.get("Ubicación")) == "Media_Embalse"].copy()
+                                df_media = df_time[df_time["Point"] == "Media_Embalse"].copy()
                                 df_media["Date"] = pd.to_datetime(df_media["Date"], errors='coerce')
                             
                                 for indice in selected_indices:
@@ -1331,7 +1331,9 @@ with tab2:
                                 df_time = df_time.copy()
                         
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
-                                df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
+                                df_tabla = df_time.copy()
+                                df_tabla.rename(columns={"Point": "Ubicación"}, inplace=True)
+
                         
                                 # ✅ Crear una única columna 'Fecha' en formato datetime para ordenar
                                 if "Fecha" not in df_time.columns:
