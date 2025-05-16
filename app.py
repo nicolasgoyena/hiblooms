@@ -471,14 +471,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).updateMask(cloud_mask).rename("PC_Val_cal"),
             "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).updateMask(cloud_mask).rename("Chla_Val_cal"),
             "Chla_Bellus_cal": lambda: (
-                ee.Image(428055.70).divide(
-                    ee.Image(1).add(
-                        (b5.divide(b3).add(ee.Image(0.995).divide(b3.add(0.395))))
-                        .subtract(11.87)
-                        .multiply(-1.13)
-                        .exp()
-                    )
-                ).updateMask(cloud_mask).rename("Chla_Bellus_cal")
+                b5.subtract(b4).divide(b5.add(b4)).multiply(112.78).add(10.779).updateMask(cloud_mask).rename("Chla_Bellus_cal")
             ),
             "PC_Bellus_cal": lambda: (
                 ee.Image(16957)
@@ -558,7 +551,7 @@ def generar_leyenda(indices_seleccionados):
         "NDCI_ind": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC_Val_cal": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "Chla_Bellus_cal": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
+        "Chla_Bellus_cal": {"min": 5,"max": 100,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
         "PC_Bellus_cal": {"min": 25,"max": 500,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
@@ -1183,7 +1176,7 @@ with tab2:
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index == "Chla_Bellus_cal":
                                                 vis_params["min"] = 5
-                                                vis_params["max"] = 55
+                                                vis_params["max"] = 100
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index == "PC_Bellus_cal":
                                                 vis_params["min"] = 25
