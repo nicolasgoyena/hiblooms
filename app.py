@@ -319,21 +319,25 @@ def calcular_media_diaria_embalse(indices_image, index_name, aoi):
 
     return media.getInfo() if media is not None else None
 
-
-
-
 def calculate_cloud_percentage(image, aoi):
     scl = image.select('SCL')
+    
+    # Crear máscara de nubes (SCL 7, 8, 9, 10) pero excluir vegetación (SCL 4) y suelo desnudo (SCL 5)
     cloud_mask_scl = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
+    non_valid_mask = scl.eq(4).Or(scl.eq(5))  # Excluir vegetación y suelo desnudo
+    
+    # Aplicar máscara para excluir píxeles no válidos
+    valid_pixels_mask = scl.mask().And(non_valid_mask.Not())
 
-    cloud_fraction_scl = cloud_mask_scl.reduceRegion(
+    # Calcular la fracción de nubes solo sobre píxeles válidos
+    cloud_fraction_scl = cloud_mask_scl.updateMask(valid_pixels_mask).reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=aoi,
         scale=20,
         maxPixels=1e13
     ).get('SCL')
 
-    cloud_mask_prob = image.select('MSK_CLDPRB').gte(10)
+    cloud_mask_prob = image.select('MSK_CLDPRB').gte(10).updateMask(valid_pixels_mask)
     cloud_fraction_prob = cloud_mask_prob.reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=aoi,
@@ -359,6 +363,7 @@ def calculate_cloud_percentage(image, aoi):
 
     else:  # prob_ok
         return ee.Number(cloud_fraction_prob).multiply(100)
+
 
 
 def calculate_coverage_percentage(image, aoi):
