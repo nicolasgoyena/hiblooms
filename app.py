@@ -462,7 +462,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8a = scaled_image.select('B8A') 
+        b8A = scaled_image.select('B8A') 
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
