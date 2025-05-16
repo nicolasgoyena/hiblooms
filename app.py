@@ -488,6 +488,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                     )
                 )
                 .add(571)
+                .max(0)
                 .updateMask(cloud_mask)
                 .rename("PC_Bellus_cal")
             )
