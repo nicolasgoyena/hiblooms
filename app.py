@@ -1234,7 +1234,7 @@ with tab2:
                                     st.dataframe(df_results)
 
                             with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
-                                df_media = df_time[df_time["Point"] == "Media_Embalse"].copy()
+                                df_media = df_time[df_time.get("Point", df_time.get("Ubicación")) == "Media_Embalse"].copy()
                                 df_media["Date"] = pd.to_datetime(df_media["Date"], errors='coerce')
                             
                                 for indice in selected_indices:
