@@ -494,6 +494,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .rename("PC_Bellus_cal")
             )
         }
+        # ✅ Verificación de la correcta creación del índice PC_Bellus_cal si está seleccionado
+        if "PC_Bellus_cal" in selected_indices:
+            try:
+                pc_bellus_image = indices_functions["PC_Bellus_cal"]()
+                st.success("✅ Índice PC_Bellus_cal calculado correctamente.")
+            except Exception as e:
+                st.error(f"❌ Error al calcular el índice PC_Bellus_cal: {str(e)}")
+
 
 
         indices_to_add = []
