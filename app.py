@@ -559,7 +559,7 @@ def generar_leyenda(indices_seleccionados):
         "PC_Val_cal": {"min": 0, "max": 7, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
         "Chla_Bellus_cal": {"min": 5,"max": 55,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "PC_Bellus_cal": {"min": 25,"max": 200,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
+        "PC_Bellus_cal": {"min": 25,"max": 500,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -1187,7 +1187,7 @@ with tab2:
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index == "PC_Bellus_cal":
                                                 vis_params["min"] = 25
-                                                vis_params["max"] = 200
+                                                vis_params["max"] = 500
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
 
 
