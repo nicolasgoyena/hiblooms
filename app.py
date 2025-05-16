@@ -446,7 +446,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         scl = sentinel2_image.select('SCL')
         cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
-        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6']
+        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
 
         for banda in bandas_requeridas:
@@ -1331,9 +1331,7 @@ with tab2:
                                 df_time = df_time.copy()
                         
                                 # ✅ Renombrar la columna 'Point' a 'Ubicación'
-                                df_tabla = df_time.copy()
-                                df_tabla.rename(columns={"Point": "Ubicación"}, inplace=True)
-
+                                df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
                                 # ✅ Crear una única columna 'Fecha' en formato datetime para ordenar
                                 if "Fecha" not in df_time.columns:
