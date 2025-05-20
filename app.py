@@ -23,7 +23,7 @@ st.markdown("""
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
     switch_page("login")
-
+from streamlit_folium import st_folium
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
