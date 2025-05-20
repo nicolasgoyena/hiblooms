@@ -294,7 +294,7 @@ def gdf_to_ee_geometry(gdf):
     return ee_geometry
 
 def calcular_media_diaria_embalse(indices_image, index_name, aoi):
-    """Calcula la media del índice dado sobre el embalse solo en píxeles de agua (SCL == 6 o SCL == 2 para el año 2018)."""
+    """Calcula la media del índice dado sobre el embalse solo en píxeles de agua SCL == 6 (o SCL == 2 también para el año 2018)."""
     scl = indices_image.select('SCL')
 
     # Extraer la fecha de la imagen
@@ -447,7 +447,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        # ⚡ Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
+        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
         scl = sentinel2_image.select('SCL')
         cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
@@ -564,7 +564,7 @@ def generar_leyenda(indices_seleccionados):
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
     leyenda_html += "<h4 style='text-align: center;'>📌 Leyenda de Índices y Capas</h4>"
 
-    # 🔹 Leyenda para la capa SCL (Scene Classification Layer)
+    # Leyenda para la capa SCL (Scene Classification Layer)
     scl_palette = {
         1: ('#ff0004', 'Píxeles saturados/defectuosos'),
         2: ('#000000', 'Píxeles de área oscura'),
@@ -585,14 +585,14 @@ def generar_leyenda(indices_seleccionados):
 
     leyenda_html += "<br>"
 
-    # 🔹 Leyenda para la capa MSK_CLDPRB (Probabilidad de nubes)
+    # Leyenda para la capa MSK_CLDPRB (Probabilidad de nubes)
     msk_palette = ["blue", "green", "yellow", "red", "black"]
     leyenda_html += "<b>Capa MSK_CLDPRB (Probabilidad de Nubes):</b><br>"
     leyenda_html += f"<div style='background: linear-gradient(to right, {', '.join(msk_palette)}); height: 20px; border: 1px solid #000;'></div>"
     leyenda_html += "<div style='display: flex; justify-content: space-between; font-size: 12px;'><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>"
     leyenda_html += "<br>"
 
-    # 🔹 Leyenda para los índices seleccionados
+    # Leyenda para los índices seleccionados
     for indice in indices_seleccionados:
         if indice in parametros:
             min_val = parametros[indice]["min"]
@@ -815,7 +815,7 @@ with tab2:
             st.error("❌ No se encontró ningún archivo .shp válido en el ZIP.")
 
     # ──────────────────────────────
-    # 🔳 Dividimos el contenido en dos columnas
+    # Dividimos el contenido en dos columnas
     row1 = st.columns([2, 2])
     row2 = st.columns([2, 2])
 
@@ -883,7 +883,7 @@ with tab2:
                     """)
 
                 if st.button("Calcular y mostrar resultados"):
-                    # 🔁 Limpiar resultados anteriores
+                    # Limpiar resultados anteriores
                     st.session_state["data_time"] = []
                     st.session_state["urls_exportacion"] = []
                     st.session_state["used_cloud_results"] = []
@@ -909,7 +909,6 @@ with tab2:
                             # Línea base ficticia para separar los ticks visualmente
                             df_available["y_base"] = 0
                             
-                            # Ticks más bajos
                             timeline_chart = alt.Chart(df_available).mark_tick(thickness=2, size=20).encode(
                                 x=alt.X("Fecha:T", title=None, axis=alt.Axis(labelAngle=0, format="%d-%b")),
                                 y=alt.Y("y_base:Q", axis=None),
@@ -983,7 +982,7 @@ with tab2:
                                 df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
                                 df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
                                 
-                                # 🔁 Renombrado flexible
+                                # Renombrado flexible
                                 for col in df_fico_bellus.columns:
                                     if "pc_ivf" in col.lower():
                                         df_fico_bellus.rename(columns={col: "Ficocianina (µg/L)"}, inplace=True)
@@ -992,7 +991,7 @@ with tab2:
                                     if "chla_ivf" in col.lower():
                                         df_cloro_bellus.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
                                 
-                                # 🔗 Fusionar y filtrar por fechas
+                                # Fusionar y filtrar por fechas
                                 if not df_fico_bellus.empty and not df_cloro_bellus.empty:
                                     df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
                                     df_bellus = df_bellus.sort_values("Fecha-hora")
@@ -1017,7 +1016,7 @@ with tab2:
 
 
                             
-                            # ✅ Guardar data_time *solo después* de añadir (o no) los datos SAICA
+                            # Guardar data_time solo después de añadir (o no) los datos SAICA
                             st.session_state['data_time'] = data_time
 
 
@@ -1064,7 +1063,7 @@ with tab2:
                                         data_time.append(registro)
 
 
-                                # 2️⃣ Añadir media diaria del embalse solo en píxeles con SCL == 6
+                                # Añadir media diaria del embalse solo en píxeles con SCL == 6
                                 for index in selected_indices:
                                     if (hay_clorofila and index in clorofila_indices) or (hay_ficocianina and index in ficocianina_indices):
                                         media_valor = calcular_media_diaria_embalse(indices_image, index, aoi)
@@ -1077,8 +1076,6 @@ with tab2:
                                                 index: media_valor,
                                                 "Tipo": "Valor Estimado"
                                             })
-
-
 
                                 index_palettes = {
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
@@ -1099,8 +1096,6 @@ with tab2:
                                                       gdf_4326.geometry.centroid.x.mean()]
                                         map_indices = geemap.Map(center=map_center, zoom=13)
                                         
-
-
                                         # Crear grupos de capas para permitir que solo una se active a la vez
                                         rgb_layer = folium.raster_layers.TileLayer(
                                             tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
@@ -1220,11 +1215,11 @@ with tab2:
                             st.info("🔧 Puedes descargar todos los archivos y luego comprimirlos en ZIP en tu ordenador.")
 
                         with row2[1]:
-                            # 🔽 Leyenda de índices y capas
+                            # Leyenda de índices y capas
                             with st.expander("🗺️ Leyenda de índices y capas", expanded=False):
                                 generar_leyenda(selected_indices)
                         
-                            # 🔽 Tabla de nubosidad estimada por imagen
+                            # Tabla de nubosidad estimada por imagen
                             if "used_cloud_results" in st.session_state and st.session_state["used_cloud_results"]:
                                 with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
                                     df_results = pd.DataFrame(st.session_state["used_cloud_results"])
@@ -1256,7 +1251,7 @@ with tab2:
                             
 
 
-                            # 🔽 Serie temporal real de ficocianina (solo si embalse es VAL)
+                            # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val":
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
                                     urls_csv = [
@@ -1328,10 +1323,10 @@ with tab2:
                             if not df_time.empty:
                                 df_time = df_time.copy()
                         
-                                # ✅ Renombrar la columna 'Point' a 'Ubicación'
+                                # Renombrar la columna 'Point' a 'Ubicación'
                                 df_time.rename(columns={"Point": "Ubicación"}, inplace=True)
                         
-                                # ✅ Crear una única columna 'Fecha' en formato datetime para ordenar
+                                # Crear una única columna 'Fecha' en formato datetime para ordenar
                                 if "Fecha" not in df_time.columns:
                                     posibles_fechas = ["Date", "Fecha-hora", "Fecha_dt"]
                                     for col in posibles_fechas:
@@ -1339,33 +1334,33 @@ with tab2:
                                             df_time["Fecha"] = pd.to_datetime(df_time[col], errors='coerce')
                                             break
                         
-                                # ✅ Verificar que 'Fecha' existe y eliminar duplicados
+                                # Verificar que 'Fecha' existe y eliminar duplicados
                                 if "Fecha" not in df_time.columns:
                                     st.error("❌ No se encontró ninguna columna de fecha válida.")
                                     st.stop()
                         
-                                # ✅ Ordenar por 'Ubicación' y 'Fecha' (orden cronológico)
+                                # Ordenar por 'Ubicación' y 'Fecha' (orden cronológico)
                                 df_time = df_time.dropna(subset=["Fecha"]).sort_values(by=["Ubicación", "Fecha"])
                         
-                                # ✅ Convertir la fecha a texto para visualización
+                                # Convertir la fecha a texto para visualización
                                 df_time["Fecha"] = df_time["Fecha"].dt.strftime("%d-%m-%Y %H:%M")
                         
-                                # ✅ Eliminar columnas de fecha duplicadas si existen
+                                # Eliminar columnas de fecha duplicadas si existen
                                 columnas_fecha = ["Date", "Fecha-hora", "Fecha_dt"]
                                 df_time.drop(columns=[col for col in columnas_fecha if col in df_time.columns], errors='ignore', inplace=True)
                         
-                                # 🔧 Ordenar las columnas
+                                # Ordenar las columnas
                                 columnas = list(df_time.columns)
                                 orden = ["Ubicación", "Fecha", "Tipo"]
                                 otras = [col for col in columnas if col not in orden]
                                 columnas_ordenadas = orden + otras
                                 df_time = df_time[columnas_ordenadas]
                         
-                                # 🔧 Dividir en puntos de interés y medias del embalse
+                                # Dividir en puntos de interés y medias del embalse
                                 df_medias = df_time[df_time["Ubicación"] == "Media_Embalse"]
                                 df_puntos = df_time[df_time["Ubicación"] != "Media_Embalse"]
                         
-                                # ✅ Mostrar las tablas corregidas
+                                # Mostrar las tablas corregidas
                                 if not df_puntos.empty:
                                     st.markdown("### 📌 Datos en los puntos de interés")
                                     st.dataframe(df_puntos.reset_index(drop=True))
