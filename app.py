@@ -536,19 +536,6 @@ def get_values_at_point(lat, lon, indices_image, selected_indices):
             values[index] = None
     return values
 
-
-
-def get_index_value(lon, lat, index_name, indices_image):
-    """Función para obtener el valor del índice en un punto específico."""
-    point = ee.Geometry.Point(lon, lat)
-    value = indices_image.select(index_name).sampleRegions(
-        collection=ee.FeatureCollection([ee.Feature(point)]),
-        scale=20  # Resolución de Sentinel-2
-    ).first().get(index_name)
-
-    return value.getInfo() if value is not None else None
-
-
 def generar_leyenda(indices_seleccionados):
     # Parámetros de visualización para cada índice
     parametros = {
