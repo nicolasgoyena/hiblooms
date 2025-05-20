@@ -20,7 +20,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
     switch_page("login")
@@ -126,8 +125,6 @@ def cargar_csv_desde_url(url: str) -> pd.DataFrame:
         st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
         return pd.DataFrame()
 
-
-
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
@@ -141,8 +138,6 @@ def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
         return []
-
-
 
 # Función combinada para cargar el shapefile, ajustar el zoom y mostrar los embalses con tooltip
 def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hiblooms.shp", nombre_columna="NOMBRE"):
@@ -218,8 +213,6 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
             
             coverage = calculate_coverage_percentage(image, aoi)
             
-
-
             # Solo conservar fechas que pasen los filtros
             if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
                 available_dates.add(formatted_date)
@@ -268,8 +261,6 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
         return None
-
-
 
 def gdf_to_ee_geometry(gdf):
 
@@ -364,8 +355,6 @@ def calculate_cloud_percentage(image, aoi):
     else:  # prob_ok
         return ee.Number(cloud_fraction_prob).multiply(100)
 
-
-
 def calculate_coverage_percentage(image, aoi):
     """Devuelve el % del embalse cubierto por la imagen (basado en la banda B4)."""
     try:
@@ -395,7 +384,6 @@ def calculate_coverage_percentage(image, aoi):
     except Exception as e:
         print(f"Error al calcular cobertura de imagen: {e}")
         return 0
-
 
 def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices):
     with st.spinner("Procesando imágenes de Sentinel-2 para " + selected_date + "..."):
@@ -508,10 +496,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         indices_image = scaled_image.addBands(indices_to_add)
         return scaled_image, indices_image, image_date
-
-
-
-
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
     if indices_image is None:
@@ -922,11 +906,7 @@ with tab2:
                                 labelFontSize=12,
                                 tickSize=5
                             )
-                            
                             st.altair_chart(final_chart, use_container_width=True)
-
-
-
                             # Procesar y visualizar resultados
                             data_time = []
 
@@ -998,15 +978,9 @@ with tab2:
                                     
                                         if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
                                             data_time.append(entry)
-
-
-
-
-                            
+                 
                             # Guardar data_time solo después de añadir (o no) los datos SAICA
                             st.session_state['data_time'] = data_time
-
-
 
                             # Paleta de colores para SCL con una mejor diferenciación
                             scl_palette = {
@@ -1236,8 +1210,6 @@ with tab2:
                             
                                         st.altair_chart(chart, use_container_width=True)
                             
-
-
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val":
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
@@ -1303,7 +1275,6 @@ with tab2:
                                 
                                             st.altair_chart(chart, use_container_width=True)
 
-
                         with tab3:
                             st.subheader("Tablas de Índices Calculados")
                         
@@ -1356,11 +1327,7 @@ with tab2:
                                     st.markdown("### 💧 Datos de medias del embalse")
                                     st.dataframe(df_medias.reset_index(drop=True))
                             else:
-                                st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")
-                        
-                                                
-                                                                        
-                                                                        
+                                st.warning("No hay datos disponibles. Primero realiza el cálculo en la pestaña de Visualización.")                                                   
                                                             
 with tab4:
                             st.subheader("📈 Modo rápido: generación de gráficas")
@@ -1491,9 +1458,7 @@ with tab4:
                                             st.stop()
                         
                                         st.session_state["data_time"] = data_time
-                        
                                         st.success("✅ Datos procesados correctamente. Mostrando gráficas:")
-                        
                                         df_time["Fecha_dt"] = pd.to_datetime(df_time["Date"], errors='coerce')
                         
                                         with st.expander("📊 Evolución de la media diaria del embalse", expanded=True):
