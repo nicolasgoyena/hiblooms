@@ -23,7 +23,7 @@ st.markdown("""
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
     switch_page("login")
-from streamlit_folium import st_folium
+
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
@@ -1161,29 +1161,8 @@ with tab2:
                                         # Agregar el control de capas con opción exclusiva
                                         folium.LayerControl(collapsed=False, position='topright').add_to(map_indices)
 
-                                        # Mostrar el mapa en Streamlit y permitir clics
-                                        map_data = st_folium(map_indices, width=1000, height=600)
-                                        
-                                        # Si el usuario hace clic, mostrar coordenadas y valores
-                                        if map_data and map_data.get("last_clicked"):
-                                            clicked_lat = map_data["last_clicked"]["lat"]
-                                            clicked_lon = map_data["last_clicked"]["lng"]
-                                        
-                                            st.success(f"📍 Coordenadas seleccionadas: lat={clicked_lat:.5f}, lon={clicked_lon:.5f}")
-                                        
-                                            # Obtener valores de índices en el punto clicado
-                                            if indices_image is not None:
-                                                valores = get_values_at_point(clicked_lat, clicked_lon, indices_image, selected_indices)
-                                                if valores:
-                                                    st.subheader("📊 Valores de índices en el punto seleccionado:")
-                                                    for indice, valor in valores.items():
-                                                        if valor is not None:
-                                                            st.markdown(f"- **{indice}**: {valor:.2f}")
-                                                        else:
-                                                            st.markdown(f"- **{indice}**: sin datos disponibles")
-                                                else:
-                                                    st.warning("⚠️ No se pudieron obtener valores para este punto.")
-
+                                        # Mostrar el mapa en Streamlit
+                                        folium_static(map_indices)
 
                             st.session_state['data_time'] = data_time
 
