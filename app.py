@@ -169,79 +169,54 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
-@st.cache_data
-def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
-    aoi = _aoi
+def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
+    inicio_total = time.time()
+
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
 
-    def anotar_datos(img):
-        scl = img.select("SCL")
+    if sentinel2.size().getInfo() == 0:
+        st.warning("❌ No se encontraron imágenes de Sentinel-2 para este embalse y rango de fechas.")
+        return []
 
-        # Máscara de nubes y válidos
-        cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
-        valid_mask = scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8))
+    images = sentinel2.toList(sentinel2.size())
+    results_list = []
 
-        cloud_fracc_raw = cloud_mask.updateMask(valid_mask).reduceRegion(
-            reducer=ee.Reducer.mean(), geometry=aoi, scale=20, maxPixels=1e13
-        ).get("SCL")
+    for i in range(images.size().getInfo()):
+        image = ee.Image(images.get(i)).clip(aoi)
+        image_date = image.get('system:time_start').getInfo()
+        formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
+        image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
 
-        total_pix = ee.Image(1).clip(aoi).reduceRegion(
-            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
-        ).get("constant")
-
-        valid_pix = ee.Image(1).updateMask(valid_mask).clip(aoi).reduceRegion(
-            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
-        ).get("constant")
-
-        # Validaciones para evitar nulls
-        cloud_pct = ee.Algorithms.If(
-            cloud_fracc_raw,
-            ee.Number(cloud_fracc_raw).multiply(100),
-            None
-        )
-
-        coverage = ee.Algorithms.If(
-            total_pix,
-            ee.Number(valid_pix).divide(total_pix).multiply(100),
-            None
-        )
-
-        return ee.Feature(None, {
-            "fecha": img.date().format("YYYY-MM-dd"),
-            "hora": img.date().format("HH:mm"),
-            "cloud": cloud_pct,
-            "coverage": coverage
-        })
-
-    resultados = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
-
-    # DEBUG opcional: imprimir resultados por imagen
-    for r in resultados:
-        st.write(f"🗓 {r['fecha']} {r['hora']} - Nubosidad: {r.get('cloud')} %, Cobertura: {r.get('coverage')} %")
-
-    # Filtrar imágenes útiles
-    resultados_utiles = []
-    for r in resultados:
-        try:
-            cloud = r["cloud"]
-            coverage = r["coverage"]
-            if cloud is not None and coverage is not None:
-                if cloud <= max_cloud_percentage and coverage >= 10:
-                    resultados_utiles.append({
-                        "Fecha": r["fecha"],
-                        "Hora": r["hora"],
-                        "Nubosidad aproximada (%)": round(cloud, 2),
-                        "Cobertura (%)": round(coverage, 2)
-                    })
-        except Exception as e:
-            st.warning(f"Error evaluando imagen {r.get('fecha')}: {e}")
+        # Evitar duplicados
+        if any(r["Fecha"] == formatted_date for r in results_list):
             continue
 
-    st.session_state["cloud_results"] = resultados_utiles
-    return sorted([r["Fecha"] for r in resultados_utiles])
+        with st.spinner(f"🕒 Analizando imagen del {formatted_date}..."):
+            cloud_obj = calculate_cloud_percentage(image, aoi)
+            if cloud_obj is None:
+                continue
+            
+            try:
+                cloud_percentage = cloud_obj.getInfo()
+            except Exception as e:
+                continue
 
+            coverage = calculate_coverage_percentage(image, aoi)
+            if coverage is None:
+                continue
+
+            if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
+                results_list.append({
+                    "Fecha": formatted_date,
+                    "Hora": image_time,
+                    "Nubosidad aproximada (%)": round(cloud_percentage, 2),
+                    "Cobertura (%)": round(coverage, 2)
+                })
+
+    st.session_state["cloud_results"] = results_list
+    return sorted([r["Fecha"] for r in results_list])
 
 
 
