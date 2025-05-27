@@ -169,8 +169,9 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
-@st.cache_data(show_spinner=False)
-def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
+@st.cache_data
+def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
+    aoi = _aoi  
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
