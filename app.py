@@ -179,16 +179,14 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
     def anotar_datos(img):
         scl = img.select("SCL")
 
-        # Máscara de nubes (valores SCL 7-10) y válidos (excluye sombra de vegetación y nieve)
+        # Máscara de nubes y válidos
         cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
         valid_mask = scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8))
 
-        # Calcular nubosidad (% de pixeles nublados en área válida)
-        cloud_fracc = cloud_mask.updateMask(valid_mask).reduceRegion(
+        cloud_fracc_raw = cloud_mask.updateMask(valid_mask).reduceRegion(
             reducer=ee.Reducer.mean(), geometry=aoi, scale=20, maxPixels=1e13
         ).get("SCL")
 
-        # Calcular cobertura válida (basado en SCL válido sobre el total del área)
         total_pix = ee.Image(1).clip(aoi).reduceRegion(
             ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
         ).get("constant")
@@ -197,19 +195,29 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
             ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
         ).get("constant")
 
-        coverage = ee.Number(valid_pix).divide(total_pix).multiply(100)
+        # Validaciones para evitar nulls
+        cloud_pct = ee.Algorithms.If(
+            cloud_fracc_raw,
+            ee.Number(cloud_fracc_raw).multiply(100),
+            None
+        )
+
+        coverage = ee.Algorithms.If(
+            total_pix,
+            ee.Number(valid_pix).divide(total_pix).multiply(100),
+            None
+        )
 
         return ee.Feature(None, {
             "fecha": img.date().format("YYYY-MM-dd"),
             "hora": img.date().format("HH:mm"),
-            "cloud": ee.Number(cloud_fracc).multiply(100),
+            "cloud": cloud_pct,
             "coverage": coverage
         })
 
-    # Ejecutar en Earth Engine y traer resultados
     resultados = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
 
-    # Mostrar resultados crudos para depuración
+    # DEBUG opcional: imprimir resultados por imagen
     for r in resultados:
         st.write(f"🗓 {r['fecha']} {r['hora']} - Nubosidad: {r.get('cloud')} %, Cobertura: {r.get('coverage')} %")
 
