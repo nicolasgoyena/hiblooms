@@ -171,29 +171,43 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
 
 @st.cache_data
 def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
-    aoi = _aoi  
-    sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
+    # Evitar errores de Streamlit con Earth Engine Geometry
+    aoi = _aoi
+
+    # Usamos la colección Sentinel-2 Surface Reflectance (S2_SR)
+    sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
 
     def anotar_datos(img):
-        scl = img.select('SCL')
-        b4_mask = img.select("B4").mask()
+        scl = img.select('SCL')  # Scene Classification Layer
+        b4_mask = img.select("B4").mask()  # Visibilidad del rojo
 
-        # Máscaras y cálculos en servidor
+        # Máscaras para nubes (SCL = 7, 8, 9, 10) y píxeles válidos
         cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
-        valid_mask = scl.mask().And(scl.neq(4)).And(scl.neq(5))
+        valid_mask = scl.neq(0).And(scl.neq(1))  # evitar nodata y saturado
 
-        cloud_fracc = cloud_mask.updateMask(valid_mask).reduceRegion(
-            reducer=ee.Reducer.mean(), geometry=aoi, scale=20, maxPixels=1e13
+        # Cálculo de nubosidad (fracción de píxeles nublados en área válida)
+        cloud_fraction = cloud_mask.updateMask(valid_mask).reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
         ).get('SCL')
 
+        # Cálculo de cobertura visible usando la máscara de B4 (rojo)
         total_pix = ee.Image(1).clip(aoi).reduceRegion(
-            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
+            reducer=ee.Reducer.count(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
         ).get("constant")
 
         valid_pix = ee.Image(1).updateMask(b4_mask).clip(aoi).reduceRegion(
-            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
+            reducer=ee.Reducer.count(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
         ).get("constant")
 
         coverage = ee.Number(valid_pix).divide(total_pix).multiply(100)
@@ -201,12 +215,14 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
         return ee.Feature(None, {
             "fecha": img.date().format("YYYY-MM-dd"),
             "hora": img.date().format("HH:mm"),
-            "cloud": ee.Number(cloud_fracc).multiply(100),
+            "cloud": ee.Number(cloud_fraction).multiply(100),
             "coverage": coverage
         })
 
+    # Ejecutamos anotaciones por imagen
     resultados = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
 
+    # Filtramos por nubosidad y cobertura
     resultados_utiles = []
     for r in resultados:
         try:
@@ -217,11 +233,15 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
                     "Nubosidad aproximada (%)": round(r["cloud"], 2),
                     "Cobertura (%)": round(r["coverage"], 2)
                 })
-        except:
-            continue
+        except Exception as e:
+            continue  # Saltar errores por valores nulos o mal definidos
 
+    # Guardamos en session_state si hay resultados
     st.session_state["cloud_results"] = resultados_utiles
+
+    # Devolvemos solo las fechas ordenadas
     return sorted([r["Fecha"] for r in resultados_utiles])
+
 
 
 
