@@ -172,9 +172,6 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     inicio_total = time.time()
 
-    if "cloud_results" not in st.session_state:
-        st.session_state["cloud_results"] = []
-
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
@@ -184,38 +181,33 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
         return []
 
     images = sentinel2.toList(sentinel2.size())
-    available_dates = set()
     results_list = []
 
     for i in range(images.size().getInfo()):
-        inicio_iter = time.time()
-
         image = ee.Image(images.get(i)).clip(aoi)
         image_date = image.get('system:time_start').getInfo()
         formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
         image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
 
         # Evitar duplicados
-        if formatted_date in available_dates:
+        if any(r["Fecha"] == formatted_date for r in results_list):
             continue
 
-        with st.spinner(f"**🕒 Analizando imagen del {formatted_date}...**"):
+        with st.spinner(f"🕒 Analizando imagen del {formatted_date}..."):
             cloud_obj = calculate_cloud_percentage(image, aoi)
             if cloud_obj is None:
-                print(f"⚠️ Imagen del {formatted_date} descartada: no tiene SCL ni MSK_CLDPRB.")
                 continue
             
             try:
                 cloud_percentage = cloud_obj.getInfo()
             except Exception as e:
-                print(f"⚠️ Error al obtener cloud_percentage en {formatted_date}: {e}")
                 continue
-            
+
             coverage = calculate_coverage_percentage(image, aoi)
-            
-            # Solo conservar fechas que pasen los filtros
+            if coverage is None:
+                continue
+
             if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
-                available_dates.add(formatted_date)
                 results_list.append({
                     "Fecha": formatted_date,
                     "Hora": image_time,
@@ -223,15 +215,9 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
                     "Cobertura (%)": round(coverage, 2)
                 })
 
-        fin_iter = time.time()
-        print(f"Tiempo en procesar imagen {formatted_date}: {fin_iter - inicio_iter:.2f} seg")
-
-    fin_total = time.time()
-    print(f"Tiempo total en get_available_dates: {fin_total - inicio_total:.2f} seg")
-
     st.session_state["cloud_results"] = results_list
+    return sorted(results_list, key=lambda x: x["Fecha"])
 
-    return sorted(available_dates)
 
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
@@ -401,35 +387,37 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         images = sentinel2.toList(num_images)
         best_image = None
-        best_score = None  
+
+        # Construir un diccionario con los datos precalculados de nubosidad y cobertura
+        cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
 
         for i in range(num_images):
             image = ee.Image(images.get(i))
-            try:
-                cloud_score = calculate_cloud_percentage(image, aoi).getInfo()
-                coverage = calculate_coverage_percentage(image, aoi)
+            image_time_millis = image.get('system:time_start').getInfo()
+            formatted_date = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%Y-%m-%d')
+            hora = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%H:%M')
 
-                if coverage < 50 or cloud_score > max_cloud_percentage:
-                    continue
+            if formatted_date not in cloud_results_dict:
+                continue  # Solo procesar imágenes útiles
 
-                if best_score is None or cloud_score < best_score:
-                    best_score = cloud_score
-                    best_image = image
+            cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
+            coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
 
-                    image_time = image.get('system:time_start').getInfo()
-                    hora = datetime.utcfromtimestamp(image_time / 1000).strftime('%H:%M')
-                    st.session_state.setdefault("used_cloud_results", []).append({
-                        "Fecha": selected_date,
-                        "Hora": hora,
-                        "Nubosidad aproximada (%)": round(cloud_score, 2)
-                    })
-            except Exception as e:
-                st.warning(f"Error al procesar imagen {i}: {e}")
+            if coverage < 50 or cloud_score > max_cloud_percentage:
                 continue
+
+            best_image = image
+            st.session_state.setdefault("used_cloud_results", []).append({
+                "Fecha": formatted_date,
+                "Hora": hora,
+                "Nubosidad aproximada (%)": round(cloud_score, 2)
+            })
+            break  # Usamos la mejor disponible y salimos
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
             return None, None, None
+
 
         sentinel2_image = best_image
         image_date = sentinel2_image.get('system:time_start').getInfo()
