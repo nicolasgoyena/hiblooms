@@ -216,7 +216,8 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
                 })
 
     st.session_state["cloud_results"] = results_list
-    return sorted(results_list, key=lambda x: x["Fecha"])
+    return sorted([r["Fecha"] for r in results_list])
+
 
 
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
