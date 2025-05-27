@@ -169,54 +169,59 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
+@st.cache_data(show_spinner=False)
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
-    inicio_total = time.time()
-
     sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
 
-    if sentinel2.size().getInfo() == 0:
-        st.warning("❌ No se encontraron imágenes de Sentinel-2 para este embalse y rango de fechas.")
-        return []
+    def anotar_datos(img):
+        scl = img.select('SCL')
+        b4_mask = img.select("B4").mask()
 
-    images = sentinel2.toList(sentinel2.size())
-    results_list = []
+        # Máscaras y cálculos en servidor
+        cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
+        valid_mask = scl.mask().And(scl.neq(4)).And(scl.neq(5))
 
-    for i in range(images.size().getInfo()):
-        image = ee.Image(images.get(i)).clip(aoi)
-        image_date = image.get('system:time_start').getInfo()
-        formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
-        image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
+        cloud_fracc = cloud_mask.updateMask(valid_mask).reduceRegion(
+            reducer=ee.Reducer.mean(), geometry=aoi, scale=20, maxPixels=1e13
+        ).get('SCL')
 
-        # Evitar duplicados
-        if any(r["Fecha"] == formatted_date for r in results_list):
+        total_pix = ee.Image(1).clip(aoi).reduceRegion(
+            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
+        ).get("constant")
+
+        valid_pix = ee.Image(1).updateMask(b4_mask).clip(aoi).reduceRegion(
+            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
+        ).get("constant")
+
+        coverage = ee.Number(valid_pix).divide(total_pix).multiply(100)
+
+        return ee.Feature(None, {
+            "fecha": img.date().format("YYYY-MM-dd"),
+            "hora": img.date().format("HH:mm"),
+            "cloud": ee.Number(cloud_fracc).multiply(100),
+            "coverage": coverage
+        })
+
+    resultados = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
+
+    resultados_utiles = []
+    for r in resultados:
+        try:
+            if r["cloud"] <= max_cloud_percentage and r["coverage"] >= 50:
+                resultados_utiles.append({
+                    "Fecha": r["fecha"],
+                    "Hora": r["hora"],
+                    "Nubosidad aproximada (%)": round(r["cloud"], 2),
+                    "Cobertura (%)": round(r["coverage"], 2)
+                })
+        except:
             continue
 
-        with st.spinner(f"🕒 Analizando imagen del {formatted_date}..."):
-            cloud_obj = calculate_cloud_percentage(image, aoi)
-            if cloud_obj is None:
-                continue
-            
-            try:
-                cloud_percentage = cloud_obj.getInfo()
-            except Exception as e:
-                continue
+    st.session_state["cloud_results"] = resultados_utiles
+    return sorted([r["Fecha"] for r in resultados_utiles])
 
-            coverage = calculate_coverage_percentage(image, aoi)
-            if coverage is None:
-                continue
-
-            if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
-                results_list.append({
-                    "Fecha": formatted_date,
-                    "Hora": image_time,
-                    "Nubosidad aproximada (%)": round(cloud_percentage, 2),
-                    "Cobertura (%)": round(coverage, 2)
-                })
-
-    st.session_state["cloud_results"] = results_list
-    return sorted([r["Fecha"] for r in results_list])
 
 
 
