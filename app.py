@@ -171,43 +171,30 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
 
 @st.cache_data
 def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
-    # Evitar errores de Streamlit con Earth Engine Geometry
-    aoi = _aoi
-
-    # Usamos la colección Sentinel-2 Surface Reflectance (S2_SR)
-    sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR") \
+    aoi = _aoi  
+    sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterBounds(aoi) \
         .filterDate(start_date, end_date)
 
+    st.write(f"🔍 Imágenes encontradas en bruto: {sentinel2.size().getInfo()}")
+
     def anotar_datos(img):
-        scl = img.select('SCL')  # Scene Classification Layer
-        b4_mask = img.select("B4").mask()  # Visibilidad del rojo
+        scl = img.select('SCL')
+        b4_mask = img.select("B4").mask()
 
-        # Máscaras para nubes (SCL = 7, 8, 9, 10) y píxeles válidos
         cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
-        valid_mask = scl.neq(0).And(scl.neq(1))  # evitar nodata y saturado
+        valid_mask = scl.mask().And(scl.neq(4)).And(scl.neq(5))
 
-        # Cálculo de nubosidad (fracción de píxeles nublados en área válida)
-        cloud_fraction = cloud_mask.updateMask(valid_mask).reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=aoi,
-            scale=20,
-            maxPixels=1e13
+        cloud_fracc = cloud_mask.updateMask(valid_mask).reduceRegion(
+            reducer=ee.Reducer.mean(), geometry=aoi, scale=20, maxPixels=1e13
         ).get('SCL')
 
-        # Cálculo de cobertura visible usando la máscara de B4 (rojo)
         total_pix = ee.Image(1).clip(aoi).reduceRegion(
-            reducer=ee.Reducer.count(),
-            geometry=aoi,
-            scale=20,
-            maxPixels=1e13
+            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
         ).get("constant")
 
         valid_pix = ee.Image(1).updateMask(b4_mask).clip(aoi).reduceRegion(
-            reducer=ee.Reducer.count(),
-            geometry=aoi,
-            scale=20,
-            maxPixels=1e13
+            ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
         ).get("constant")
 
         coverage = ee.Number(valid_pix).divide(total_pix).multiply(100)
@@ -215,19 +202,19 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
         return ee.Feature(None, {
             "fecha": img.date().format("YYYY-MM-dd"),
             "hora": img.date().format("HH:mm"),
-            "cloud": ee.Number(cloud_fraction).multiply(100),
+            "cloud": ee.Number(cloud_fracc).multiply(100),
             "coverage": coverage
         })
 
-    # Ejecutamos anotaciones por imagen
-    resultados = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
+    features = sentinel2.map(anotar_datos).aggregate_array("properties").getInfo()
 
-    # Filtramos por nubosidad y cobertura
     resultados_utiles = []
-    for r in resultados:
+    for r in features:
+        st.write("🔎 Evaluando imagen:", r)
         try:
             if r["cloud"] is None or r["coverage"] is None:
-                continue  # O imprimir r para ver qué falla
+                st.warning("⚠️ Imagen descartada por valores nulos en cloud o coverage.")
+                continue
             if r["cloud"] <= max_cloud_percentage and r["coverage"] >= 50:
                 resultados_utiles.append({
                     "Fecha": r["fecha"],
@@ -235,18 +222,16 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
                     "Nubosidad aproximada (%)": round(r["cloud"], 2),
                     "Cobertura (%)": round(r["coverage"], 2)
                 })
+            else:
+                st.info(f"ℹ️ Imagen descartada: cloud={r['cloud']}%, coverage={r['coverage']}%")
         except Exception as e:
-            st.warning(f"Error en resultado: {e}")
+            st.error(f"❌ Error procesando imagen: {e}")
             continue
 
-
-    # Guardamos en session_state si hay resultados
     st.session_state["cloud_results"] = resultados_utiles
-
-    # Devolvemos solo las fechas ordenadas
+    if not resultados_utiles:
+        st.warning("⚠️ Ninguna imagen cumple con los filtros de cobertura y nubosidad.")
     return sorted([r["Fecha"] for r in resultados_utiles])
-
-
 
 
 
