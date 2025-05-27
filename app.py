@@ -226,6 +226,8 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
     resultados_utiles = []
     for r in resultados:
         try:
+            if r["cloud"] is None or r["coverage"] is None:
+                continue  # O imprimir r para ver qué falla
             if r["cloud"] <= max_cloud_percentage and r["coverage"] >= 50:
                 resultados_utiles.append({
                     "Fecha": r["fecha"],
@@ -234,7 +236,9 @@ def get_available_dates(_aoi, start_date, end_date, max_cloud_percentage):
                     "Cobertura (%)": round(r["coverage"], 2)
                 })
         except Exception as e:
-            continue  # Saltar errores por valores nulos o mal definidos
+            st.warning(f"Error en resultado: {e}")
+            continue
+
 
     # Guardamos en session_state si hay resultados
     st.session_state["cloud_results"] = resultados_utiles
