@@ -23,6 +23,19 @@ st.markdown("""
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
     switch_page("login")
+# Inicialización segura del estado
+default_keys = {
+    "cloud_results": [],
+    "used_cloud_results": [],
+    "data_time": [],
+    "urls_exportacion": [],
+    "available_dates": [],
+    "selected_indices": [],
+}
+
+for key, default in default_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
@@ -844,10 +857,11 @@ with tab2:
 
                 if st.button("Calcular y mostrar resultados"):
                     # Limpiar resultados anteriores
-                    st.session_state["data_time"] = []
-                    st.session_state["urls_exportacion"] = []
-                    st.session_state["used_cloud_results"] = []
-                    st.session_state["cloud_results"] = []
+                    st.session_state["data_time"].clear()
+                    st.session_state["urls_exportacion"].clear()
+                    st.session_state["used_cloud_results"].clear()
+                    st.session_state["cloud_results"].clear()
+
                 
                     with st.spinner("Calculando fechas disponibles..."):
                         available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
