@@ -135,7 +135,7 @@ def cargar_csv_desde_url(url: str) -> pd.DataFrame:
             return pd.DataFrame()
 
         # Forzar formato correcto: día/mes/año
-        df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, infer_datetime_format=False, errors='coerce')
+        df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')  # ❌ quita dayfirst=True
 
         # Mostrar para depuración
         st.write("📅 Fechas tras conversión forzada:", df['Fecha'])
