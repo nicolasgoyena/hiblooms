@@ -121,7 +121,6 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
-@st.cache_data
 def cargar_csv_desde_url(url: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(url)
@@ -135,14 +134,21 @@ def cargar_csv_desde_url(url: str) -> pd.DataFrame:
             st.warning("❌ El CSV no contiene ninguna columna válida de fechas ('fecha' o 'Fecha-hora').")
             return pd.DataFrame()
 
-        # Parsear las fechas correctamente
-        df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
+        # Forzar formato correcto: día/mes/año
+        df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, infer_datetime_format=False, errors='coerce')
+
+        # Mostrar para depuración
+        st.write("📅 Fechas tras conversión forzada:", df['Fecha'])
+
+        # Eliminar filas con fechas no convertidas
         df = df.dropna(subset=['Fecha'])
 
         return df
+
     except Exception as e:
         st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
         return pd.DataFrame()
+
 
 def obtener_nombres_embalses(shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
