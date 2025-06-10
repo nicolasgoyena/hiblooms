@@ -126,12 +126,18 @@ def cargar_csv_desde_url(url: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(url)
 
-        # Renombrar si la columna de fecha es 'Time'
-        if 'Time' in df.columns:
-            df.rename(columns={'Time': 'Fecha-hora'}, inplace=True)
+        # Aceptar tanto 'fecha' como 'Fecha-hora'
+        if 'fecha' in df.columns:
+            df.rename(columns={'fecha': 'Fecha'}, inplace=True)
+        elif 'Fecha-hora' in df.columns:
+            df.rename(columns={'Fecha-hora': 'Fecha'}, inplace=True)
+        else:
+            st.warning("❌ El CSV no contiene ninguna columna válida de fechas ('fecha' o 'Fecha-hora').")
+            return pd.DataFrame()
 
-        # Parsear fecha sin dayfirst para evitar errores con formato ISO
-        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], format='mixed')
+        # Parsear las fechas correctamente
+        df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
+        df = df.dropna(subset=['Fecha'])
 
         return df
     except Exception as e:
