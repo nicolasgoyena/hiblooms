@@ -907,16 +907,8 @@ with tab2:
                                     available_dates = sorted(fechas_filtradas)
                         
                                     if available_dates:
-                                        # Crear diccionario de fechas a nubosidad
-                                        nubosidad_dict = dict(zip(df_fechas_val["Fecha"].dt.strftime("%Y-%m-%d"), df_fechas_val["nubosidad"]))
-                                    
                                         st.session_state["cloud_results"] = [
-                                            {
-                                                "Fecha": f,
-                                                "Hora": "00:00",
-                                                "Nubosidad aproximada (%)": nubosidad_dict.get(f, 30),  # Usa el valor real si existe, si no 30
-                                                "Cobertura (%)": 100
-                                            }
+                                            {"Fecha": f, "Hora": "00:00", "Nubosidad aproximada (%)": 30, "Cobertura (%)": 100}
                                             for f in available_dates
                                         ]
                                     else:
