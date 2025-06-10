@@ -890,11 +890,7 @@ with tab2:
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
                         
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
-                                try:
-                                    # Asegurar formato datetime
-                                    df_fechas_val["Fecha"] = pd.to_datetime(df_fechas_val["Fecha"], dayfirst=True, errors="coerce")
-                                    df_fechas_val.dropna(subset=["Fecha"], inplace=True)
-                        
+                                try:               
                                     # Convertir las fechas del usuario también a datetime
                                     start_dt = pd.to_datetime(start_date)
                                     end_dt = pd.to_datetime(end_date)
