@@ -884,7 +884,7 @@ with tab2:
                         if (
                             reservoir_name.lower() == "val" and 
                             int(max_cloud_percentage) == 30 and 
-                            start_date >= "2025-01-01" and end_date <= "2025-05-31"
+                            start_date >= "2024-01-01" and end_date <= "2025-06-05"
                         ):
                             url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
