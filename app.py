@@ -121,30 +121,36 @@ def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
 # Reproyectar las coordenadas
 reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
 
+@st.cache_data
+def cargar_fechas_csv(url: str) -> pd.DataFrame:
+    try:
+        df = pd.read_csv(url)
+
+        if 'fecha' in df.columns:
+            df.rename(columns={'fecha': 'Fecha'}, inplace=True)
+        else:
+            st.warning("❌ El CSV no contiene la columna esperada 'fecha'.")
+            return pd.DataFrame()
+
+        df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+        df.dropna(subset=['Fecha'], inplace=True)
+
+        return df
+    except Exception as e:
+        st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
+        return pd.DataFrame()
+
+@st.cache_data
 def cargar_csv_desde_url(url: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(url)
 
-        # Aceptar tanto 'fecha' como 'Fecha-hora'
-        if 'fecha' in df.columns:
-            df.rename(columns={'fecha': 'Fecha'}, inplace=True)
-        elif 'Fecha-hora' in df.columns:
-            df.rename(columns={'Fecha-hora': 'Fecha'}, inplace=True)
-        else:
-            st.warning("❌ El CSV no contiene ninguna columna válida de fechas ('fecha' o 'Fecha-hora').")
-            return pd.DataFrame()
+        if 'Time' in df.columns:
+            df.rename(columns={'Time': 'Fecha-hora'}, inplace=True)
 
-        # Forzar formato correcto: día/mes/año
-        df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')  # ❌ quita dayfirst=True
-
-        # Mostrar para depuración
-        st.write("📅 Fechas tras conversión forzada:", df['Fecha'])
-
-        # Eliminar filas con fechas no convertidas
-        df = df.dropna(subset=['Fecha'])
+        df['Fecha-hora'] = pd.to_datetime(df['Fecha-hora'], format='mixed')
 
         return df
-
     except Exception as e:
         st.warning(f"⚠️ Error al cargar el CSV desde {url}: {e}")
         return pd.DataFrame()
@@ -881,7 +887,8 @@ with tab2:
                             start_date >= "2025-01-01" and end_date <= "2025-05-31"
                         ):
                             url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"
-                            df_fechas_val = cargar_csv_desde_url(url_csv_val)
+                            df_fechas_val = cargar_fechas_csv(url_csv_el_val)
+
                         
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
                                 try:
