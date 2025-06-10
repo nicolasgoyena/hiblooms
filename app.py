@@ -888,7 +888,6 @@ with tab2:
                         ):
                             url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
-
                         
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
                                 try:
@@ -904,33 +903,22 @@ with tab2:
                                     fechas_filtradas = df_fechas_val[
                                         (df_fechas_val["Fecha"] >= start_dt) & (df_fechas_val["Fecha"] <= end_dt)
                                     ]["Fecha"].dt.strftime("%Y-%m-%d").tolist()
-                                    # DEPURACIÓN
-                                    st.write("📅 Fechas originales del CSV (ya en datetime):", df_fechas_val["Fecha"].tolist())
-                                    st.write("📅 Rango seleccionado:", start_dt.date(), "a", end_dt.date())
-                                    st.write("📅 Fechas filtradas dentro del rango:", fechas_filtradas)
-
-                        
+                                    
                                     available_dates = sorted(fechas_filtradas)
                         
                                     if available_dates:
-                                        st.info(f"✅ Usando {len(available_dates)} fechas del CSV para El Val.")
                                         st.session_state["cloud_results"] = [
                                             {"Fecha": f, "Hora": "00:00", "Nubosidad aproximada (%)": 30, "Cobertura (%)": 100}
                                             for f in available_dates
                                         ]
                                     else:
-                                        st.warning("⚠️ El CSV no contiene fechas dentro del rango seleccionado. Se usará el método estándar.")
-                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-                        
+                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)             
                                 except Exception as e:
-                                    st.warning(f"⚠️ Error procesando fechas desde CSV: {e}")
                                     available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                             else:
-                                st.warning("⚠️ El CSV está vacío o no tiene la columna 'Fecha'. Se usará el método estándar.")
                                 available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                         else:
                             available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-
 
                         if not available_dates:
                             st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
