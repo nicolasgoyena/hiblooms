@@ -869,33 +869,55 @@ with tab2:
                     st.session_state["cloud_results"].clear()        
            
                     with st.spinner("Calculando fechas disponibles..."):
-                        # NUEVO BLOQUE para sustituir la llamada a get_available_dates
                         if (
                             reservoir_name.lower() == "val" and 
                             int(max_cloud_percentage) == 30 and 
                             start_date >= "2025-01-01" and end_date <= "2025-05-31"
                         ):
-                            # Cargar el CSV desde S3
-                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"  
+                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"
                             df_fechas_val = cargar_csv_desde_url(url_csv_val)
                         
-                            if not df_fechas_val.empty and "fecha" in df_fechas_val.columns:
-                                # Asegurar que es datetime y formato correcto
-                                df_fechas_val["fecha"] = pd.to_datetime(df_fechas_val["fecha"], dayfirst=True)
-                                start_dt = pd.to_datetime(start_date)
-                                end_dt = pd.to_datetime(end_date)
+                            if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
+                                try:
+                                    # Asegurar formato datetime
+                                    df_fechas_val["Fecha"] = pd.to_datetime(df_fechas_val["Fecha"], dayfirst=True, errors="coerce")
+                                    df_fechas_val.dropna(subset=["Fecha"], inplace=True)
                         
-                                fechas_filtradas = df_fechas_val[
-                                    (df_fechas_val["fecha"] >= start_dt) & (df_fechas_val["fecha"] <= end_dt)
-                                ]["fecha"].dt.strftime("%Y-%m-%d").tolist()
+                                    # Convertir las fechas del usuario también a datetime
+                                    start_dt = pd.to_datetime(start_date)
+                                    end_dt = pd.to_datetime(end_date)
                         
-                                available_dates = sorted(fechas_filtradas)
-                                st.session_state["cloud_results"] = [{"Fecha": f, "Hora": "00:00", "Nubosidad aproximada (%)": 30, "Cobertura (%)": 100} for f in available_dates]
+                                    # Filtrar
+                                    fechas_filtradas = df_fechas_val[
+                                        (df_fechas_val["Fecha"] >= start_dt) & (df_fechas_val["Fecha"] <= end_dt)
+                                    ]["Fecha"].dt.strftime("%Y-%m-%d").tolist()
+                                    # DEPURACIÓN
+                                    st.write("📅 Fechas originales del CSV (ya en datetime):", df_fechas_val["Fecha"].tolist())
+                                    st.write("📅 Rango seleccionado:", start_dt.date(), "a", end_dt.date())
+                                    st.write("📅 Fechas filtradas dentro del rango:", fechas_filtradas)
+
+                        
+                                    available_dates = sorted(fechas_filtradas)
+                        
+                                    if available_dates:
+                                        st.info(f"✅ Usando {len(available_dates)} fechas del CSV para El Val.")
+                                        st.session_state["cloud_results"] = [
+                                            {"Fecha": f, "Hora": "00:00", "Nubosidad aproximada (%)": 30, "Cobertura (%)": 100}
+                                            for f in available_dates
+                                        ]
+                                    else:
+                                        st.warning("⚠️ El CSV no contiene fechas dentro del rango seleccionado. Se usará el método estándar.")
+                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                        
+                                except Exception as e:
+                                    st.warning(f"⚠️ Error procesando fechas desde CSV: {e}")
+                                    available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                             else:
-                                st.warning("⚠️ No se pudieron cargar las fechas desde el CSV. Se usará el método estándar.")
+                                st.warning("⚠️ El CSV está vacío o no tiene la columna 'Fecha'. Se usará el método estándar.")
                                 available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                         else:
                             available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+
 
                         if not available_dates:
                             st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
