@@ -870,7 +870,7 @@ with tab2:
                             start_date >= "2025-01-01" and end_date <= "2025-05-31"
                         ):
                             # Cargar el CSV desde S3
-                            url_csv_val = "https://your-bucket.s3.amazonaws.com/fechas_elval.csv"  # 🔁 cambia esto por tu URL real
+                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val.csv"  
                             df_fechas_val = cargar_csv_desde_url(url_csv_val)
                         
                             if not df_fechas_val.empty and "fecha" in df_fechas_val.columns:
