@@ -881,54 +881,48 @@ with tab2:
                     st.session_state["cloud_results"].clear()        
            
                     with st.spinner("Calculando fechas disponibles..."):
-                        if (
-                            reservoir_name.lower() == "val" and 
-                            int(max_cloud_percentage) == 30 and 
-                            start_date >= "2024-01-01" and end_date <= "2025-06-05"
-                        ):
-                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_con_nubes.csv"
+                        if reservoir_name.lower() == "val" and int(max_cloud_percentage) == 30:
+                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico.csv"
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
-                        
+                    
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
-                                try:               
-                                    # Convertir las fechas del usuario también a datetime
+                                try:
                                     start_dt = pd.to_datetime(start_date)
                                     end_dt = pd.to_datetime(end_date)
-                        
-                                    # Filtrar
+                    
                                     fechas_filtradas = df_fechas_val[
                                         (df_fechas_val["Fecha"] >= start_dt) & (df_fechas_val["Fecha"] <= end_dt)
                                     ]["Fecha"].dt.strftime("%Y-%m-%d").tolist()
-                                    
+                    
                                     available_dates = sorted(fechas_filtradas)
-                        
+                    
                                     if available_dates:
                                         df_fechas_val.set_index("Fecha", inplace=True)
-
+                    
                                         cloud_results = []
                                         for f in available_dates:
                                             try:
                                                 nubosidad = df_fechas_val.loc[f, "nubosidad"]
                                             except Exception:
                                                 nubosidad = None
-                                        
+                    
                                             cloud_results.append({
                                                 "Fecha": f,
                                                 "Hora": "00:00",
                                                 "Nubosidad aproximada (%)": round(nubosidad, 2) if nubosidad is not None else "Desconocida",
-                                                "Cobertura (%)": 100  # Modificar si usas cobertura real
+                                                "Cobertura (%)": 100
                                             })
-                                        
+                    
                                         st.session_state["cloud_results"] = cloud_results
-
                                     else:
-                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)             
-                                except Exception as e:
+                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                                except Exception:
                                     available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                             else:
                                 available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                         else:
                             available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                    
 
                         if not available_dates:
                             st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
