@@ -481,10 +481,23 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
             "B5_div_B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('B5_div_B4'),
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
-            "PC_Val_cal": lambda: b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04).updateMask(cloud_mask).rename("PC_Val_cal"),
-            "Chla_Val_cal": lambda: b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16).updateMask(cloud_mask).rename("Chla_Val_cal"),
+            "PC_Val_cal": lambda: (
+                b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04)
+                .max(0)
+                .updateMask(cloud_mask)
+                .rename("PC_Val_cal")
+            ),
+            "Chla_Val_cal": lambda: (
+                b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16)
+                .max(0)
+                .updateMask(cloud_mask)
+                .rename("Chla_Val_cal")
+            ),
             "Chla_Bellus_cal": lambda: (
-                b5.subtract(b4).divide(b5.add(b4)).multiply(112.78).add(10.779).updateMask(cloud_mask).rename("Chla_Bellus_cal")
+                b5.subtract(b4).divide(b5.add(b4)).multiply(112.78).add(10.779)
+                .max(0)
+                .updateMask(cloud_mask)
+                .rename("Chla_Bellus_cal")
             ),
             "PC_Bellus_cal": lambda: (
                 ee.Image(16957)
