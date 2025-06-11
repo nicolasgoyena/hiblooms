@@ -886,7 +886,7 @@ with tab2:
                             int(max_cloud_percentage) == 30 and 
                             start_date >= "2024-01-01" and end_date <= "2025-06-05"
                         ):
-                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/el_val_24_25.csv"
+                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_con_nubes.csv"
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
                         
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
