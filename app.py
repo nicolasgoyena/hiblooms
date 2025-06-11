@@ -903,10 +903,24 @@ with tab2:
                                     available_dates = sorted(fechas_filtradas)
                         
                                     if available_dates:
-                                        st.session_state["cloud_results"] = [
-                                            {"Fecha": f, "Hora": "00:00", "Nubosidad aproximada (%)": 30, "Cobertura (%)": 100}
-                                            for f in available_dates
-                                        ]
+                                        df_fechas_val.set_index("Fecha", inplace=True)
+
+                                        cloud_results = []
+                                        for f in available_dates:
+                                            try:
+                                                nubosidad = df_fechas_val.loc[f, "nubosidad"]
+                                            except Exception:
+                                                nubosidad = None
+                                        
+                                            cloud_results.append({
+                                                "Fecha": f,
+                                                "Hora": "00:00",
+                                                "Nubosidad aproximada (%)": round(nubosidad, 2) if nubosidad is not None else "Desconocida",
+                                                "Cobertura (%)": 100  # Modificar si usas cobertura real
+                                            })
+                                        
+                                        st.session_state["cloud_results"] = cloud_results
+
                                     else:
                                         available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)             
                                 except Exception as e:
