@@ -835,7 +835,7 @@ with tab2:
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
-                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 30%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 30)
+                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 50%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 50)
                 if max_cloud_percentage == 100:
                     st.info("🔁 Has seleccionado un 100 % de nubosidad permitida: se mostrarán todas las imágenes del periodo. Aun así, se estimará la nubosidad de cada imagen.")
 
@@ -881,8 +881,8 @@ with tab2:
                     st.session_state["cloud_results"].clear()        
            
                     with st.spinner("Calculando fechas disponibles..."):
-                        if reservoir_name.lower() == "val" and int(max_cloud_percentage) == 30:
-                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico.csv"
+                        if reservoir_name.lower() == "val" and int(max_cloud_percentage) == 50:
+                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico_50.csv"
                             df_fechas_val = cargar_fechas_csv(url_csv_val)
                     
                             if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
