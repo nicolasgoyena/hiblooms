@@ -235,8 +235,6 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     st.session_state["cloud_results"] = results_list
     return sorted([r["Fecha"] for r in results_list])
 
-
-
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
@@ -246,10 +244,10 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
             st.error("❌ El shapefile cargado no contiene una columna llamada 'NOMBRE'. Añádela para poder seleccionar embalses.")
             return None
 
-        # Reproyectar automáticamente si no está en EPSG:32630
-        if gdf.crs is None or gdf.crs.to_epsg() != 32630:
-            st.warning("🔄 El shapefile no está en EPSG:32630. Se reproyectará automáticamente.")
-            gdf = gdf.to_crs(epsg=32630)
+        # Reproyectar automáticamente a EPSG:4326 si no lo está
+        if gdf.crs is None or gdf.crs.to_epsg() != 4326:
+            st.warning("🔄 El shapefile no está en EPSG:4326. Se reproyectará automáticamente.")
+            gdf = gdf.to_crs(epsg=4326)
 
         # Normalizar nombres
         gdf["NOMBRE"] = gdf["NOMBRE"].str.lower().str.replace(" ", "_")
@@ -267,26 +265,26 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
         return None
 
 def gdf_to_ee_geometry(gdf):
-
     if gdf.empty:
         raise ValueError("❌ El shapefile está vacío o no contiene geometrías.")
-        
-    if gdf.crs is None or gdf.crs.to_epsg() != 32630:
-        raise ValueError("❌ El shapefile debe estar en EPSG:32630.")
-        
-    geometry = gdf.geometry.iloc[0]
     
+    if gdf.crs is None or gdf.crs.to_epsg() != 4326:
+        raise ValueError("❌ El GeoDataFrame debe estar en EPSG:4326.")
+
+    geometry = gdf.geometry.iloc[0]
+
     if geometry.geom_type == "MultiPolygon":
         geometry = list(geometry.geoms)[0]  # Extrae el primer polígono
-        
+
     ee_coordinates = list(geometry.exterior.coords)
+
     ee_geometry = ee.Geometry.Polygon(
-        ee_coordinates,
-        proj=ee.Projection("EPSG:32630"),  # Especifica la proyección UTM
-        geodesic=False # Evita errores con geometrías con huecos
+        [ee_coordinates],
+        geodesic=False  # Suele ser preferible para polígonos pequeños
     )
 
     return ee_geometry
+
 
 def calcular_media_diaria_embalse(indices_image, index_name, aoi):
     """Calcula la media del índice dado sobre el embalse solo en píxeles de agua SCL == 6 (o SCL == 2 también para el año 2018)."""
