@@ -874,54 +874,62 @@ with tab2:
                     """)
 
                 if st.button("Calcular y mostrar resultados"):
-                    # Limpiar resultados anteriores
-                    st.session_state["data_time"].clear()
-                    st.session_state["urls_exportacion"].clear()
-                    st.session_state["used_cloud_results"].clear()
-                    st.session_state["cloud_results"].clear()        
-           
-                    with st.spinner("Calculando fechas disponibles..."):
-                        if reservoir_name.lower() == "val" and int(max_cloud_percentage) == 50:
-                            url_csv_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico_50.csv"
-                            df_fechas_val = cargar_fechas_csv(url_csv_val)
-                    
-                            if not df_fechas_val.empty and "Fecha" in df_fechas_val.columns:
-                                try:
-                                    start_dt = pd.to_datetime(start_date)
-                                    end_dt = pd.to_datetime(end_date)
-                    
-                                    fechas_filtradas = df_fechas_val[
-                                        (df_fechas_val["Fecha"] >= start_dt) & (df_fechas_val["Fecha"] <= end_dt)
-                                    ]["Fecha"].dt.strftime("%Y-%m-%d").tolist()
-                    
-                                    available_dates = sorted(fechas_filtradas)
-                    
-                                    if available_dates:
-                                        df_fechas_val.set_index("Fecha", inplace=True)
-                    
-                                        cloud_results = []
-                                        for f in available_dates:
-                                            try:
-                                                nubosidad = df_fechas_val.loc[f, "nubosidad"]
-                                            except Exception:
-                                                nubosidad = None
-                    
-                                            cloud_results.append({
-                                                "Fecha": f,
-                                                "Hora": "00:00",
-                                                "Nubosidad aproximada (%)": round(nubosidad, 2) if nubosidad is not None else "Desconocida",
-                                                "Cobertura (%)": 100
-                                            })
-                    
-                                        st.session_state["cloud_results"] = cloud_results
-                                    else:
-                                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-                                except Exception:
+                # Limpiar resultados anteriores
+                st.session_state["data_time"].clear()
+                st.session_state["urls_exportacion"].clear()
+                st.session_state["used_cloud_results"].clear()
+                st.session_state["cloud_results"].clear()        
+            
+                with st.spinner("Calculando fechas disponibles..."):
+                    usar_csv_val = reservoir_name.lower() == "val" and int(max_cloud_percentage) == 50
+                    usar_csv_bellus = reservoir_name.lower() == "bellus" and int(max_cloud_percentage) == 50
+            
+                    if usar_csv_val or usar_csv_bellus:
+                        if usar_csv_val:
+                            url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico_50.csv"
+                        elif usar_csv_bellus:
+                            url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_bellus_historico.csv"
+            
+                        df_fechas = cargar_fechas_csv(url_csv)
+            
+                        if not df_fechas.empty and "Fecha" in df_fechas.columns:
+                            try:
+                                start_dt = pd.to_datetime(start_date)
+                                end_dt = pd.to_datetime(end_date)
+            
+                                fechas_filtradas = df_fechas[
+                                    (df_fechas["Fecha"] >= start_dt) & (df_fechas["Fecha"] <= end_dt)
+                                ]["Fecha"].dt.strftime("%Y-%m-%d").tolist()
+            
+                                available_dates = sorted(fechas_filtradas)
+            
+                                if available_dates:
+                                    df_fechas.set_index("Fecha", inplace=True)
+            
+                                    cloud_results = []
+                                    for f in available_dates:
+                                        try:
+                                            nubosidad = df_fechas.loc[f, "nubosidad"]
+                                        except Exception:
+                                            nubosidad = None
+            
+                                        cloud_results.append({
+                                            "Fecha": f,
+                                            "Hora": "00:00",
+                                            "Nubosidad aproximada (%)": round(nubosidad, 2) if nubosidad is not None else "Desconocida",
+                                            "Cobertura (%)": 100
+                                        })
+            
+                                    st.session_state["cloud_results"] = cloud_results
+                                else:
                                     available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-                            else:
+                            except Exception:
                                 available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
                         else:
                             available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+                    else:
+                        available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
+
                     
 
                         if not available_dates:
