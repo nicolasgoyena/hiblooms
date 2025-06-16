@@ -107,20 +107,6 @@ puntos_interes = {
 }
 }
 
-def reproject_coords_to_epsg(coords, target_crs='EPSG:32630'):
-    reprojected_coords = {}
-    for place, points in coords.items():
-        if place in puntos_interes:  # Solo reproyectar si el embalse tiene puntos de interés
-            reprojected_coords[place] = {}
-            for point_id, (lat, lon) in points.items():
-                point = ee.Geometry.Point([lon, lat])
-                reprojected_point = point.transform(target_crs)
-                reprojected_coords[place][point_id] = reprojected_point.coordinates().getInfo()
-    return reprojected_coords
-
-# Reproyectar las coordenadas
-reprojected_puntos_interes = reproject_coords_to_epsg(puntos_interes)
-
 @st.cache_data
 def cargar_fechas_csv(url: str) -> pd.DataFrame:
     try:
