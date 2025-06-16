@@ -246,7 +246,6 @@ def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses
 
         # Reproyectar automáticamente a EPSG:4326 si no lo está
         if gdf.crs is None or gdf.crs.to_epsg() != 4326:
-            st.warning("🔄 El shapefile no está en EPSG:4326. Se reproyectará automáticamente.")
             gdf = gdf.to_crs(epsg=4326)
 
         # Normalizar nombres
