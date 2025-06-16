@@ -1225,13 +1225,6 @@ with tab2:
                             st.session_state['data_time'] = data_time
 
                         df_time = pd.DataFrame(data_time)
-                        if "urls_exportacion" in st.session_state and st.session_state["urls_exportacion"]:
-                            st.markdown("## 📦 Descarga de imágenes multibanda por fecha")
-                        
-                            for item in st.session_state["urls_exportacion"]:
-                                st.markdown(f"- 🗓️ **{item['fecha']}**: [Descargar GeoTIFF multibanda]({item['url']})")
-                        
-                            st.info("🔧 Puedes descargar todos los archivos y luego comprimirlos en ZIP en tu ordenador.")
 
                         with row2[1]:
                             # Leyenda de índices y capas
