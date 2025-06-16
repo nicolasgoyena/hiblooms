@@ -1266,7 +1266,7 @@ with tab2:
                                         st.altair_chart(chart, use_container_width=True)
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
-                            if reservoir_name.lower() == "val":
+                            if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
                                     urls_csv = [
                                         "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
