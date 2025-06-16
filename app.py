@@ -779,7 +779,7 @@ with tab2:
     st.subheader("🔄 Cargar shapefile propio con todos los embalses de tu interés (opcional)")
     st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
 
-    uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses (proyección EPSG:32630)", type=["zip"])
+    uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses", type=["zip"])
 
     custom_shapefile_path = None
 
@@ -831,7 +831,11 @@ with tab2:
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
-                max_cloud_percentage = st.slider("Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 50%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:", 0, 100, 50)
+                max_cloud_percentage = st.selectbox(
+                    "Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 50%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:",
+                    options=[50, 80, 100],
+                    index=0  # Valor por defecto: 50%
+                )
                 if max_cloud_percentage == 100:
                     st.info("🔁 Has seleccionado un 100 % de nubosidad permitida: se mostrarán todas las imágenes del periodo. Aun así, se estimará la nubosidad de cada imagen.")
 
