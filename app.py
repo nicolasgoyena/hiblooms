@@ -679,7 +679,7 @@ with col3:
         st.image("images/logo_jucar.png", width=150)
 
 
-tab1, tab2, tab3, tab4 = st.tabs(["Introducción", "Visualización", "Tablas", "Gráficas"])
+tab1, tab2, tab3, tab4 = st.tabs(["Introducción", "Visualización", "Tablas", "Modo rápido"])
 with tab1:
     st.markdown("""
         <style>
