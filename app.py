@@ -832,8 +832,8 @@ with tab2:
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
                 max_cloud_percentage = st.selectbox(
-                    "Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 50%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:",
-                    options=[50, 80, 100],
+                    "Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 60%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:",
+                    options=[60, 80, 100],
                     index=0  # Valor por defecto: 50%
                 )
                 if max_cloud_percentage == 100:
@@ -881,8 +881,8 @@ with tab2:
                     st.session_state["cloud_results"].clear()        
                 
                     with st.spinner("Calculando fechas disponibles..."):
-                        usar_csv_val = reservoir_name.lower() == "val" and int(max_cloud_percentage) == 50
-                        usar_csv_bellus = reservoir_name.lower() == "bellus" and int(max_cloud_percentage) == 50
+                        usar_csv_val = reservoir_name.lower() == "val" and int(max_cloud_percentage) == 60
+                        usar_csv_bellus = reservoir_name.lower() == "bellus" and int(max_cloud_percentage) == 60
                 
                         if usar_csv_val or usar_csv_bellus:
                             if usar_csv_val:
