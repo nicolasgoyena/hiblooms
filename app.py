@@ -865,7 +865,7 @@ with tab2:
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
                     - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
-                    - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), útil como indicador de biomasa y ficocianina.
+                    - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), es un buen indicador de ficocianina para todo tipo de embalses.
                     - **NDCI_ind (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
                     - **PC_Val_cal (Ficocianina en El Val):** Estimador empírico de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val.
                     - **Chla_Val_cal:** Estimación cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
