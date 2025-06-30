@@ -1313,7 +1313,17 @@ with tab2:
                                                 max_val = 1.5
                                 
                                             try:
-                                                img_np = img.select(index_name).clip(aoi).sampleRectangle(defaultValue=-9999).getInfo()
+                                                # Detectar tipo de dato del índice para definir defaultValue compatible
+                                                try:
+                                                    band_info = img.select(index_name).bandTypes().getInfo()
+                                                    band_type = list(band_info.values())[0]["precision"]
+                                                    default_value = -9999 if "int" in band_type.lower() else -9999.0
+                                                except:
+                                                    default_value = -9999  # fallback seguro
+                                                
+                                                # Aplicar sampleRectangle con defaultValue correcto
+                                                img_np = img.select(index_name).clip(aoi).sampleRectangle(defaultValue=default_value).getInfo()
+                                                
                                                 array = np.array(img_np['properties']['array'])
                                                 valid_pixels = array[(array != -9999) & (~np.isnan(array))]
                                 
