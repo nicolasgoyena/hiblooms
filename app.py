@@ -235,6 +235,57 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     st.session_state["cloud_results"] = results_list
     return sorted([r["Fecha"] for r in results_list])
 
+def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
+    scl = indices_image.select("SCL")
+    year = datetime.utcfromtimestamp(indices_image.get('system:time_start').getInfo() / 1000).year
+
+    if year == 2018:
+        mask_agua = scl.eq(6).Or(scl.eq(2))
+    else:
+        mask_agua = scl.eq(6)
+
+    imagen_indice = indices_image.select(index_name).updateMask(mask_agua)
+    pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())
+
+    results = []
+    for i in range(len(bins) - 1):
+        lower = bins[i]
+        upper = bins[i + 1]
+
+        bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
+        bin_area = pixel_area.updateMask(bin_mask).reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
+        ).get("area")
+
+        results.append({
+            "rango": f"{lower}–{upper}",
+            "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
+        })
+
+    total_area = pixel_area.reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=aoi,
+        scale=20,
+        maxPixels=1e13
+    ).get("area")
+
+    total_area_ha = ee.Number(total_area).divide(10000).getInfo()
+
+    resultados_finales = []
+    for r in results:
+        area_ha = r["area_ha"].getInfo()
+        porcentaje = (area_ha / total_area_ha) * 100
+        resultados_finales.append({
+            "rango": r["rango"],
+            "area_ha": area_ha,
+            "porcentaje": porcentaje
+        })
+
+    return resultados_finales
+
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
     if os.path.exists(shapefile_path):
         gdf = gpd.read_file(shapefile_path)
@@ -1063,6 +1114,32 @@ with tab2:
                             for day in available_dates:
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is not None:
+                                    # Para cada índice, calcular la distribución por clases
+                                    for index_name in selected_indices:
+                                        # Verifica que los valores de min y max son adecuados
+                                        min_val, max_val = -0.1, 0.4  # valores por defecto
+                                        if index_name == "PC_Val_cal":
+                                            min_val, max_val = 0, 7
+                                        elif index_name == "Chla_Val_cal":
+                                            min_val, max_val = 0, 150
+                                        elif index_name == "Chla_Bellus_cal":
+                                            min_val, max_val = 5, 100
+                                        elif index_name == "PC_Bellus_cal":
+                                            min_val, max_val = 25, 500
+                                        elif index_name == "B5_div_B4":
+                                            min_val, max_val = 0.5, 1.5
+                            
+                                        bins = np.linspace(min_val, max_val, 6)  # Usamos 5 bins de forma estándar
+                            
+                                        # Llamar a la función para calcular la distribución por clases
+                                        result = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins)
+                                        if result:
+                                            st.write(f"Distribución de {index_name} para {day}: {result}")
+                            
+                                    # Añadir las imágenes y fechas al session_state
+                                    st.session_state["image_list"].append(indices_image)
+                                    st.session_state["selected_dates"].append(day)
+                                if indices_image is not None:
                                     url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
                                 
                                     if "urls_exportacion" not in st.session_state:
@@ -1272,6 +1349,67 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
+                            # Dentro de tu código de interfaz para visualizar las distribuciones
+                            if image_list and selected_dates:
+                                st.markdown("### Distribución diaria por clases del índice en el embalse")
+                            
+                                pixel_area_m2 = 20 * 20  # Resolución real de Sentinel-2
+                                pixel_area_ha = pixel_area_m2 / 10000  # 0.04 ha por píxel
+                            
+                                for i, (img, fecha_str) in enumerate(zip(image_list, selected_dates)):
+                                    fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                    st.markdown(f"**Fecha: {fecha}**")
+                            
+                                    for index_name in selected_indices:
+                                        # Obtener min/max según vis_params
+                                        min_val, max_val = -0.1, 0.4  # valores por defecto
+                                        if index_name == "PC_Val_cal":
+                                            min_val, max_val = 0, 7
+                                        elif index_name == "Chla_Val_cal":
+                                            min_val, max_val = 0, 150
+                                        elif index_name == "Chla_Bellus_cal":
+                                            min_val, max_val = 5, 100
+                                        elif index_name == "PC_Bellus_cal":
+                                            min_val, max_val = 25, 500
+                                        elif index_name == "B5_div_B4":
+                                            min_val, max_val = 0.5, 1.5
+                            
+                                        try:
+                                            # Obtener los valores del índice para cada fecha
+                                            index_img = indices_image.select(index_name)
+                            
+                                            # Mostrar los valores de concentración para cada fecha
+                                            valores_indice = index_img.reduceRegion(
+                                                reducer=ee.Reducer.minMax(),
+                                                geometry=aoi,
+                                                scale=20,
+                                                maxPixels=1e13
+                                            ).getInfo()
+                            
+                                            min_val = valores_indice.get(index_name)['min']
+                                            max_val = valores_indice.get(index_name)['max']
+                            
+                                            # Mostrar los valores de concentración para la fecha
+                                            st.write(f"Para el índice {index_name}, los valores para la fecha {fecha} son:")
+                                            st.write(f"Valor mínimo: {min_val}")
+                                            st.write(f"Valor máximo: {max_val}")
+                            
+                                            # Si el rango de valores es muy pequeño, ajustamos el número de bins
+                                            if max_val - min_val < 1:  # Si la diferencia es menor que 1
+                                                st.write(f"Rango de valores para {index_name} en {fecha} es muy pequeño. Aumentando el número de bins.")
+                                                bins = np.linspace(min_val, max_val, 10)  # Usamos 10 bins para mayor detalle
+                                            else:
+                                                bins = np.linspace(min_val, max_val, 6)  # Usamos 5 bins de forma estándar
+                            
+                                            # Crear los labels para los bins
+                                            labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
+                            
+                                            # Mostrar los bins para diagnóstico
+                                            st.write(f"Los bins generados para {index_name} en {fecha}: {labels}")
+                            
+                                        except Exception as e:
+                                            st.warning(f"No se pudo generar el diagnóstico para {index_name} en {fecha}: {e}")
+
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
