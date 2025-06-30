@@ -1384,8 +1384,8 @@ with tab2:
                                                 except Exception as e:
                                                     st.warning(f"⚠️ No se pudo generar la distribución para {index} el {day}: {e}")
 
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo procesar {day}: {e}")
+                                    except Exception as e:
+                                        st.warning(f"⚠️ No se pudo procesar {day}: {e}")
 
 
                                                         
