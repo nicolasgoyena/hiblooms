@@ -1310,35 +1310,46 @@ with tab2:
                                         elif index_name == "B5_div_B4":
                                             min_val, max_val = 0.5, 1.5
                             
-                                        try:
-                                            # Crear bins y etiquetas
-                                            bins = np.linspace(min_val, max_val, 5)  # Los bins definidos según tu lógica
+                                       try:
+                                            # Establecer bins dinámicos basados en el mínimo y máximo para cada fecha
+                                            index_img = indices_image.select(index_name)
+                                            
+                                            # Obtener el valor mínimo y máximo para la fecha actual
+                                            min_val = index_img.reduceRegion(
+                                                reducer=ee.Reducer.min(),
+                                                geometry=aoi,
+                                                scale=20,
+                                                maxPixels=1e13
+                                            ).get(index_name)
+                                        
+                                            max_val = index_img.reduceRegion(
+                                                reducer=ee.Reducer.max(),
+                                                geometry=aoi,
+                                                scale=20,
+                                                maxPixels=1e13
+                                            ).get(index_name)
+                                        
+                                            min_val = min_val.getInfo()  # Min para la fecha actual
+                                            max_val = max_val.getInfo()  # Max para la fecha actual
+                                        
+                                            # Crear bins dinámicos para esa fecha
+                                            bins = np.linspace(min_val, max_val, 6)  # 5 bins para esa fecha
                                             labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
                                         
-                                            # Extraer SCL y definir máscara de no-nubes
+                                            # Extraer la máscara SCL para excluir nubes
                                             scl = indices_image.select("SCL")
-                                            valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))  # Excluir nubes (SCL 7, 8, 9, 10)
-                                            
-                                            # **Verificación visual**: Mostrar la máscara SCL y los valores del índice
-                                            st.write(f"Visualización de la máscara SCL para {fecha}:")
-                                            scl_mask = valid_scl.getInfo()  # Solo para diagnóstico, no usar en producción
-                                            st.write(f"Máscara de no-nubes (SCL): {scl_mask}")  # Imprime el estado de la máscara
+                                            valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))  # Excluir nubes
                                         
-                                            # Seleccionar el índice de interés y aplicar la máscara de nubes
+                                            # Seleccionar la imagen del índice y aplicar la máscara de nubes
                                             imagen_indice = indices_image.select(index_name).updateMask(valid_scl)
                                             
-                                            # **Verificación de los valores del índice** para diagnóstico
-                                            valores_indice = imagen_indice.getInfo()  # Para ver cómo varían los valores
-                                            st.write(f"Valores del índice {index_name} para {fecha}:")
-                                            st.write(valores_indice)
-                                        
                                             # Crear la imagen de área de píxeles
                                             pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())  # Excluye nubes y píxeles no válidos
                                         
                                             # Lista para almacenar los resultados de cada rango (bin)
                                             results = []
                                             
-                                            # Recorrer los bins definidos por el usuario
+                                            # Recorrer los bins definidos para cada fecha
                                             for i in range(len(bins) - 1):
                                                 lower = bins[i]
                                                 upper = bins[i + 1]
@@ -1403,7 +1414,8 @@ with tab2:
                                         except Exception as e:
                                             st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
                                         
-                                                                                                                        
+                                                                                
+                                                                                                                                                                
 
                             
 
