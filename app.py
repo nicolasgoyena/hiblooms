@@ -1060,15 +1060,16 @@ with tab2:
                             }
                             scl_colors = [scl_palette[i] for i in sorted(scl_palette.keys())]
 
+                            # Vaciar antes de comenzar a procesar nuevas imágenes
+                            st.session_state["image_list"] = []
+                            st.session_state["selected_dates"] = []
+                            
                             for day in available_dates:
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is not None:
-                                    if "image_list" not in st.session_state:
-                                        st.session_state["image_list"] = []
-                                        st.session_state["selected_dates"] = []
-                                
                                     st.session_state["image_list"].append(indices_image)
                                     st.session_state["selected_dates"].append(day)
+
 
                                 if indices_image is not None:
                                     url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
@@ -1309,31 +1310,38 @@ with tab2:
                                             min_val, max_val = 0.5, 1.5
                             
                                         try:
-                                            # sampleRectangle sin defaultValue (más seguro)
-                                            img_np = img.select(index_name).clip(aoi).sampleRectangle().getInfo()
-                                            array = np.array(img_np['properties']['array'])
-                                            valid_pixels = array[~np.isnan(array)]  # ya no usamos -9999
-                            
-                                            if valid_pixels.size == 0:
-                                                st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
-                                                continue
-                            
                                             # Crear bins automáticamente
                                             bins = np.linspace(min_val, max_val, 5)
                                             labels = [f"{round(bins[i],2)} – {round(bins[i+1],2)}" for i in range(len(bins)-1)]
-                            
-                                            # Histograma
-                                            counts, _ = np.histogram(valid_pixels, bins=bins)
-                                            total_pixels = np.sum(counts)
-                                            percentages = (counts / total_pixels) * 100
-                                            hectares = counts * pixel_area_ha
-                            
+                                        
+                                            # Crear imagen clasificada por bins
+                                            bin_indices = [img.select(index_name).gt(bins[i]).And(img.select(index_name).lte(bins[i+1])) for i in range(len(bins)-1)]
+                                        
+                                            # Calcular conteo por clase
+                                            counts = []
+                                            for bin_mask in bin_indices:
+                                                count = bin_mask.reduceRegion(
+                                                    reducer=ee.Reducer.count(),
+                                                    geometry=aoi,
+                                                    scale=20,
+                                                    maxPixels=1e13
+                                                ).get(index_name)
+                                                counts.append(count.getInfo() if count is not None else 0)
+                                        
+                                            total_pixels = sum(counts)
+                                            if total_pixels == 0:
+                                                st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
+                                                continue
+                                        
+                                            percentages = [(c / total_pixels) * 100 for c in counts]
+                                            hectares = [c * pixel_area_ha for c in counts]
+                                        
                                             df_bins = pd.DataFrame({
                                                 "Clase": labels,
                                                 "% Área": percentages,
                                                 "Hectáreas": hectares
                                             })
-                            
+                                        
                                             chart = alt.Chart(df_bins).mark_bar().encode(
                                                 x=alt.X("Clase:N", title="Clase del índice"),
                                                 y=alt.Y("% Área:Q", title="% del embalse"),
@@ -1343,11 +1351,12 @@ with tab2:
                                                 height=250,
                                                 title=f"{index_name} – {fecha}"
                                             )
-                            
+                                        
                                             st.altair_chart(chart, use_container_width=True)
-                            
+                                        
                                         except Exception as e:
                                             st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
+
                             
 
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
