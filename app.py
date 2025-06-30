@@ -456,7 +456,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         images = sentinel2.toList(num_images)
         best_image = None
 
-        # Construir un diccionario con los datos precalculados de nubosidad y cobertura
         cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
 
         for i in range(num_images):
@@ -466,7 +465,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             hora = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%H:%M')
 
             if formatted_date not in cloud_results_dict:
-                continue  # Solo procesar imágenes útiles
+                continue
 
             cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
             coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
@@ -480,18 +479,16 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 "Hora": hora,
                 "Nubosidad aproximada (%)": round(cloud_score, 2)
             })
-            break  # Usamos la mejor disponible y salimos
+            break
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
             return None, None, None
 
-
         sentinel2_image = best_image
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
         scl = sentinel2_image.select('SCL')
         cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
@@ -511,7 +508,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A') 
+        b8A = scaled_image.select('B8A')
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
@@ -552,10 +549,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         }
 
         indices_to_add = []
+        nombres_indices_agregados = []
+
         for index in selected_indices:
             try:
                 if index in indices_functions:
-                    indices_to_add.append(indices_functions[index]())
+                    indice_calculado = indices_functions[index]()
+                    indices_to_add.append(indice_calculado)
+                    nombres_indices_agregados.append(index)
             except Exception as e:
                 st.warning(f"⚠️ No se pudo calcular el índice {index} en {selected_date}: {e}")
 
@@ -564,7 +565,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             return scaled_image, None, image_date
 
         indices_image = scaled_image.addBands(indices_to_add)
-        return scaled_image, indices_image, image_date
+
+        # DEBUG: mostrar bandas disponibles
+        bandas_resultantes = indices_image.bandNames().getInfo()
+        st.info(f"📌 Índices añadidos el {selected_date}: {nombres_indices_agregados}")
+        st.info(f"🧪 Bandas disponibles: {bandas_resultantes}")
+
+        return indices_image, best_image, image_date
+
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
     if indices_image is None:
