@@ -1357,18 +1357,19 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
-                            # Dentro de tu código de interfaz para visualizar las distribuciones
-                            if "image_list" in st.session_state and "selected_dates" in st.session_state:
+                           # Dentro de tu código de interfaz para visualizar las distribuciones
+                           if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                 st.markdown("### Distribución diaria por clases del índice en el embalse")
                             
                                 pixel_area_m2 = 20 * 20  # Resolución real de Sentinel-2
                                 pixel_area_ha = pixel_area_m2 / 10000  # 0.04 ha por píxel
                             
-                                for i, (img, fecha_str) in enumerate(zip(image_list, selected_dates)):
+                                # Recorremos las imágenes y las fechas almacenadas en session_state
+                                for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                     fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                                     st.markdown(f"**Fecha: {fecha}**")
                             
-                                    for index_name in selected_indices:
+                                    for index_name in st.session_state["selected_indices"]:
                                         # Obtener min/max según vis_params
                                         min_val, max_val = -0.1, 0.4  # valores por defecto
                                         if index_name == "PC_Val_cal":
@@ -1384,7 +1385,7 @@ with tab2:
                             
                                         try:
                                             # Obtener los valores del índice para cada fecha
-                                            index_img = indices_image.select(index_name)
+                                            index_img = img.select(index_name)  # Usamos la imagen correspondiente a la fecha actual
                             
                                             # Mostrar los valores de concentración para cada fecha
                                             valores_indice = index_img.reduceRegion(
@@ -1407,7 +1408,7 @@ with tab2:
                                                 st.write(f"Rango de valores para {index_name} en {fecha} es muy pequeño. Aumentando el número de bins.")
                                                 bins = np.linspace(min_val, max_val, 10)  # Usamos 10 bins para mayor detalle
                                             else:
-                                                bins = np.linspace(min_val, max_val, 6)  # Usamos 5 bins de forma estándar
+                                                bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
                                             # Crear los labels para los bins
                                             labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
@@ -1417,6 +1418,7 @@ with tab2:
                             
                                         except Exception as e:
                                             st.warning(f"No se pudo generar el diagnóstico para {index_name} en {fecha}: {e}")
+
 
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
