@@ -1280,88 +1280,75 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
+                            # === Gráficas por clases del índice para cada fecha procesada ===
                             image_list = st.session_state.get("image_list", [])
                             selected_dates = st.session_state.get("selected_dates", [])
+                            
                             if image_list and selected_dates:
-                                    st.markdown("### Distribución diaria por clases del índice en el embalse")
-                                
-                                    pixel_area_m2 = 10 * 10  # Sentinel-2 resolución espacial
-                                    pixel_area_ha = pixel_area_m2 / 10000
-                                
-                                    for i, (img, fecha_str) in enumerate(zip(image_list, selected_dates)):
-                                        fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-                                        st.markdown(f"**Fecha: {fecha}**")
-                                
-                                        for index_name in selected_indices:
-                                            # Obtener valores min y max para bins desde tu lógica vis_params
-                                            min_val = -0.1
-                                            max_val = 0.4
-                                            if index_name == "PC_Val_cal":
-                                                min_val = 0
-                                                max_val = 7
-                                            elif index_name == "Chla_Val_cal":
-                                                min_val = 0
-                                                max_val = 150
-                                            elif index_name == "Chla_Bellus_cal":
-                                                min_val = 5
-                                                max_val = 100
-                                            elif index_name == "PC_Bellus_cal":
-                                                min_val = 25
-                                                max_val = 500
-                                            elif index_name == "B5_div_B4":
-                                                min_val = 0.5
-                                                max_val = 1.5
-                                
-                                            try:
-                                                # Detectar tipo de dato del índice para definir defaultValue compatible
-                                                try:
-                                                    band_info = img.select(index_name).bandTypes().getInfo()
-                                                    band_type = list(band_info.values())[0]["precision"]
-                                                    default_value = -9999 if "int" in band_type.lower() else -9999.0
-                                                except:
-                                                    default_value = -9999  # fallback seguro
-                                                
-                                                # Aplicar sampleRectangle con defaultValue correcto
-                                                img_np = img.select(index_name).clip(aoi).sampleRectangle(defaultValue=default_value).getInfo()
-                                                
-                                                array = np.array(img_np['properties']['array'])
-                                                valid_pixels = array[(array != -9999) & (~np.isnan(array))]
-                                
-                                                if valid_pixels.size == 0:
-                                                    st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
-                                                    continue
-                                
-                                                # Calcular bins automáticamente en 4 clases
-                                                bins = np.linspace(min_val, max_val, 5)
-                                                labels = [f"{round(bins[i],2)} – {round(bins[i+1],2)}" for i in range(len(bins)-1)]
-                                
-                                                # Histograma
-                                                counts, _ = np.histogram(valid_pixels, bins=bins)
-                                                total_pixels = np.sum(counts)
-                                                percentages = (counts / total_pixels) * 100
-                                                hectares = counts * pixel_area_ha
-                                
-                                                # DataFrame
-                                                df_bins = pd.DataFrame({
-                                                    "Clase": labels,
-                                                    "% Área": percentages,
-                                                    "Hectáreas": hectares
-                                                })
-                                
-                                                # Gráfico
-                                                chart = alt.Chart(df_bins).mark_bar().encode(
-                                                    x=alt.X("Clase:N", title="Clase del índice"),
-                                                    y=alt.Y("% Área:Q", title="% del embalse"),
-                                                    tooltip=["Clase", "% Área", "Hectáreas"]
-                                                ).properties(
-                                                    width=400,
-                                                    height=250,
-                                                    title=f"{index_name} – {fecha}"
-                                                )
-                                                st.altair_chart(chart, use_container_width=True)
-                                
-                                            except Exception as e:
-                                                st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
+                                st.markdown("### Distribución diaria por clases del índice en el embalse")
+                            
+                                pixel_area_m2 = 20 * 20  # Sentinel-2 resolución real de bandas B5/B6 = 20 m
+                                pixel_area_ha = pixel_area_m2 / 10000  # 0.04 ha por píxel
+                            
+                                for i, (img, fecha_str) in enumerate(zip(image_list, selected_dates)):
+                                    fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                    st.markdown(f"**Fecha: {fecha}**")
+                            
+                                    for index_name in selected_indices:
+                                        # Obtener min/max según vis_params
+                                        min_val, max_val = -0.1, 0.4  # valores por defecto
+                                        if index_name == "PC_Val_cal":
+                                            min_val, max_val = 0, 7
+                                        elif index_name == "Chla_Val_cal":
+                                            min_val, max_val = 0, 150
+                                        elif index_name == "Chla_Bellus_cal":
+                                            min_val, max_val = 5, 100
+                                        elif index_name == "PC_Bellus_cal":
+                                            min_val, max_val = 25, 500
+                                        elif index_name == "B5_div_B4":
+                                            min_val, max_val = 0.5, 1.5
+                            
+                                        try:
+                                            # sampleRectangle sin defaultValue (más seguro)
+                                            img_np = img.select(index_name).clip(aoi).sampleRectangle().getInfo()
+                                            array = np.array(img_np['properties']['array'])
+                                            valid_pixels = array[~np.isnan(array)]  # ya no usamos -9999
+                            
+                                            if valid_pixels.size == 0:
+                                                st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
+                                                continue
+                            
+                                            # Crear bins automáticamente
+                                            bins = np.linspace(min_val, max_val, 5)
+                                            labels = [f"{round(bins[i],2)} – {round(bins[i+1],2)}" for i in range(len(bins)-1)]
+                            
+                                            # Histograma
+                                            counts, _ = np.histogram(valid_pixels, bins=bins)
+                                            total_pixels = np.sum(counts)
+                                            percentages = (counts / total_pixels) * 100
+                                            hectares = counts * pixel_area_ha
+                            
+                                            df_bins = pd.DataFrame({
+                                                "Clase": labels,
+                                                "% Área": percentages,
+                                                "Hectáreas": hectares
+                                            })
+                            
+                                            chart = alt.Chart(df_bins).mark_bar().encode(
+                                                x=alt.X("Clase:N", title="Clase del índice"),
+                                                y=alt.Y("% Área:Q", title="% del embalse"),
+                                                tooltip=["Clase", "% Área", "Hectáreas"]
+                                            ).properties(
+                                                width=400,
+                                                height=250,
+                                                title=f"{index_name} – {fecha}"
+                                            )
+                            
+                                            st.altair_chart(chart, use_container_width=True)
+                            
+                                        except Exception as e:
+                                            st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
+                            
 
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
