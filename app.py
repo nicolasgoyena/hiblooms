@@ -1311,29 +1311,42 @@ with tab2:
                                             min_val, max_val = 0.5, 1.5
                             
                                         try:
-                                            # Crear bins automáticamente
+                                            # Crear bins y etiquetas
                                             bins = np.linspace(min_val, max_val, 5)
-                                            labels = [f"{round(bins[i],2)} – {round(bins[i+1],2)}" for i in range(len(bins)-1)]
+                                            labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
                                         
-                                            # Crear imagen clasificada por bins (cada una con nombre 'bin')
-                                            bin_indices = [
-                                                img.select(index_name).gt(bins[i]).And(img.select(index_name).lte(bins[i+1])).rename("bin")
-                                                for i in range(len(bins)-1)
-                                            ]
-                                            
-                                            # Calcular conteo por clase
-                                            counts = []
-                                            for bin_mask in bin_indices:
-                                                count = bin_mask.reduceRegion(
-                                                    reducer=ee.Reducer.count(),
-                                                    geometry=aoi,
-                                                    scale=20,
-                                                    maxPixels=1e13
-                                                ).get("bin")
-                                                counts.append(count.getInfo() if count is not None else 0)
-
+                                            # Extraer SCL y definir máscara de no-nubes
+                                            scl = img.select("SCL")
+                                            valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))  # Excluir nubes (SCL 7, 8, 9, 10)
                                         
+                                            # Clasificar los valores del índice en clases enteras: 1, 2, 3, 4
+                                            def get_class_image(index_img, bins):
+                                                classified = ee.Image(0).clip(aoi)
+                                                for i in range(len(bins) - 1):
+                                                    lower = bins[i]
+                                                    upper = bins[i + 1]
+                                                    mask = index_img.gt(lower).And(index_img.lte(upper))
+                                                    classified = classified.where(mask, i + 1)
+                                                return classified.rename("clase")
+                                        
+                                            index_img = img.select(index_name)
+                                            class_image = get_class_image(index_img, bins)
+                                        
+                                            # Aplicar máscara SCL para excluir nubes
+                                            class_image_masked = class_image.updateMask(valid_scl)
+                                        
+                                            # Contar píxeles por clase
+                                            hist = class_image_masked.reduceRegion(
+                                                reducer=ee.Reducer.frequencyHistogram(),
+                                                geometry=aoi,
+                                                scale=20,
+                                                maxPixels=1e13
+                                            ).get("clase")
+                                        
+                                            freq_dict = hist.getInfo() if hist is not None else {}
+                                            counts = [freq_dict.get(i + 1, 0) for i in range(len(labels))]
                                             total_pixels = sum(counts)
+                                        
                                             if total_pixels == 0:
                                                 st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
                                                 continue
@@ -1361,6 +1374,7 @@ with tab2:
                                         
                                         except Exception as e:
                                             st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
+                                        
 
                             
 
