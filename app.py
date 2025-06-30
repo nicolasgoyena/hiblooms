@@ -1346,7 +1346,7 @@ with tab2:
                             
                                         for day in available_dates:
                                             try:
-                                                image = filtered_images.filterDate(day, day.advance(1, 'day')).first()
+                                                image = indices_image.filterDate(day, day.advance(1, 'day')).first()
                                                 resultado = calcular_distribucion_area_por_clases(image, index, aoi, bins)
                                                 for fila in resultado:
                                                     resultados_temporales.append({
@@ -1356,8 +1356,9 @@ with tab2:
                                                         "porcentaje": fila["porcentaje"]
                                                     })
                                             except Exception as e:
-                                                st.warning(f"No se pudo procesar {index} el {day}: {e}")
-                            
+                                                st.warning(f"No se pudo procesar {index} el {day.format('yyyy-MM-dd').getInfo()}: {e}")
+                                        
+                                                                    
                                         if resultados_temporales:
                                             df_temp = pd.DataFrame(resultados_temporales)
                                             df_temp["fecha"] = pd.to_datetime(df_temp["fecha"])
