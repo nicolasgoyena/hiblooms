@@ -1366,53 +1366,72 @@ with tab2:
 
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
-                                st.markdown("### Distribución diaria por clases del índice en el embalse")
-                                
-                                # Recorremos las imágenes y las fechas almacenadas en session_state
-                                for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
-                                    fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                # Un único expander para toda la sección de distribución
+                                with st.expander("Distribución diaria por clases del índice en el embalse", expanded=False):
                                     
-                                    # Usar un expander para los gráficos
-                                    with st.expander(f"Distribución del índice para {fecha}", expanded=False):
+                                    # Recorremos las imágenes y las fechas almacenadas en session_state
+                                    col1, col2, col3, col4, col5 = st.columns(5)  # 5 columnas para los gráficos horizontales
+                            
+                                    # Usamos el contador para distribuir los gráficos en las columnas
+                                    col_counter = 0
+                            
+                                    for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
+                                        fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                                         
-                                        for index_name in st.session_state["selected_indices"]:
-                                            # Obtener min/max según vis_params
-                                            min_val, max_val = -0.1, 0.4  # valores por defecto
-                                            if index_name == "PC_Val_cal":
-                                                min_val, max_val = 0, 7
-                                            elif index_name == "Chla_Val_cal":
-                                                min_val, max_val = 0, 150
-                                            elif index_name == "Chla_Bellus_cal":
-                                                min_val, max_val = 5, 100
-                                            elif index_name == "PC_Bellus_cal":
-                                                min_val, max_val = 25, 500
-                                            elif index_name == "B5_div_B4":
-                                                min_val, max_val = 0.5, 1.5
+                                        # Usamos las columnas disponibles
+                                        with locals()[f"col{col_counter+1}"]:  # Dinámicamente selecciona la columna correspondiente
+                                            st.markdown(f"**Fecha: {fecha}**")
+                                            
+                                            for index_name in st.session_state["selected_indices"]:
+                                                # Obtener min/max según vis_params (utilizando la paleta exacta para cada índice)
+                                                min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']  # valores por defecto y colores
                             
-                                            # Calcular los bins
-                                            bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
+                                                if index_name == "PC_Val_cal":
+                                                    min_val, max_val = 0, 7
+                                                    palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
+                                                elif index_name == "Chla_Val_cal":
+                                                    min_val, max_val = 0, 150
+                                                    palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                elif index_name == "Chla_Bellus_cal":
+                                                    min_val, max_val = 5, 100
+                                                    palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                elif index_name == "PC_Bellus_cal":
+                                                    min_val, max_val = 25, 500
+                                                    palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                elif index_name == "B5_div_B4":
+                                                    min_val, max_val = 0.5, 1.5
+                                                    palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                             
-                                            # Llamar a la función para calcular la distribución por clases
-                                            result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
-                                            if result:
-                                                # Convertir el resultado en un DataFrame para graficarlo
-                                                df_distribution = pd.DataFrame(result)
+                                                # Calcular los bins
+                                                bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
-                                                # Graficar la distribución como un gráfico de pastel
-                                                chart = alt.Chart(df_distribution).mark_arc().encode(
-                                                    theta=alt.Theta(field="porcentaje", type="quantitative", stack=True),
-                                                    color=alt.Color('rango:N', legend=None),  # Color por rango
-                                                    tooltip=['rango', 'porcentaje', 'area_ha']
-                                                ).properties(
-                                                    title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
-                                                    width=600,
-                                                    height=400
-                                                )
+                                                # Llamar a la función para calcular la distribución por clases
+                                                result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
+                                                if result:
+                                                    # Convertir el resultado en un DataFrame para graficarlo
+                                                    df_distribution = pd.DataFrame(result)
                             
-                                                # Mostrar el gráfico
-                                                st.altair_chart(chart, use_container_width=True)
+                                                    # Graficar la distribución como un gráfico de pastel (pie chart)
+                                                    chart = alt.Chart(df_distribution).mark_arc().encode(
+                                                        theta=alt.Theta(field="porcentaje", type="quantitative", stack=True),
+                                                        color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=None),
+                                                        tooltip=['rango', 'porcentaje', 'area_ha']
+                                                    ).properties(
+                                                        title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
+                                                        width=300,
+                                                        height=300
+                                                    )
                             
-                                                                                    
+                                                    # Mostrar el gráfico
+                                                    st.altair_chart(chart, use_container_width=True)
+                            
+                                            # Incrementar el contador para que cada gráfico se coloque en la siguiente columna
+                                            col_counter += 1
+                                            if col_counter >= 5:  # Si ya hemos usado todas las columnas, reiniciamos
+                                                col_counter = 0
+                            
+                                                        
+                                                                                                                
                                                                                                             
 
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
