@@ -36,7 +36,12 @@ default_keys = {
 for key, default in default_keys.items():
     if key not in st.session_state:
         st.session_state[key] = default
+# Inicialización de las variables 'image_list' y 'selected_dates'
+if "image_list" not in st.session_state:
+    st.session_state["image_list"] = []
 
+if "selected_dates" not in st.session_state:
+    st.session_state["selected_dates"] = []
 import geemap.foliumap as geemap
 from streamlit_folium import folium_static
 from datetime import datetime
