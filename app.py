@@ -1120,6 +1120,8 @@ with tab2:
                             for day in available_dates:
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is not None:
+                                    st.session_state["image_list"].append(indices_image)
+                                    st.session_state["selected_dates"].append(day)
                                     # Para cada índice, calcular la distribución por clases
                                     for index_name in selected_indices:
                                         # Verifica que los valores de min y max son adecuados
