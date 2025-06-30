@@ -1325,54 +1325,67 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
-                            # Índices calibrados de concentración
-                            indices_concentracion = ["PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
-                            
-                            with st.expander(f"📊 Distribución espacial de concentración – {day}", expanded=False):
+                            with st.expander("📈 Evolución temporal de clases de concentración (área y %)", expanded=False):
                                 for index in selected_indices:
                                     if index in indices_concentracion:
-                                        try:
-                                            # Selección de bins según el índice
-                                            if index == "PC_Val_cal":
-                                                bins = [0, 1, 2, 3, 5, 7]
-                                            elif index == "Chla_Val_cal":
-                                                bins = [0, 10, 30, 60, 100, 150]
-                                            elif index == "Chla_Bellus_cal":
-                                                bins = [5, 15, 30, 50, 75, 100]
-                                            elif index == "PC_Bellus_cal":
-                                                bins = [25, 50, 100, 200, 300, 500]
-                                            else:
-                                                bins = [0, 5, 10, 20, 50, 100, 500]
+                                        st.subheader(f"Índice: {index}")
+                                        resultados_temporales = []
                             
-                                            # Calcular distribución por clases
-                                            distribucion = calcular_distribucion_area_por_clases(indices_image, index, aoi, bins)
-                                            df_dist = pd.DataFrame(distribucion)
+                                        # Selección de bins según el índice
+                                        if index == "PC_Val_cal":
+                                            bins = [0, 1, 2, 3, 5, 7]
+                                        elif index == "Chla_Val_cal":
+                                            bins = [0, 10, 30, 60, 100, 150]
+                                        elif index == "Chla_Bellus_cal":
+                                            bins = [5, 15, 30, 50, 75, 100]
+                                        elif index == "PC_Bellus_cal":
+                                            bins = [25, 50, 100, 200, 300, 500]
+                                        else:
+                                            bins = [0, 5, 10, 20, 50, 100, 500]
                             
-                                            st.markdown(
-                                                f"ℹ️ Esta distribución se calcula únicamente sobre el área visible del embalse sin nubes ni sombras en la imagen Sentinel-2 del **{day}**."
-                                            )
+                                        for day in available_dates:
+                                            try:
+                                                image = filtered_images.filterDate(day, day.advance(1, 'day')).first()
+                                                resultado = calcular_distribucion_area_por_clases(image, index, aoi, bins)
+                                                for fila in resultado:
+                                                    resultados_temporales.append({
+                                                        "fecha": day.format("yyyy-MM-dd").getInfo(),
+                                                        "rango": fila["rango"],
+                                                        "area_ha": fila["area_ha"],
+                                                        "porcentaje": fila["porcentaje"]
+                                                    })
+                                            except Exception as e:
+                                                st.warning(f"No se pudo procesar {index} el {day}: {e}")
                             
-                                            # Mostrar tabla
-                                            st.dataframe(df_dist.style.format({
-                                                "area_ha": "{:,.2f}",
-                                                "porcentaje": "{:.2f} %"
-                                            }), use_container_width=True)
+                                        if resultados_temporales:
+                                            df_temp = pd.DataFrame(resultados_temporales)
+                                            df_temp["fecha"] = pd.to_datetime(df_temp["fecha"])
                             
-                                            # Mostrar gráfica
-                                            chart = alt.Chart(df_dist).mark_bar().encode(
-                                                x=alt.X("rango:N", title="Rango de concentración (µg/L)"),
-                                                y=alt.Y("porcentaje:Q", title="Porcentaje del embalse visible (%)"),
-                                                tooltip=["rango:N", "porcentaje:Q", "area_ha:Q"]
+                                            # Gráfico de área
+                                            area_chart = alt.Chart(df_temp).mark_line().encode(
+                                                x="fecha:T",
+                                                y="area_ha:Q",
+                                                color="rango:N",
+                                                tooltip=["fecha:T", "rango:N", "area_ha:Q"]
                                             ).properties(
-                                                title=f"{index} – distribución por área y concentración",
-                                                width=500,
+                                                title="Evolución del área por clase de concentración (ha)",
+                                                width=600,
                                                 height=300
                                             )
+                                            st.altair_chart(area_chart, use_container_width=True)
                             
-                                            st.altair_chart(chart, use_container_width=True)
-                            
-                                        except Exception as e:
-                                            st.warning(f"⚠️ No se pudo generar la distribución para {index} el {day}: {e}")
+                                            # Gráfico de porcentaje
+                                            pct_chart = alt.Chart(df_temp).mark_line().encode(
+                                                x="fecha:T",
+                                                y="porcentaje:Q",
+                                                color="rango:N",
+                                                tooltip=["fecha:T", "rango:N", "porcentaje:Q"]
+                                            ).properties(
+                                                title="Evolución del porcentaje por clase de concentración (%)",
+                                                width=600,
+                                                height=300
+                                            )
+                                            st.altair_chart(pct_chart, use_container_width=True)
 
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
