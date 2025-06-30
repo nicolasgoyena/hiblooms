@@ -1350,8 +1350,8 @@ with tab2:
                                                 bins = [0, 5, 10, 20, 50, 100, 500]
                             
                                             # Obtener imagen correspondiente a la fecha
-                                            image = indices_image.filterDate(day, ee.Date(day).advance(1, "day")).first()
-                            
+                                            image = ee.ImageCollection(indices_image).filterDate(day, ee.Date(day).advance(1, "day")).first()
+        
                                             # Calcular distribución por clases
                                             distribucion = calcular_distribucion_area_por_clases(image, index, aoi, bins)
                             
