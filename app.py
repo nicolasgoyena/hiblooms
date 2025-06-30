@@ -1151,8 +1151,6 @@ with tab2:
                             
                                         # Llamar a la función para calcular la distribución por clases
                                         result = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins)
-                                        if result:
-                                            st.write(f"Distribución de {index_name} para {day}: {result}")
                                 if indices_image is not None:
                                     url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
                                 
