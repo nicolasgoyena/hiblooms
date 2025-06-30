@@ -1363,7 +1363,7 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
-                            # Dentro de tu código de interfaz para visualizar las distribuciones
+
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                 st.markdown("### Distribución diaria por clases del índice en el embalse")
@@ -1371,50 +1371,49 @@ with tab2:
                                 # Recorremos las imágenes y las fechas almacenadas en session_state
                                 for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                     fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-                                    st.markdown(f"**Fecha: {fecha}**")
+                                    
+                                    # Usar un expander para los gráficos
+                                    with st.expander(f"Distribución del índice para {fecha}", expanded=False):
+                                        
+                                        for index_name in st.session_state["selected_indices"]:
+                                            # Obtener min/max según vis_params
+                                            min_val, max_val = -0.1, 0.4  # valores por defecto
+                                            if index_name == "PC_Val_cal":
+                                                min_val, max_val = 0, 7
+                                            elif index_name == "Chla_Val_cal":
+                                                min_val, max_val = 0, 150
+                                            elif index_name == "Chla_Bellus_cal":
+                                                min_val, max_val = 5, 100
+                                            elif index_name == "PC_Bellus_cal":
+                                                min_val, max_val = 25, 500
+                                            elif index_name == "B5_div_B4":
+                                                min_val, max_val = 0.5, 1.5
                             
-                                    # Generar las gráficas solo una vez para cada índice y fecha
-                                    for index_name in st.session_state["selected_indices"]:
-                                        # Obtener min/max según vis_params
-                                        min_val, max_val = -0.1, 0.4  # valores por defecto
-                                        if index_name == "PC_Val_cal":
-                                            min_val, max_val = 0, 7
-                                        elif index_name == "Chla_Val_cal":
-                                            min_val, max_val = 0, 150
-                                        elif index_name == "Chla_Bellus_cal":
-                                            min_val, max_val = 5, 100
-                                        elif index_name == "PC_Bellus_cal":
-                                            min_val, max_val = 25, 500
-                                        elif index_name == "B5_div_B4":
-                                            min_val, max_val = 0.5, 1.5
+                                            # Calcular los bins
+                                            bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
-                                        # Calcular los bins
-                                        bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
+                                            # Llamar a la función para calcular la distribución por clases
+                                            result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
+                                            if result:
+                                                # Convertir el resultado en un DataFrame para graficarlo
+                                                df_distribution = pd.DataFrame(result)
                             
-                                        # Llamar a la función para calcular la distribución por clases
-                                        result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
-                                        if result:
-                                            st.write(f"Distribución de {index_name} para {fecha}: {result}")
+                                                # Graficar la distribución como un gráfico de pastel
+                                                chart = alt.Chart(df_distribution).mark_arc().encode(
+                                                    theta=alt.Theta(field="porcentaje", type="quantitative", stack=True),
+                                                    color=alt.Color('rango:N', legend=None),  # Color por rango
+                                                    tooltip=['rango', 'porcentaje', 'area_ha']
+                                                ).properties(
+                                                    title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
+                                                    width=600,
+                                                    height=400
+                                                )
                             
-                                            # Convertir el resultado en un DataFrame para graficarlo
-                                            df_distribution = pd.DataFrame(result)
+                                                # Mostrar el gráfico
+                                                st.altair_chart(chart, use_container_width=True)
                             
-                                            # Graficar la distribución de clases
-                                            chart = alt.Chart(df_distribution).mark_bar().encode(
-                                                x=alt.X('rango:N', title='Rango de valores'),
-                                                y=alt.Y('porcentaje:Q', title='Porcentaje de área (%)'),
-                                                color=alt.Color('rango:N', legend=None),
-                                                tooltip=['rango', 'porcentaje', 'area_ha']
-                                            ).properties(
-                                                title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
-                                                width=600,
-                                                height=400
-                                            )
-                            
-                                            st.altair_chart(chart, use_container_width=True)
-                            
-                                                        
-                                                                                
+                                                                                    
+                                                                                                            
 
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
