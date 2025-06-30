@@ -1312,62 +1312,86 @@ with tab2:
                             
                                         try:
                                             # Crear bins y etiquetas
-                                            bins = np.linspace(min_val, max_val, 5)
+                                            bins = np.linspace(min_val, max_val, 5)  # Los bins definidos según tu lógica
                                             labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
                                         
-                                            # Extraer SCL y definir máscara de no-nubes
-                                            scl = img.select("SCL")
-                                            valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))  # Excluir nubes (SCL 7, 8, 9, 10)
+                                            # Función para calcular la distribución de área por clases (bins)
+                                            def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
+                                                # Extraer la capa SCL (Scene Classification Layer)
+                                                scl = indices_image.select("SCL")
+                                                
+                                                # Máscara de nubes según SCL (excluye valores de nubes: 7, 8, 9, 10)
+                                                valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))
+                                                
+                                                # Seleccionar el índice de interés y aplicar la máscara de nubes
+                                                imagen_indice = indices_image.select(index_name).updateMask(valid_scl)
+                                                
+                                                # Crear la imagen de área de píxeles
+                                                pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())  # Excluye nubes y píxeles no válidos
                                         
-                                            # Clasificar los valores del índice en clases enteras: 1, 2, 3, 4
-                                            def get_class_image(index_img, bins):
-                                                classified = ee.Image(0).clip(aoi)
+                                                # Lista para almacenar los resultados de cada rango (bin)
+                                                results = []
+                                                
+                                                # Recorrer los bins definidos por el usuario
                                                 for i in range(len(bins) - 1):
                                                     lower = bins[i]
                                                     upper = bins[i + 1]
-                                                    mask = index_img.gt(lower).And(index_img.lte(upper))
-                                                    classified = classified.where(mask, i + 1)
-                                                return classified.rename("clase")
                                         
-                                            index_img = img.select(index_name)
-                                            class_image = get_class_image(index_img, bins)
+                                                    # Crear la máscara para el bin actual
+                                                    bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
                                         
-                                            # Aplicar máscara SCL para excluir nubes
-                                            class_image_masked = class_image.updateMask(valid_scl)
+                                                    # Calcular el área de los píxeles que están en este bin
+                                                    bin_area = pixel_area.updateMask(bin_mask).reduceRegion(
+                                                        reducer=ee.Reducer.sum(),
+                                                        geometry=aoi,
+                                                        scale=20,
+                                                        maxPixels=1e13
+                                                    ).get("area")
                                         
-                                            # Contar píxeles por clase
-                                            hist = class_image_masked.reduceRegion(
-                                                reducer=ee.Reducer.frequencyHistogram(),
-                                                geometry=aoi,
-                                                scale=20,
-                                                maxPixels=1e13
-                                            ).get("clase")
+                                                    # Guardar el área del bin (convertido a hectáreas)
+                                                    results.append({
+                                                        "rango": f"{round(lower, 2)}–{round(upper, 2)}",
+                                                        "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
+                                                    })
                                         
-                                            freq_dict = hist.getInfo() if hist is not None else {}
-                                            counts = [freq_dict.get(i + 1, 0) for i in range(len(labels))]
-                                            total_pixels = sum(counts)
+                                                # Calcular el área total del embalse (excluyendo nubes)
+                                                total_area = pixel_area.reduceRegion(
+                                                    reducer=ee.Reducer.sum(),
+                                                    geometry=aoi,
+                                                    scale=20,
+                                                    maxPixels=1e13
+                                                ).get("area")
                                         
-                                            if total_pixels == 0:
-                                                st.warning(f"Sin datos válidos para {index_name} en {fecha}.")
-                                                continue
+                                                total_area_ha = ee.Number(total_area).divide(10000).getInfo()  # Convertir a hectáreas
                                         
-                                            percentages = [(c / total_pixels) * 100 for c in counts]
-                                            hectares = [c * pixel_area_ha for c in counts]
+                                                # Calcular el porcentaje de área para cada bin respecto al área total
+                                                resultados_finales = []
+                                                for r in results:
+                                                    area_ha = r["area_ha"].getInfo()
+                                                    porcentaje = (area_ha / total_area_ha) * 100
+                                                    resultados_finales.append({
+                                                        "rango": r["rango"],
+                                                        "area_ha": area_ha,
+                                                        "porcentaje": porcentaje
+                                                    })
                                         
-                                            df_bins = pd.DataFrame({
-                                                "Clase": labels,
-                                                "% Área": percentages,
-                                                "Hectáreas": hectares
-                                            })
+                                                return resultados_finales
                                         
+                                            # Calcular distribución por clases para el índice actual
+                                            distribucion_area = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins)
+                                        
+                                            # Convertir los resultados en un DataFrame para visualizarlos
+                                            df_bins = pd.DataFrame(distribucion_area)
+                                            
+                                            # Graficar los resultados con Altair
                                             chart = alt.Chart(df_bins).mark_bar().encode(
-                                                x=alt.X("Clase:N", title="Clase del índice"),
-                                                y=alt.Y("% Área:Q", title="% del embalse"),
-                                                tooltip=["Clase", "% Área", "Hectáreas"]
+                                                x=alt.X("rango:N", title="Rango de valores del índice"),
+                                                y=alt.Y("porcentaje:Q", title="% Área del embalse"),
+                                                tooltip=["rango", "porcentaje", "area_ha"]
                                             ).properties(
                                                 width=400,
                                                 height=250,
-                                                title=f"{index_name} – {fecha}"
+                                                title=f"Distribución por clases del índice {index_name} – {fecha}"
                                             )
                                         
                                             st.altair_chart(chart, use_container_width=True)
@@ -1375,6 +1399,7 @@ with tab2:
                                         except Exception as e:
                                             st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
                                         
+                                                                                
 
                             
 
