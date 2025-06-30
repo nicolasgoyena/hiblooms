@@ -1356,7 +1356,7 @@ with tab2:
                                             height=300
                                         )
                             
-                                        st.altair_chart(chart, use_container_width=True)´
+                                        st.altair_chart(chart, use_container_width=True)
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                     st.markdown("### Distribución diaria por clases del índice en el embalse")
