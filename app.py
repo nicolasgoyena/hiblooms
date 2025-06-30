@@ -1315,9 +1315,12 @@ with tab2:
                                             bins = np.linspace(min_val, max_val, 5)
                                             labels = [f"{round(bins[i],2)} – {round(bins[i+1],2)}" for i in range(len(bins)-1)]
                                         
-                                            # Crear imagen clasificada por bins
-                                            bin_indices = [img.select(index_name).gt(bins[i]).And(img.select(index_name).lte(bins[i+1])) for i in range(len(bins)-1)]
-                                        
+                                            # Crear imagen clasificada por bins (cada una con nombre 'bin')
+                                            bin_indices = [
+                                                img.select(index_name).gt(bins[i]).And(img.select(index_name).lte(bins[i+1])).rename("bin")
+                                                for i in range(len(bins)-1)
+                                            ]
+                                            
                                             # Calcular conteo por clase
                                             counts = []
                                             for bin_mask in bin_indices:
@@ -1326,8 +1329,9 @@ with tab2:
                                                     geometry=aoi,
                                                     scale=20,
                                                     maxPixels=1e13
-                                                ).get(index_name)
+                                                ).get("bin")
                                                 counts.append(count.getInfo() if count is not None else 0)
+
                                         
                                             total_pixels = sum(counts)
                                             if total_pixels == 0:
