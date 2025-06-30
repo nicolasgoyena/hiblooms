@@ -49,6 +49,7 @@ import os
 import time
 from datetime import timedelta
 import json
+import numpy as np
 
 try:
     if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
