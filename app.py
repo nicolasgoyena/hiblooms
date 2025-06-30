@@ -1117,11 +1117,21 @@ with tab2:
                             }
                             scl_colors = [scl_palette[i] for i in sorted(scl_palette.keys())]
 
+                            # Antes de la iteración, limpia las listas de imágenes y fechas
+                            if "image_list" in st.session_state:
+                                st.session_state["image_list"] = []
+                            if "selected_dates" in st.session_state:
+                                st.session_state["selected_dates"] = []
+                            
+                            # Proceso de las fechas
                             for day in available_dates:
+                                # Procesar la imagen para cada fecha
                                 scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                 if indices_image is not None:
+                                    # Añadir solo las imágenes y fechas necesarias (una vez por fecha)
                                     st.session_state["image_list"].append(indices_image)
                                     st.session_state["selected_dates"].append(day)
+                                    
                                     # Para cada índice, calcular la distribución por clases
                                     for index_name in selected_indices:
                                         # Verifica que los valores de min y max son adecuados
@@ -1137,16 +1147,12 @@ with tab2:
                                         elif index_name == "B5_div_B4":
                                             min_val, max_val = 0.5, 1.5
                             
-                                        bins = np.linspace(min_val, max_val, 6)  # Usamos 5 bins de forma estándar
+                                        bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
                                         # Llamar a la función para calcular la distribución por clases
                                         result = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins)
                                         if result:
                                             st.write(f"Distribución de {index_name} para {day}: {result}")
-                            
-                                    # Añadir las imágenes y fechas al session_state
-                                    st.session_state["image_list"].append(indices_image)
-                                    st.session_state["selected_dates"].append(day)
                                 if indices_image is not None:
                                     url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
                                 
