@@ -186,59 +186,6 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
     else:
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
-
-def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
-    scl = indices_image.select("SCL")
-    year = datetime.utcfromtimestamp(indices_image.get('system:time_start').getInfo() / 1000).year
-
-    if year == 2018:
-        mask_agua = scl.eq(6).Or(scl.eq(2))
-    else:
-        mask_agua = scl.eq(6)
-
-    imagen_indice = indices_image.select(index_name).updateMask(mask_agua)
-    pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())
-
-    results = []
-    for i in range(len(bins) - 1):
-        lower = bins[i]
-        upper = bins[i + 1]
-
-        bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
-        bin_area = pixel_area.updateMask(bin_mask).reduceRegion(
-            reducer=ee.Reducer.sum(),
-            geometry=aoi,
-            scale=20,
-            maxPixels=1e13
-        ).get("area")
-
-        results.append({
-            "rango": f"{lower}–{upper}",
-            "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
-        })
-
-    total_area = pixel_area.reduceRegion(
-        reducer=ee.Reducer.sum(),
-        geometry=aoi,
-        scale=20,
-        maxPixels=1e13
-    ).get("area")
-
-    total_area_ha = ee.Number(total_area).divide(10000).getInfo()
-
-    resultados_finales = []
-    for r in results:
-        area_ha = r["area_ha"].getInfo()
-        porcentaje = (area_ha / total_area_ha) * 100
-        resultados_finales.append({
-            "rango": r["rango"],
-            "area_ha": area_ha,
-            "porcentaje": porcentaje
-        })
-
-    return resultados_finales
-
-
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     inicio_total = time.time()
 
@@ -456,6 +403,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         images = sentinel2.toList(num_images)
         best_image = None
 
+        # Construir un diccionario con los datos precalculados de nubosidad y cobertura
         cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
 
         for i in range(num_images):
@@ -465,7 +413,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             hora = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%H:%M')
 
             if formatted_date not in cloud_results_dict:
-                continue
+                continue  # Solo procesar imágenes útiles
 
             cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
             coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
@@ -479,16 +427,18 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 "Hora": hora,
                 "Nubosidad aproximada (%)": round(cloud_score, 2)
             })
-            break
+            break  # Usamos la mejor disponible y salimos
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
             return None, None, None
 
+
         sentinel2_image = best_image
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
+        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
         scl = sentinel2_image.select('SCL')
         cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
@@ -508,7 +458,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A')
+        b8A = scaled_image.select('B8A') 
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
@@ -549,14 +499,10 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         }
 
         indices_to_add = []
-        nombres_indices_agregados = []
-
         for index in selected_indices:
             try:
                 if index in indices_functions:
-                    indice_calculado = indices_functions[index]()
-                    indices_to_add.append(indice_calculado)
-                    nombres_indices_agregados.append(index)
+                    indices_to_add.append(indices_functions[index]())
             except Exception as e:
                 st.warning(f"⚠️ No se pudo calcular el índice {index} en {selected_date}: {e}")
 
@@ -565,14 +511,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             return scaled_image, None, image_date
 
         indices_image = scaled_image.addBands(indices_to_add)
-
-        # DEBUG: mostrar bandas disponibles
-        bandas_resultantes = indices_image.bandNames().getInfo()
-        st.info(f"📌 Índices añadidos el {selected_date}: {nombres_indices_agregados}")
-        st.info(f"🧪 Bandas disponibles: {bandas_resultantes}")
-
-        return indices_image, best_image, image_date
-
+        return scaled_image, indices_image, image_date
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
     if indices_image is None:
@@ -1334,59 +1273,7 @@ with tab2:
                             
                                         st.altair_chart(chart, use_container_width=True)
                             
-                            # Índices calibrados de concentración
-                            indices_concentracion = ["PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
-                            
-                            with st.expander("📊 Distribución espacial de concentración por fecha", expanded=False):
-                                for index in selected_indices:
-                                    if index in indices_concentracion:
-                                        for day in available_dates:
-                                            try:
-                                                # Calcular solo ese índice para esa fecha
-                                                image, _, _ = process_sentinel2(aoi, day, max_cloud_percentage, [index])
-                                                if image is None:
-                                                    continue
-                            
-                                                # Selección de bins según el índice
-                                                if index == "PC_Val_cal":
-                                                    bins = [0, 1, 2, 3, 5, 7]
-                                                elif index == "Chla_Val_cal":
-                                                    bins = [0, 10, 30, 60, 100, 150]
-                                                elif index == "Chla_Bellus_cal":
-                                                    bins = [5, 15, 30, 50, 75, 100]
-                                                elif index == "PC_Bellus_cal":
-                                                    bins = [25, 50, 100, 200, 300, 500]
-                                                else:
-                                                    bins = [0, 5, 10, 20, 50, 100, 500]
-                            
-                                                # Calcular distribución
-                                                distribucion = calcular_distribucion_area_por_clases(image, index, aoi, bins)
-                                                df_dist = pd.DataFrame(distribucion)
-                            
-                                                st.markdown(f"ℹ️ Distribución para **{index}** el **{day}**")
-                                                st.dataframe(df_dist.style.format({
-                                                    "area_ha": "{:,.2f}",
-                                                    "porcentaje": "{:.2f} %"
-                                                }), use_container_width=True)
-                            
-                                                chart = alt.Chart(df_dist).mark_bar().encode(
-                                                    x=alt.X("rango:N", title="Rango de concentración (µg/L)"),
-                                                    y=alt.Y("porcentaje:Q", title="Porcentaje del embalse visible (%)"),
-                                                    tooltip=["rango:N", "porcentaje:Q", "area_ha:Q"]
-                                                ).properties(
-                                                    title=f"{index} – distribución el {day}",
-                                                    width=500,
-                                                    height=300
-                                                )
-                            
-                                                st.altair_chart(chart, use_container_width=True)
-                            
-                                            except Exception as e:
-                                                st.warning(f"⚠️ No se pudo generar la distribución para {index} el {day}: {e}")
-                            
-
-                                                        
-                                                        # Serie temporal real de ficocianina (solo si embalse es VAL)
+                            # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
                                     urls_csv = [
