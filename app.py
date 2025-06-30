@@ -1357,8 +1357,9 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
-                           # Dentro de tu código de interfaz para visualizar las distribuciones
-                           if "image_list" in st.session_state and "selected_dates" in st.session_state:
+
+                            # Dentro de tu código de interfaz para visualizar las distribuciones
+                            if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                 st.markdown("### Distribución diaria por clases del índice en el embalse")
                             
                                 pixel_area_m2 = 20 * 20  # Resolución real de Sentinel-2
@@ -1419,8 +1420,6 @@ with tab2:
                                         except Exception as e:
                                             st.warning(f"No se pudo generar el diagnóstico para {index_name} en {fecha}: {e}")
 
-
-                            
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
