@@ -1310,7 +1310,7 @@ with tab2:
                                         elif index_name == "B5_div_B4":
                                             min_val, max_val = 0.5, 1.5
                             
-                                       try:
+                                        try:
                                             # Establecer bins dinámicos basados en el mínimo y máximo para cada fecha
                                             index_img = indices_image.select(index_name)
                                             
