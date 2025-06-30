@@ -1325,6 +1325,7 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
+                            indices_concentracion = ["PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
                             with st.expander("📈 Evolución temporal de clases de concentración (área y %)", expanded=False):
                                 for index in selected_indices:
                                     if index in indices_concentracion:
