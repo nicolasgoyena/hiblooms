@@ -1325,82 +1325,85 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
-                            import pandas as pd
-                            import altair as alt
                             
-                            # Índices que representan concentraciones calibradas
+                            # Índices calibrados de concentración
                             indices_concentracion = ["PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
+                            
+                            st.subheader("📈 Evolución temporal de la distribución por clases")
                             
                             for index in selected_indices:
                                 if index in indices_concentracion:
-                                    st.subheader(f"Distribución temporal para el índice: {index}")
-                                    resultados_temporales = []
-                            
-                                    # Bins por índice calibrado
-                                    if index == "PC_Val_cal":
-                                        bins = [0, 1, 2, 3, 5, 7]
-                                    elif index == "Chla_Val_cal":
-                                        bins = [0, 10, 30, 60, 100, 150]
-                                    elif index == "Chla_Bellus_cal":
-                                        bins = [5, 15, 30, 50, 75, 100]
-                                    elif index == "PC_Bellus_cal":
-                                        bins = [25, 50, 100, 200, 300, 500]
+                                    resultados = []
                             
                                     for i, day in enumerate(available_dates):
                                         try:
-                                            # Obtener imagen del día desde el diccionario generado
-                                            image = indices_image_list[i]  # asumimos que cada fecha se corresponde con una imagen en orden
+                                            # Selección de bins según el índice
+                                            if index == "PC_Val_cal":
+                                                bins = [0, 1, 2, 3, 5, 7]
+                                            elif index == "Chla_Val_cal":
+                                                bins = [0, 10, 30, 60, 100, 150]
+                                            elif index == "Chla_Bellus_cal":
+                                                bins = [5, 15, 30, 50, 75, 100]
+                                            elif index == "PC_Bellus_cal":
+                                                bins = [25, 50, 100, 200, 300, 500]
+                                            else:
+                                                bins = [0, 5, 10, 20, 50, 100, 500]
                             
-                                            # Aplicar la función de cálculo por clases
-                                            resultado = calcular_distribucion_area_por_clases(image, index, aoi, bins)
+                                            # Obtener imagen correspondiente a la fecha
+                                            image = indices_image.filterDate(day, ee.Date(day).advance(1, "day")).first()
                             
-                                            for fila in resultado:
-                                                resultados_temporales.append({
+                                            # Calcular distribución por clases
+                                            distribucion = calcular_distribucion_area_por_clases(image, index, aoi, bins)
+                            
+                                            for fila in distribucion:
+                                                resultados.append({
                                                     "fecha": day,
                                                     "rango": fila["rango"],
                                                     "area_ha": fila["area_ha"],
                                                     "porcentaje": fila["porcentaje"]
                                                 })
+                            
                                         except Exception as e:
-                                            st.warning(f"No se pudo procesar {index} el {day}: {e}")
+                                            st.warning(f"⚠️ No se pudo procesar {index} el {day}: {e}")
                             
                                     # Mostrar resultados si hay datos
-                                    if resultados_temporales:
-                                        df_temp = pd.DataFrame(resultados_temporales)
-                                        df_temp["fecha"] = pd.to_datetime(df_temp["fecha"])
+                                    if resultados:
+                                        df_res = pd.DataFrame(resultados)
+                                        df_res["fecha"] = pd.to_datetime(df_res["fecha"])
+                            
+                                        st.markdown(f"### {index}")
+                                        st.markdown("ℹ️ Distribución de concentración por clases a lo largo del tiempo. Solo se incluye el área del embalse sin nubes ni sombras.")
                             
                                         # Gráfico de área
-                                        area_chart = alt.Chart(df_temp).mark_line(point=True).encode(
+                                        area_chart = alt.Chart(df_res).mark_line(point=True).encode(
                                             x=alt.X("fecha:T", title="Fecha"),
                                             y=alt.Y("area_ha:Q", title="Área (ha)"),
                                             color=alt.Color("rango:N", title="Clase de concentración"),
                                             tooltip=["fecha:T", "rango:N", "area_ha:Q"]
                                         ).properties(
-                                            title="Evolución del área por clase (ha)",
+                                            title="Área de cada clase en el embalse",
                                             width=700,
                                             height=300
                                         )
                             
                                         # Gráfico de porcentaje
-                                        pct_chart = alt.Chart(df_temp).mark_line(point=True).encode(
+                                        pct_chart = alt.Chart(df_res).mark_line(point=True).encode(
                                             x=alt.X("fecha:T", title="Fecha"),
                                             y=alt.Y("porcentaje:Q", title="Porcentaje (%)"),
                                             color=alt.Color("rango:N", title="Clase de concentración"),
                                             tooltip=["fecha:T", "rango:N", "porcentaje:Q"]
                                         ).properties(
-                                            title="Evolución del porcentaje por clase (%)",
+                                            title="Porcentaje del embalse por clase",
                                             width=700,
                                             height=300
                                         )
                             
-                                        # Mostrar gráficos
                                         st.altair_chart(area_chart, use_container_width=True)
                                         st.altair_chart(pct_chart, use_container_width=True)
                             
-                                        # Mostrar tabla
-                                        st.markdown("### Datos de distribución por clase y fecha")
-                                        st.dataframe(df_temp)
-                            
+                                        # Mostrar tabla de resultados
+                                        st.dataframe(df_res, use_container_width=True)
+
 
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
