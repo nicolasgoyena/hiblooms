@@ -1311,108 +1311,41 @@ with tab2:
                                             min_val, max_val = 0.5, 1.5
                             
                                         try:
-                                            # Establecer bins dinámicos basados en el mínimo y máximo para cada fecha
+                                            # Obtener los valores del índice para cada fecha
                                             index_img = indices_image.select(index_name)
-                                            
-                                            # Obtener el valor mínimo y máximo para la fecha actual
-                                            min_val = index_img.reduceRegion(
-                                                reducer=ee.Reducer.min(),
+                                        
+                                            # Mostrar los valores de concentración para cada fecha
+                                            valores_indice = index_img.reduceRegion(
+                                                reducer=ee.Reducer.minMax(),
                                                 geometry=aoi,
                                                 scale=20,
                                                 maxPixels=1e13
-                                            ).get(index_name)
+                                            ).getInfo()
                                         
-                                            max_val = index_img.reduceRegion(
-                                                reducer=ee.Reducer.max(),
-                                                geometry=aoi,
-                                                scale=20,
-                                                maxPixels=1e13
-                                            ).get(index_name)
+                                            min_val = valores_indice.get(index_name)['min']
+                                            max_val = valores_indice.get(index_name)['max']
                                         
-                                            min_val = min_val.getInfo()  # Min para la fecha actual
-                                            max_val = max_val.getInfo()  # Max para la fecha actual
+                                            # Mostrar los valores de concentración para la fecha
+                                            st.write(f"Para el índice {index_name}, los valores para la fecha {fecha} son:")
+                                            st.write(f"Valor mínimo: {min_val}")
+                                            st.write(f"Valor máximo: {max_val}")
                                         
-                                            # Crear bins dinámicos para esa fecha
-                                            bins = np.linspace(min_val, max_val, 6)  # 5 bins para esa fecha
+                                            # Si el rango de valores es muy pequeño, ajustamos el número de bins
+                                            if max_val - min_val < 1:  # Si la diferencia es menor que 1
+                                                st.write(f"Rango de valores para {index_name} en {fecha} es muy pequeño. Aumentando el número de bins.")
+                                                bins = np.linspace(min_val, max_val, 10)  # Usamos 10 bins para mayor detalle
+                                            else:
+                                                bins = np.linspace(min_val, max_val, 6)  # Usamos 5 bins de forma estándar
+                                        
+                                            # Crear los labels para los bins
                                             labels = [f"{round(bins[i], 2)} – {round(bins[i+1], 2)}" for i in range(len(bins) - 1)]
                                         
-                                            # Extraer la máscara SCL para excluir nubes
-                                            scl = indices_image.select("SCL")
-                                            valid_scl = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))  # Excluir nubes
-                                        
-                                            # Seleccionar la imagen del índice y aplicar la máscara de nubes
-                                            imagen_indice = indices_image.select(index_name).updateMask(valid_scl)
-                                            
-                                            # Crear la imagen de área de píxeles
-                                            pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())  # Excluye nubes y píxeles no válidos
-                                        
-                                            # Lista para almacenar los resultados de cada rango (bin)
-                                            results = []
-                                            
-                                            # Recorrer los bins definidos para cada fecha
-                                            for i in range(len(bins) - 1):
-                                                lower = bins[i]
-                                                upper = bins[i + 1]
-                                        
-                                                # Crear la máscara para el bin actual
-                                                bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
-                                        
-                                                # Calcular el área de los píxeles que están en este bin
-                                                bin_area = pixel_area.updateMask(bin_mask).reduceRegion(
-                                                    reducer=ee.Reducer.sum(),
-                                                    geometry=aoi,
-                                                    scale=20,
-                                                    maxPixels=1e13
-                                                ).get("area")
-                                        
-                                                # Guardar el área del bin (convertido a hectáreas)
-                                                results.append({
-                                                    "rango": f"{round(lower, 2)}–{round(upper, 2)}",
-                                                    "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
-                                                })
-                                        
-                                            # Calcular el área total del embalse (excluyendo nubes)
-                                            total_area = pixel_area.reduceRegion(
-                                                reducer=ee.Reducer.sum(),
-                                                geometry=aoi,
-                                                scale=20,
-                                                maxPixels=1e13
-                                            ).get("area")
-                                        
-                                            total_area_ha = ee.Number(total_area).divide(10000).getInfo()  # Convertir a hectáreas
-                                        
-                                            # Calcular el porcentaje de área para cada bin respecto al área total
-                                            resultados_finales = []
-                                            for r in results:
-                                                area_ha = r["area_ha"].getInfo()
-                                                porcentaje = (area_ha / total_area_ha) * 100
-                                                resultados_finales.append({
-                                                    "rango": r["rango"],
-                                                    "area_ha": area_ha,
-                                                    "porcentaje": porcentaje
-                                                })
-                                        
-                                            # Mostrar los resultados
-                                            st.write(f"Distribución por clases del índice {index_name} para {fecha}:")
-                                            st.write(resultados_finales)
-                                        
-                                            # Crear la gráfica
-                                            df_bins = pd.DataFrame(resultados_finales)
-                                        
-                                            chart = alt.Chart(df_bins).mark_bar().encode(
-                                                x=alt.X("rango:N", title="Rango de valores del índice"),
-                                                y=alt.Y("porcentaje:Q", title="% Área del embalse"),
-                                                tooltip=["rango", "porcentaje", "area_ha"]
-                                            ).properties(
-                                                width=400,
-                                                height=250,
-                                                title=f"Distribución por clases del índice {index_name} – {fecha}"
-                                            )
-                                        
-                                            st.altair_chart(chart, use_container_width=True)
+                                            # Mostrar los bins para diagnóstico
+                                            st.write(f"Los bins generados para {index_name} en {fecha}: {labels}")
                                         
                                         except Exception as e:
-                                            st.warning(f"No se pudo generar la gráfica para {index_name} en {fecha}: {e}")
+                                            st.warning(f"No se pudo generar el diagnóstico para {index_name} en {fecha}: {e}")
+
                                         
                                                                                 
                                                                                                                                                                 
