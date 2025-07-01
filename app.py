@@ -1396,26 +1396,38 @@ with tab2:
                             
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
-                                            
+                            
                                             if result:
                                                 # Convertir el resultado en un DataFrame para graficarlo
                                                 df_distribution = pd.DataFrame(result)
                             
-                                                # Graficar la distribución como un gráfico de barras apiladas
-                                                chart = alt.Chart(df_distribution).mark_bar().encode(
-                                                    x=alt.X('Fecha:T', title='Fecha'),
-                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
-                                                    color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=alt.Legend(title="Rango de valores"))
-                                                ).properties(
-                                                    title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
-                                                    width=600,
-                                                    height=400
-                                                )
+                                                # Añadir los resultados al dataframe final, incluyendo la fecha para cada entrada
+                                                for row in df_distribution.itertuples():
+                                                    data.append({
+                                                        "Fecha": fecha,
+                                                        "Rango": row.rango,
+                                                        "Porcentaje": row.porcentaje
+                                                    })
                             
-                                                # Mostrar el gráfico
-                                                st.altair_chart(chart, use_container_width=True)
-
-
+                                    # Si se ha recogido algún dato, generar el gráfico
+                                    if data:
+                                        df_final = pd.DataFrame(data)
+                            
+                                        # Graficar la distribución como un gráfico de barras apiladas
+                                        chart = alt.Chart(df_final).mark_bar().encode(
+                                            x=alt.X('Fecha:T', title='Fecha'),
+                                            y=alt.Y('Porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
+                                            color=alt.Color('Rango:N', scale=alt.Scale(domain=df_final['Rango'].unique().tolist(), range=palette), legend=alt.Legend(title="Rango de valores"))
+                                        ).properties(
+                                            title=f"Distribución de las clases del índice por fecha",
+                                            width=800,
+                                            height=400
+                                        )
+                            
+                                        # Mostrar el gráfico
+                                        st.altair_chart(chart, use_container_width=True)
+                            
+                            
 
                             
                                                                                                                                             
