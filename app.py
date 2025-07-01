@@ -1408,7 +1408,7 @@ with tab2:
                                                 # Graficar la distribución como un gráfico de barras apiladas
                                                 chart = alt.Chart(df_distribution).mark_bar().encode(
                                                     x=alt.X('rango:N', title='Rango de valores'),
-                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de Área (%)'),
+                                                    y=alt.Y('porcentaje:Q', stack='zero', title='Porcentaje de Área (%)'),
                                                     color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=None),
                                                     tooltip=['rango', 'porcentaje', 'area_ha']
                                                 ).properties(
