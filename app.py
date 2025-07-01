@@ -1393,7 +1393,7 @@ with tab2:
                                                 palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                             
                                             # Calcular los bins
-                                            bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
+                                            bins = np.linspace(min_val, max_val, 4)
                             
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
@@ -1408,7 +1408,7 @@ with tab2:
                                                 # Graficar la distribución como un gráfico de barras apiladas
                                                 chart = alt.Chart(df_distribution).mark_bar().encode(
                                                     x=alt.X('rango:N', title='Rango de valores'),
-                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de Área (%)', stack='normalize'),
+                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de Área (%)'),
                                                     color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=None),
                                                     tooltip=['rango', 'porcentaje', 'area_ha']
                                                 ).properties(
@@ -1419,7 +1419,7 @@ with tab2:
                             
                                                 # Mostrar el gráfico
                                                 st.altair_chart(chart, use_container_width=True)
-                            
+
                                                                                                                 
                                                                                                                                             
                                                                                                             
