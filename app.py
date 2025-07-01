@@ -1368,9 +1368,10 @@ with tab2:
                                 with st.expander("Distribución diaria por clases del índice en el embalse", expanded=False):
                             
                                     # Recorremos las imágenes y las fechas almacenadas en session_state
+                                    data = []  # Guardamos los datos para todas las fechas
+                            
                                     for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-                                        st.markdown(f"**Fecha: {fecha}**")
                             
                                         for index_name in st.session_state["selected_indices"]:
                                             # Obtener min/max según vis_params (utilizando la paleta exacta para cada índice)
@@ -1393,7 +1394,7 @@ with tab2:
                                                 palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                             
                                             # Calcular los bins
-                                            bins = np.linspace(min_val, max_val, 4)
+                                            bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
@@ -1431,6 +1432,7 @@ with tab2:
                             
                                     # Mostrar el gráfico
                                     st.altair_chart(chart, use_container_width=True)
+
                             
                                                                                                                                             
                                                                                                                                             
