@@ -1380,16 +1380,16 @@ with tab2:
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 7
-                                                palette = ["#FF0000", "#FFFF00", "#008000", "#ADD8E6"]  # Invertir el orden de colores
+                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Orden original de colores
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
                                             elif index_name == "Chla_Bellus_cal":
                                                 min_val, max_val = 5, 100
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
                             
                                             # Definir siempre 4 bins
                                             bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
@@ -1413,6 +1413,10 @@ with tab2:
                                     if data:
                                         df_final = pd.DataFrame(data)
                             
+                                        # Invertir el orden de apilado de las categorías para cada fecha
+                                        df_final['Rango'] = pd.Categorical(df_final['Rango'], categories=df_final['Rango'].unique(), ordered=True)
+                                        df_final.sort_values('Rango', ascending=False, inplace=True)  # Esto invierte el orden de las categorías en las barras apiladas
+                            
                                         # Graficar la distribución como un gráfico de barras apiladas
                                         chart = alt.Chart(df_final).mark_bar(size=25).encode(  # Aumentar el tamaño de las barras
                                             x=alt.X('Fecha:T', title='Fecha'),
@@ -1426,6 +1430,7 @@ with tab2:
                             
                                         # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
+
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
