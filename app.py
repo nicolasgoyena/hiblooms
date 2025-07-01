@@ -1366,12 +1366,12 @@ with tab2:
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                 # Un único expander para toda la sección de distribución
                                 with st.expander("Distribución diaria por clases del índice en el embalse", expanded=False):
-                                    
+                            
                                     # Recorremos las imágenes y las fechas almacenadas en session_state
                                     for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                                         st.markdown(f"**Fecha: {fecha}**")
-                                        
+                            
                                         for index_name in st.session_state["selected_indices"]:
                                             # Obtener min/max según vis_params (utilizando la paleta exacta para cada índice)
                                             min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']  # valores por defecto y colores
@@ -1401,21 +1401,26 @@ with tab2:
                                                 # Convertir el resultado en un DataFrame para graficarlo
                                                 df_distribution = pd.DataFrame(result)
                             
-                                                # Graficar la distribución como un gráfico de pastel (pie chart)
-                                                chart = alt.Chart(df_distribution).mark_arc().encode(
-                                                    theta=alt.Theta(field="porcentaje", type="quantitative", stack=True),
+                                                # Calcular el porcentaje de cada categoría sobre el total
+                                                total_area = df_distribution['area_ha'].sum()
+                                                df_distribution['porcentaje'] = df_distribution['area_ha'] / total_area * 100
+                            
+                                                # Graficar la distribución como un gráfico de barras apiladas
+                                                chart = alt.Chart(df_distribution).mark_bar().encode(
+                                                    x=alt.X('rango:N', title='Rango de valores'),
+                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de Área (%)', stack='normalize'),
                                                     color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=None),
                                                     tooltip=['rango', 'porcentaje', 'area_ha']
                                                 ).properties(
                                                     title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
-                                                    width=300,
-                                                    height=300
+                                                    width=600,
+                                                    height=400
                                                 )
                             
                                                 # Mostrar el gráfico
                                                 st.altair_chart(chart, use_container_width=True)
                             
-                                                                                    
+                                                                                                                
                                                                                                                                             
                                                                                                             
 
