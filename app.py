@@ -1380,16 +1380,16 @@ with tab2:
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 7
-                                                palette = ["#FF0000", "#FFFF00", "#008000", "#ADD8E6"]  # Invertimos los colores
+                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Azul, verde, amarillo, rojo
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                                             elif index_name == "Chla_Bellus_cal":
                                                 min_val, max_val = 5, 100
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
-                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                             
                                             # Definir siempre 4 bins
                                             bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
@@ -1413,9 +1413,9 @@ with tab2:
                                     if data:
                                         df_final = pd.DataFrame(data)
                             
-                                        # Invertir el orden de apilado de las categorías para cada fecha
+                                        # Invertir el orden de las categorías en la barra (se apilarán de abajo hacia arriba)
                                         df_final['Rango'] = pd.Categorical(df_final['Rango'], categories=df_final['Rango'].unique(), ordered=True)
-                                        df_final.sort_values('Rango', ascending=False, inplace=True)  # Esto invierte el orden de las categorías en las barras apiladas
+                                        df_final['Rango'] = df_final['Rango'].cat.reorder_categories(df_final['Rango'].cat.categories[::-1])  # Invertir el orden
                             
                                         # Graficar la distribución como un gráfico de barras apiladas
                                         chart = alt.Chart(df_final).mark_bar(size=25).encode(  # Aumentar el tamaño de las barras
