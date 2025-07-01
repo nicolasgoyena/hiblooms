@@ -1405,8 +1405,7 @@ with tab2:
                                                 chart = alt.Chart(df_distribution).mark_bar().encode(
                                                     x=alt.X('Fecha:T', title='Fecha'),
                                                     y=alt.Y('porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
-                                                    color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=alt.Legend(title="Rango de valores")),
-                                                    tooltip=['rango', 'porcentaje', 'area_ha']
+                                                    color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=alt.Legend(title="Rango de valores"))
                                                 ).properties(
                                                     title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
                                                     width=600,
@@ -1415,6 +1414,7 @@ with tab2:
                             
                                                 # Mostrar el gráfico
                                                 st.altair_chart(chart, use_container_width=True)
+
 
 
                             
