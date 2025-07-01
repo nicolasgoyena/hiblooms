@@ -1380,16 +1380,16 @@ with tab2:
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 7
-                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Orden original de colores
+                                                palette = ["#FF0000", "#FFFF00", "#008000", "#ADD8E6"]  # Invertimos los colores
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
                                             elif index_name == "Chla_Bellus_cal":
                                                 min_val, max_val = 5, 100
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Orden original de colores
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertimos los colores
                             
                                             # Definir siempre 4 bins
                                             bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
@@ -1430,6 +1430,7 @@ with tab2:
                             
                                         # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
+
 
                             
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
