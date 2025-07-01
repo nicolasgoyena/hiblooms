@@ -1367,9 +1367,10 @@ with tab2:
                                 # Un único expander para toda la sección de distribución
                                 with st.expander("Distribución diaria por clases del índice en el embalse", expanded=False):
                             
-                                    # Recorremos las imágenes y las fechas almacenadas en session_state
+                                    # Inicializar la lista de datos
                                     data = []  # Guardamos los datos para todas las fechas
                             
+                                    # Recorremos las imágenes y las fechas almacenadas en session_state
                                     for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                             
@@ -1389,49 +1390,32 @@ with tab2:
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
-                                            elif index_name == "B5_div_B4":
-                                                min_val, max_val = 0.5, 1.5
-                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                             
-                                            # Calcular los bins
-                                            bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
+                                            # Definir siempre 4 bins
+                                            bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
                             
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
+                                            
                                             if result:
                                                 # Convertir el resultado en un DataFrame para graficarlo
                                                 df_distribution = pd.DataFrame(result)
                             
-                                                # Calcular el porcentaje de cada categoría sobre el total
-                                                total_area = df_distribution['area_ha'].sum()
-                                                df_distribution['porcentaje'] = df_distribution['area_ha'] / total_area * 100
+                                                # Graficar la distribución como un gráfico de barras apiladas
+                                                chart = alt.Chart(df_distribution).mark_bar().encode(
+                                                    x=alt.X('Fecha:T', title='Fecha'),
+                                                    y=alt.Y('porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
+                                                    color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=alt.Legend(title="Rango de valores")),
+                                                    tooltip=['rango', 'porcentaje', 'area_ha']
+                                                ).properties(
+                                                    title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
+                                                    width=600,
+                                                    height=400
+                                                )
                             
-                                                # Agregar los resultados de cada fecha a los datos
-                                                for _, row in df_distribution.iterrows():
-                                                    data.append({
-                                                        'Fecha': fecha_str,
-                                                        'Rango': row['rango'],
-                                                        'Porcentaje': row['porcentaje'],
-                                                        'Color': row['rango']
-                                                    })
-                            
-                                    # Convertir todos los datos a un DataFrame para graficar
-                                    df_data = pd.DataFrame(data)
-                            
-                                    # Graficar la distribución como un gráfico de barras apiladas
-                                    chart = alt.Chart(df_data).mark_bar().encode(
-                                        x=alt.X('Fecha:N', title='Fecha'),
-                                        y=alt.Y('Porcentaje:Q', stack='zero', title='Porcentaje de Área (%)'),
-                                        color=alt.Color('Rango:N', scale=alt.Scale(domain=df_data['Rango'].unique().tolist(), range=palette), legend=None),
-                                        tooltip=['Fecha', 'Rango', 'Porcentaje']
-                                    ).properties(
-                                        title="Distribución de clases del índice a lo largo del tiempo",
-                                        width=700,
-                                        height=400
-                                    )
-                            
-                                    # Mostrar el gráfico
-                                    st.altair_chart(chart, use_container_width=True)
+                                                # Mostrar el gráfico
+                                                st.altair_chart(chart, use_container_width=True)
+
 
                             
                                                                                                                                             
