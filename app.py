@@ -1380,16 +1380,16 @@ with tab2:
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 7
-                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
+                                                palette = ["#FF0000", "#FFFF00", "#008000", "#ADD8E6"]  # Invertir el orden de colores
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
                                             elif index_name == "Chla_Bellus_cal":
                                                 min_val, max_val = 5, 100
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                                palette = ['#e31a1c', '#fdae61', '#75ba82', '#2171b5']  # Invertir el orden de colores
                             
                                             # Definir siempre 4 bins
                                             bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
@@ -1414,7 +1414,7 @@ with tab2:
                                         df_final = pd.DataFrame(data)
                             
                                         # Graficar la distribución como un gráfico de barras apiladas
-                                        chart = alt.Chart(df_final).mark_bar().encode(
+                                        chart = alt.Chart(df_final).mark_bar(size=25).encode(  # Aumentar el tamaño de las barras
                                             x=alt.X('Fecha:T', title='Fecha'),
                                             y=alt.Y('Porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
                                             color=alt.Color('Rango:N', scale=alt.Scale(domain=df_final['Rango'].unique().tolist(), range=palette), legend=alt.Legend(title="Rango de valores"))
@@ -1427,13 +1427,6 @@ with tab2:
                                         # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
                             
-                            
-
-                            
-                                                                                                                                            
-                                                                                                                                            
-                                                                                                            
-
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
