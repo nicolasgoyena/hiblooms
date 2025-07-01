@@ -1405,22 +1405,34 @@ with tab2:
                                                 total_area = df_distribution['area_ha'].sum()
                                                 df_distribution['porcentaje'] = df_distribution['area_ha'] / total_area * 100
                             
-                                                # Graficar la distribución como un gráfico de barras apiladas
-                                                chart = alt.Chart(df_distribution).mark_bar().encode(
-                                                    x=alt.X('rango:N', title='Rango de valores'),
-                                                    y=alt.Y('porcentaje:Q', stack='zero', title='Porcentaje de Área (%)'),
-                                                    color=alt.Color('rango:N', scale=alt.Scale(domain=df_distribution['rango'].tolist(), range=palette), legend=None),
-                                                    tooltip=['rango', 'porcentaje', 'area_ha']
-                                                ).properties(
-                                                    title=f"Distribución diaria del índice {index_name} - Fecha {fecha}",
-                                                    width=600,
-                                                    height=400
-                                                )
+                                                # Agregar los resultados de cada fecha a los datos
+                                                for _, row in df_distribution.iterrows():
+                                                    data.append({
+                                                        'Fecha': fecha_str,
+                                                        'Rango': row['rango'],
+                                                        'Porcentaje': row['porcentaje'],
+                                                        'Color': row['rango']
+                                                    })
                             
-                                                # Mostrar el gráfico
-                                                st.altair_chart(chart, use_container_width=True)
-
-                                                                                                                
+                                    # Convertir todos los datos a un DataFrame para graficar
+                                    df_data = pd.DataFrame(data)
+                            
+                                    # Graficar la distribución como un gráfico de barras apiladas
+                                    chart = alt.Chart(df_data).mark_bar().encode(
+                                        x=alt.X('Fecha:N', title='Fecha'),
+                                        y=alt.Y('Porcentaje:Q', stack='zero', title='Porcentaje de Área (%)'),
+                                        color=alt.Color('Rango:N', scale=alt.Scale(domain=df_data['Rango'].unique().tolist(), range=palette), legend=None),
+                                        tooltip=['Fecha', 'Rango', 'Porcentaje']
+                                    ).properties(
+                                        title="Distribución de clases del índice a lo largo del tiempo",
+                                        width=700,
+                                        height=400
+                                    )
+                            
+                                    # Mostrar el gráfico
+                                    st.altair_chart(chart, use_container_width=True)
+                            
+                                                                                                                                            
                                                                                                                                             
                                                                                                             
 
