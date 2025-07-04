@@ -522,16 +522,17 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "B5_div_B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('B5_div_B4'),
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
             "PC_Val_cal": lambda: (
-                ee.Image(23.56)
+                ee.Image(75)
                 .divide(
                     ee.Image(1).add(
-                        (b5.divide(b4).subtract(1.66)).multiply(-4.42).exp()
+                        (b5.divide(b4).subtract(1.95)).multiply(-4.35).exp()
                     )
                 )
                 .max(0)
                 .updateMask(cloud_mask)
                 .rename("PC_Val_cal")
             ),
+
             "Chla_Val_cal": lambda: (
                 b5.subtract(b4).divide(b5.add(b4)).multiply(5.05).exp().multiply(23.16)
                 .max(0)
