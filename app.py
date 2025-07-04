@@ -522,7 +522,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "B5_div_B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('B5_div_B4'),
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
             "PC_Val_cal": lambda: (
-                b5.divide(b4).subtract(1.41).multiply(-3.97).exp().add(1).pow(-1).multiply(9.04)
+                b5.divide(b4).pow(5.0567).multiply(1.5062)
                 .max(0)
                 .updateMask(cloud_mask)
                 .rename("PC_Val_cal")
@@ -1285,7 +1285,7 @@ with tab2:
                                                                                                                      'red'])}
                                             if index == "PC_Val_cal":
                                                 vis_params["min"] = 0
-                                                vis_params["max"] = 7
+                                                vis_params["max"] = 10
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
                                             elif index == "B5_div_B4":
                                                 vis_params["min"] = 0.5
@@ -1379,7 +1379,7 @@ with tab2:
                                             min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']  # valores por defecto y colores
                             
                                             if index_name == "PC_Val_cal":
-                                                min_val, max_val = 0, 7
+                                                min_val, max_val = 0, 10
                                                 palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Azul, verde, amarillo, rojo
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
