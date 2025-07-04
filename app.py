@@ -1384,7 +1384,7 @@ with tab2:
                                             min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']  # valores por defecto y colores
                             
                                             if index_name == "PC_Val_cal":
-                                                min_val, max_val = 0, 10
+                                                min_val, max_val = 0, 30
                                                 palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Azul, verde, amarillo, rojo
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
