@@ -522,10 +522,10 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "B5_div_B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('B5_div_B4'),
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
             "PC_Val_cal": lambda: (
-                ee.Image(100)
+                ee.Image(120)
                 .divide(
                     ee.Image(1).add(
-                        (b5.divide(b4).subtract(1.93)).multiply(-5.95).exp()
+                        (b5.divide(b4).subtract(1.93)).multiply(-4.75).exp()
                     )
                 )
                 .max(0)
