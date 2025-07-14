@@ -525,7 +525,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 ee.Image(100)
                 .divide(
                     ee.Image(1).add(
-                        (b5.divide(b4).subtract(1.925)).multiply(-4.45).exp()
+                        (b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp()
                     )
                 )
                 .max(0)
@@ -534,11 +534,11 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             ),
 
             "Chla_Val_cal": lambda: (
-                ee.Image(397.28)  
+                ee.Image(450)  
                 .divide(
                     ee.Image(1).add(
-                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.43))  
-                        .multiply(-7.32)  
+                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))  
+                        .multiply(-7.14)  
                         .exp()
                     )
                 )
