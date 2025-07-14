@@ -1596,17 +1596,15 @@ with tab4:
                         
                                     if st.button("Ejecutar modo rápido"):
                                         st.session_state["data_time"] = []
-                        
-                                        with st.spinner("Obteniendo fechas disponibles..."):
-                                            # Mapeo de nombres para los CSV precalculados
-                                            csv_name_map = {
+                                        # Mapeo de nombres para los CSV precalculados
+                                        csv_name_map = {
                                                 "El Val": "val",
                                                 "Bellús": "bellus"
-                                            }
-                                            reservoir_key = csv_name_map.get(reservoir_name, None)
+                                        }
+                                        reservoir_key = csv_name_map.get(reservoir_name, None)
                                             
-                                            # Usar CSV precalculado si procede
-                                            if reservoir_key in ["val", "bellus"] and max_cloud_percentage == 60:
+                                        # Usar CSV precalculado si procede
+                                        if reservoir_key in ["val", "bellus"] and max_cloud_percentage == 60:
                                                 url_csv = f"https://{BUCKET_NAME}.s3.amazonaws.com/fechas_validas/{reservoir_key}_60.csv"
                                                 try:
                                                     df_csv = pd.read_csv(url_csv)
@@ -1618,10 +1616,10 @@ with tab4:
                                                 except Exception as e:
                                                     st.warning(f"No se pudo cargar el CSV precalculado para {reservoir_name}: {e}")
                                                     available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
-                                            else:
+                                        else:
                                                 available_dates = get_available_dates(aoi, start_date, end_date, max_cloud_percentage)
 
-                                            if not available_dates:
+                                        if not available_dates:
                                                 st.warning("No se encontraron imágenes en ese rango de fechas.")
                                                 st.stop()
                         
