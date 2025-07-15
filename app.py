@@ -569,6 +569,15 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .max(0)
                 .updateMask(cloud_mask)
                 .rename("Chla_Bellus_cal")
+            ),
+            "UV_General_Cal": lambda: (
+                ee.Image(24.665)
+                .multiply(
+                    b5.divide(b4).pow(3.4607)
+                )
+                .max(0)
+                .updateMask(cloud_mask)
+                .rename("UV_General_Cal")
             )
         }
 
