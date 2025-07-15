@@ -944,7 +944,7 @@ with tab2:
 
                 # Selección de índices
                 st.subheader("Selecciona los índices a visualizar:")
-                available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal]
+                available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
