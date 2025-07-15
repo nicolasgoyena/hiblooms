@@ -1389,7 +1389,7 @@ with tab2:
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
                                 # Un único expander para toda la sección de distribución
-                                with st.expander("Distribución diaria por clases del índice en el embalse", expanded=False):
+                                with st.expander("📊 Distribución diaria por clases del índice en el embalse", expanded=False):
                             
                                     # Inicializar la lista de datos
                                     data = []  # Guardamos los datos para todas las fechas
