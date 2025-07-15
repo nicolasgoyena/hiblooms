@@ -570,14 +570,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .updateMask(cloud_mask)
                 .rename("Chla_Bellus_cal")
             ),
-            "UV_General_Cal": lambda: (
+            "UV_PC_Gral_cal": lambda: (
                 ee.Image(24.665)
                 .multiply(
                     b5.divide(b4).pow(3.4607)
                 )
                 .max(0)
                 .updateMask(cloud_mask)
-                .rename("UV_General_Cal")
+                .rename("UV_PC_Gral_cal")
             )
         }
 
@@ -628,7 +628,8 @@ def generar_leyenda(indices_seleccionados):
         "PC_Val_cal": {"min": 0, "max": 10, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
         "Chla_Bellus_cal": {"min": 5,"max": 100,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
-        "PC_Bellus_cal": {"min": 25,"max": 500,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
+        "PC_Bellus_cal": {"min": 25,"max": 500,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
+        "UV_PC_Gral_cal": {"min": 0,"max": 100,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']}
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
@@ -943,13 +944,14 @@ with tab2:
 
                 # Selección de índices
                 st.subheader("Selecciona los índices a visualizar:")
-                available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
+                available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
                     - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
                     - **B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), es un buen indicador de ficocianina para todo tipo de embalses, pero no proporciona concentraciones directas.
                     - **NDCI_ind (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
+                    - **UV_PC_Gral_cal:** Calibración cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
                     - **PC_Val_cal (Ficocianina en El Val):** Estimador cuantitativo de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val.
                     - **Chla_Val_cal:** Calibración cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
                     - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
@@ -1065,7 +1067,7 @@ with tab2:
 
                             # Determinar si se seleccionaron índices de clorofila o de ficocianina
                             clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                            ficocianina_indices = {"PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                            ficocianina_indices = {"UV_PC_Gral_cal","PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
                             
                             hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
                             hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
@@ -1172,6 +1174,8 @@ with tab2:
                                             min_val, max_val = 25, 500
                                         elif index_name == "B5_div_B4":
                                             min_val, max_val = 0.5, 1.5
+                                        elif index_name == "UV_PC_Gral_cal":
+                                            min_val, max_val = 0, 100
                             
                                         bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
@@ -1227,8 +1231,8 @@ with tab2:
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
                                     "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
                                     "NDCI_ind": ['blue', 'green', 'yellow', 'red'],
+                                    "UV_PC_Gral_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "PC_Val_cal": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
-                                    "Simbolic_Index": ['blue', 'green', 'yellow', 'red'],
                                     "Chla_Val_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "Chla_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "PC_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
@@ -1329,6 +1333,10 @@ with tab2:
                                                 vis_params["min"] = 25
                                                 vis_params["max"] = 500
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
+                                            elif index == "PC_Bellus_cal":
+                                                vis_params["min"] = 25
+                                                vis_params["max"] = 500
+                                                vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
 
 
 
@@ -1422,6 +1430,9 @@ with tab2:
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
+                                            elif index_name == "UV_PC_Gral_cal":
+                                                min_val, max_val = 0, 100
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                             
                                             # Definir siempre 4 bins
@@ -1617,7 +1628,7 @@ with tab4:
                                     start_date = start_date.strftime('%Y-%m-%d')
                                     end_date = end_date.strftime('%Y-%m-%d')
                         
-                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
+                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
                                     selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices, key="graficas_indices")
                         
                                     if st.button("Ejecutar modo rápido"):
@@ -1651,7 +1662,7 @@ with tab4:
                         
                                         data_time = []
                                         clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                                        ficocianina_indices = {"PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                                        ficocianina_indices = {"UV_PC_Gral_cal""PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
                         
                                         hay_clorofila = any(i in selected_indices for i in clorofila_indices)
                                         hay_ficocianina = any(i in selected_indices for i in ficocianina_indices)
