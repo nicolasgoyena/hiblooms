@@ -1364,9 +1364,15 @@ with tab2:
                                     if indice in df_media.columns:
                                         df_indice = df_media[["Date", indice]].dropna()
                             
+                                        # Determinar si es un índice calibrado según si contiene 'cal' (insensible a mayúsculas)
+                                        if 'cal' in indice.lower():
+                                            y_axis_title = 'Concentración (μg/L)'
+                                        else:
+                                            y_axis_title = 'Valor del índice'
+                            
                                         chart = alt.Chart(df_indice).mark_bar().encode(
                                             x=alt.X('Date:T', title='Fecha', axis=alt.Axis(format="%d-%b", labelAngle=0)),
-                                            y=alt.Y(f'{indice}:Q', title='Concentración (µg/L)'),
+                                            y=alt.Y(f'{indice}:Q', title=y_axis_title),
                                             tooltip=[
                                                 alt.Tooltip('Date:T', title='Fecha'),
                                                 alt.Tooltip(f'{indice}:Q', title=f'{indice}')
@@ -1378,6 +1384,7 @@ with tab2:
                                         )
                             
                                         st.altair_chart(chart, use_container_width=True)
+
 
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
