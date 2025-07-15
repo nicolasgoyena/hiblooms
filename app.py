@@ -1333,7 +1333,7 @@ with tab2:
                                                 vis_params["min"] = 25
                                                 vis_params["max"] = 500
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
-                                            elif index == "PUV_PC_Gral_cal":
+                                            elif index == "UV_PC_Gral_cal":
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 100
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
