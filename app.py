@@ -1111,44 +1111,6 @@ with tab2:
                                             "Tipo": "Valor Real"
                                         })
                             
-                            # Bellús: cargar datos solo si se ha seleccionado algún índice relacionado
-                            if reservoir_name.lower() == "bellus" and (hay_clorofila or hay_ficocianina):
-                                # 🔽 Cargar los CSV de Bellús
-                                url_fico_bellus = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
-                                url_cloro_bellus = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
-                                
-                                df_fico_bellus = cargar_csv_desde_url(url_fico_bellus)
-                                df_cloro_bellus = cargar_csv_desde_url(url_cloro_bellus)
-                                
-                                # Renombrado flexible
-                                for col in df_fico_bellus.columns:
-                                    if "pc_ivf" in col.lower():
-                                        df_fico_bellus.rename(columns={col: "Ficocianina (µg/L)"}, inplace=True)
-                                
-                                for col in df_cloro_bellus.columns:
-                                    if "chla_ivf" in col.lower():
-                                        df_cloro_bellus.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
-                                
-                                # Fusionar y filtrar por fechas
-                                if not df_fico_bellus.empty and not df_cloro_bellus.empty:
-                                    df_bellus = pd.merge(df_fico_bellus, df_cloro_bellus, on="Fecha-hora", how="outer")
-                                    df_bellus = df_bellus.sort_values("Fecha-hora")
-                                
-                                    # Filtrado por fechas
-                                    start_dt = pd.to_datetime(start_date)
-                                    end_dt = pd.to_datetime(end_date)
-                                    df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
-                                                               
-                                    for _, row in df_bellus_filtrado.iterrows():
-                                        entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
-                                    
-                                        if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
-                                            entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
-                                        if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
-                                            entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
-                                    
-                                        if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
-                                            data_time.append(entry)
                  
                             # Guardar data_time solo después de añadir (o no) los datos SAICA
                             st.session_state['data_time'] = data_time
@@ -1532,6 +1494,48 @@ with tab2:
                                             st.altair_chart(chart_fico, use_container_width=True)
                                     else:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")                       
+
+                            if reservoir_name.lower() == "val" and hay_clorofila:
+                                with st.expander("📈 Serie temporal real de clorofila (sonda SAICA)", expanded=False):
+                                    url_cloro_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/clorofila_val_entero.csv"
+                                    try:
+                                        df_cloro = pd.read_csv(url_cloro_val)
+                            
+                                        # Asegurar que están las columnas necesarias
+                                        if "Fecha" in df_cloro.columns and "Clorofila (µg/L)" in df_cloro.columns:
+                                            df_cloro["Fecha-hora"] = pd.to_datetime(df_cloro["Fecha"])
+                                            df_cloro = df_cloro[["Fecha-hora", "Clorofila (µg/L)"]]
+                            
+                                            start_dt = pd.to_datetime(start_date)
+                                            end_dt = pd.to_datetime(end_date)
+                            
+                                            df_filtrado = df_cloro[(df_cloro["Fecha-hora"] >= start_dt) & (df_cloro["Fecha-hora"] <= end_dt)]
+                            
+                                            if df_filtrado.empty:
+                                                st.warning("⚠️ No hay datos de clorofila en el rango de fechas seleccionado.")
+                                            else:
+                                                max_puntos_grafico = 500
+                                                step = max(1, len(df_filtrado) // max_puntos_grafico)
+                                                df_subsample = df_filtrado.iloc[::step]
+                                                df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
+                            
+                                                chart_cloro = alt.Chart(df_subsample).mark_line().encode(
+                                                    x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
+                                                    y=alt.Y('Clorofila (µg/L):Q', title='Concentración (µg/L)'),
+                                                    tooltip=[
+                                                        alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
+                                                        alt.Tooltip('Clorofila (µg/L):Q', title='Clorofila (µg/L)', format=".2f")
+                                                    ]
+                                                ).properties(
+                                                    title="Evolución de la concentración de clorofila (µg/L)"
+                                                )
+                            
+                                                st.altair_chart(chart_cloro, use_container_width=True)
+                                        else:
+                                            st.error("❌ El archivo no contiene las columnas necesarias: 'Fecha' y 'Clorofila (µg/L)'")
+                                    except Exception as e:
+                                        st.error(f"❌ Error al cargar el archivo de clorofila desde S3: {e}")
+
                         
                             if not df_time.empty:
                                 with st.expander("📉 Gráficos de valores por punto de interés", expanded=False):
