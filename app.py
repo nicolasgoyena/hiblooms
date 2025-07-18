@@ -1493,34 +1493,7 @@ with tab2:
                                         st.altair_chart(chart, use_container_width=True)
 
 
-                            if reservoir_name.lower() == "bellus" and (hay_clorofila or hay_ficocianina):
-                                            url_fico = "https://drive.google.com/uc?id=1jeTpJfPTTKORN3iIprh6P_RPXPu16uDa&export=download"
-                                            url_cloro = "https://drive.google.com/uc?id=17-jtO6mbjfj_CMnsMo_UX2RQ7IM_0hQ4&export=download"
-                                            df_fico = cargar_csv_desde_url(url_fico)
-                                            df_cloro = cargar_csv_desde_url(url_cloro)
-                        
-                                            for col in df_fico.columns:
-                                                if "pc_ivf" in col.lower():
-                                                    df_fico.rename(columns={col: "Ficocianina (µg/L)"}, inplace=True)
-                                            for col in df_cloro.columns:
-                                                if "chla_ivf" in col.lower():
-                                                    df_cloro.rename(columns={col: "Clorofila (µg/L)"}, inplace=True)
-                        
-                                            if not df_fico.empty and not df_cloro.empty:
-                                                df_bellus = pd.merge(df_fico, df_cloro, on="Fecha-hora", how="outer")
-                                                df_bellus = df_bellus.sort_values("Fecha-hora")
-                                                start_dt = pd.to_datetime(start_date)
-                                                end_dt = pd.to_datetime(end_date)
-                                                df_bellus_filtrado = df_bellus[(df_bellus["Fecha-hora"] >= start_dt) & (df_bellus["Fecha-hora"] <= end_dt)]
-                                                for _, row in df_bellus_filtrado.iterrows():
-                                                    entry = {"Point": "Sonda-Bellús", "Date": row["Fecha-hora"], "Tipo": "Real"}
-                                                    if hay_ficocianina and pd.notna(row.get("Ficocianina (µg/L)")):
-                                                        entry["Ficocianina (µg/L)"] = row["Ficocianina (µg/L)"]
-                                                    if hay_clorofila and pd.notna(row.get("Clorofila (µg/L)")):
-                                                        entry["Clorofila (µg/L)"] = row["Clorofila (µg/L)"]
-                                                    if "Ficocianina (µg/L)" in entry or "Clorofila (µg/L)" in entry:
-                                                        data_time.append(entry)
-                                                        
+                            
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
