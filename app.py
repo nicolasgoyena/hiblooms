@@ -891,6 +891,36 @@ with tab2:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
+                st.subheader("Puntos de interés")
+
+                if reservoir_name in puntos_interes:
+                    st.success("Puntos de interés disponibles por defecto para este embalse.")
+                    pois_embalse = puntos_interes[reservoir_name]
+                else:
+                    st.warning("Este embalse no tiene puntos de interés definidos. Puedes subir un archivo CSV con tus propios puntos.")
+    
+                    archivo_pois = st.file_uploader("Sube un archivo CSV con columnas: nombre, lat, lon", type=["csv"])
+                    pois_embalse = {}
+    
+                    if archivo_pois is not None:
+                        try:
+                            df_pois = pd.read_csv(archivo_pois)
+                            if all(col in df_pois.columns for col in ["nombre", "lat", "lon"]):
+                                pois_embalse = {
+                                    row["nombre"]: (row["lat"], row["lon"]) for _, row in df_pois.iterrows()
+                                }
+                                st.success("Puntos cargados correctamente.")
+                            else:
+                                st.error("El archivo debe contener las columnas: nombre, lat, lon.")
+                        except Exception as e:
+                            st.error(f"Error al leer el archivo: {e}")
+
+            # (Opcional) Mostrar los puntos si están cargados
+            if pois_embalse:
+                st.markdown("**Puntos de interés cargados:**")
+                st.dataframe(pd.DataFrame([
+                    {"nombre": nombre, "lat": lat, "lon": lon} for nombre, (lat, lon) in pois_embalse.items()
+                ]))
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
