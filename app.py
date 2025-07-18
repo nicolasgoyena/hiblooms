@@ -1212,21 +1212,22 @@ with tab2:
                                 if indices_image is None:
                                     continue
 
-                                for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
-                                    values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
-                                    registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
-                                
-                                    if hay_clorofila:
-                                        for indice in clorofila_indices:
-                                            if indice in values and values[indice] is not None:
-                                                registro[indice] = values[indice]
-                                    if hay_ficocianina:
-                                        for indice in ficocianina_indices:
-                                            if indice in values and values[indice] is not None:
-                                                registro[indice] = values[indice]
-                                
-                                    if any(k in registro for k in clorofila_indices.union(ficocianina_indices)):
-                                        data_time.append(registro)
+                                if reservoir_name in puntos_interes and puntos_interes[reservoir_name]:
+                                    for point_name, (lat_point, lon_point) in puntos_interes[reservoir_name].items():
+                                        values = get_values_at_point(lat_point, lon_point, indices_image, selected_indices)
+                                        registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
+                                    
+                                        if hay_clorofila:
+                                            for indice in clorofila_indices:
+                                                if indice in values and values[indice] is not None:
+                                                    registro[indice] = values[indice]
+                                        if hay_ficocianina:
+                                            for indice in ficocianina_indices:
+                                                if indice in values and values[indice] is not None:
+                                                    registro[indice] = values[indice]
+                                    
+                                        if any(k in registro for k in clorofila_indices.union(ficocianina_indices)):
+                                            data_time.append(registro)
 
 
                                 # Añadir media diaria del embalse solo en píxeles con SCL == 6
