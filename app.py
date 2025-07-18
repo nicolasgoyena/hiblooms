@@ -1532,6 +1532,44 @@ with tab2:
                                             st.altair_chart(chart_fico, use_container_width=True)
                                     else:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")
+
+                            if reservoir_name.lower() == "bellus" and hay_ficocianina:
+                                with st.expander("📈 Serie temporal real de ficocianina en Bellús", expanded=False):
+                                    df_plot = pd.DataFrame(data_time)
+                            
+                                    if not df_plot.empty:
+                                        df_plot["Date"] = pd.to_datetime(df_plot["Date"])
+                            
+                                        df_fico_bellus = df_plot[
+                                            (df_plot["Point"] == "Sonda-Bellús") &
+                                            (df_plot["Tipo"] == "Real") &
+                                            (df_plot["Ficocianina (µg/L)"].notna())
+                                        ]
+                            
+                                        df_fico_bellus = df_fico_bellus.sort_values("Date")
+                            
+                                        if df_fico_bellus.empty:
+                                            st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                        else:
+                                            df_fico_bellus["Fecha_formateada"] = df_fico_bellus["Date"].dt.strftime("%d-%m-%Y %H:%M")
+                                            max_puntos_grafico = 500
+                                            step = max(1, len(df_fico_bellus) // max_puntos_grafico)
+                                            df_subsample = df_fico_bellus.iloc[::step]
+                            
+                                            chart_fico_bellus = alt.Chart(df_subsample).mark_line().encode(
+                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
+                                                y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
+                                                tooltip=[
+                                                    alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
+                                                    alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
+                                                ]
+                                            ).properties(
+                                                title="Evolución de la concentración de ficocianina en Bellús (µg/L)"
+                                            )
+                            
+                                            st.altair_chart(chart_fico_bellus, use_container_width=True)
+                                    else:
+                                        st.warning("⚠️ No se pudo construir el gráfico porque no hay datos en data_time.")
                         
                             if not df_time.empty:
                                 with st.expander("📉 Gráficos de valores por punto de interés", expanded=False):
