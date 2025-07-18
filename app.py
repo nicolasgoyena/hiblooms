@@ -73,7 +73,7 @@ try:
         ee.Initialize()
 
 except Exception as e:
-    st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
+    st.(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
     st.stop()
 
 # URL pública del archivo CSV en S3
@@ -86,9 +86,9 @@ try:
         embalse = row["embalse"]
         if embalse not in puntos_interes:
             puntos_interes[embalse] = {}
-        puntos_interes[embalse][row["nombre"]] = (row["lat"], row["lon"])
+        puntos_interes[embalse][row["nombre"]] = (row["latitud"], row["longitud"])
 except Exception as e:
-    st.error(f"Error cargando puntos de interés desde S3: {e}")
+    st.(f"Error cargando puntos de interés desde S3: {e}")
     puntos_interes = {}
 
 
