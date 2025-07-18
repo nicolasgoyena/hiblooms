@@ -1735,26 +1735,26 @@ with tab4:
                                             _, indices_image, _ = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
                                             if indices_image is None:
                                                 continue
-                        
-                                            for point_name, (lat, lon) in puntos_interes[reservoir_name].items():
-                                                values = get_values_at_point(lat, lon, indices_image, selected_indices)
-                                                registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
+
+                                            if reservoir_name in puntos_interes and puntos_interes[reservoir_name]: 
+                                                for point_name, (lat, lon) in puntos_interes[reservoir_name].items():
+                                                    values = get_values_at_point(lat, lon, indices_image, selected_indices)
+                                                    registro = {"Point": point_name, "Date": day, "Tipo": "Valor Estimado"}
+                                                    for i in selected_indices:
+                                                        if i in values and values[i] is not None:
+                                                            registro[i] = values[i]
+                                                    if any(i in registro for i in selected_indices):
+                                                        data_time.append(registro)
+                            
                                                 for i in selected_indices:
-                                                    if i in values and values[i] is not None:
-                                                        registro[i] = values[i]
-                                                if any(i in registro for i in selected_indices):
-                                                    data_time.append(registro)
-                        
-                                            for i in selected_indices:
-                                                media_valor = calcular_media_diaria_embalse(indices_image, i, aoi)
-                                                if media_valor is not None:
-                                                    data_time.append({
-                                                        "Point": "Media_Embalse",
-                                                        "Date": day,
-                                                        i: media_valor,
-                                                        "Tipo": "Valor Estimado"
-                                                    })
-                        
+                                                    media_valor = calcular_media_diaria_embalse(indices_image, i, aoi)
+                                                    if media_valor is not None:
+                                                        data_time.append({
+                                                            "Point": "Media_Embalse",
+                                                            "Date": day,
+                                                            i: media_valor,
+                                                            "Tipo": "Valor Estimado"
+                                                        })
                                         df_time = pd.DataFrame(data_time)
                                         if df_time.empty:
                                             st.warning("No se generaron datos válidos.")
