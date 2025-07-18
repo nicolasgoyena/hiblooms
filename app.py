@@ -916,6 +916,7 @@ with tab2:
                                 pois_embalse = {
                                     row["nombre"]: (row["latitud"], row["longitud"]) for _, row in df_pois.iterrows()
                                 }
+                                puntos_interes[reservoir_name] = pois_embalse
                                 st.success("Puntos cargados correctamente.")
                             else:
                                 st.error("❌ El archivo debe tener columnas llamadas exactamente: 'nombre', 'latitud' y 'longitud'.")
