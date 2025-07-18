@@ -73,7 +73,7 @@ try:
         ee.Initialize()
 
 except Exception as e:
-    st.(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
+    st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
     st.stop()
 
 # URL pública del archivo CSV en S3
