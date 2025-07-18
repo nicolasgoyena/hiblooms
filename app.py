@@ -498,7 +498,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
-            "B5_div_B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('B5_div_B4'),
+            "PCI_B5/B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('PCI_B5/B4'),
             "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
             "PC_Val_cal": lambda: (
                 ee.Image(100)
@@ -602,7 +602,7 @@ def generar_leyenda(indices_seleccionados):
     # Parámetros de visualización para cada índice
     parametros = {
         "MCI": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
-        "B5_div_B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
+        "PCI_B5/B4": {"min": 0.5, "max": 1.5, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "NDCI_ind": {"min": -0.1, "max": 0.4, "palette": ['blue', 'green', 'yellow', 'red']},
         "PC_Val_cal": {"min": 0, "max": 10, "palette": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]},
         "Chla_Val_cal": {"min": 0,"max": 150,"palette": ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']},
@@ -923,7 +923,7 @@ with tab2:
 
                 # Selección de índices
                 st.subheader("Selecciona los índices a visualizar:")
-                available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
+                available_indices = ["MCI", "PCI_B5/B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
                 selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
                 with st.expander("ℹ️ ¿Qué significa cada índice?"):
                     st.markdown("""
@@ -1046,7 +1046,7 @@ with tab2:
 
                             # Determinar si se seleccionaron índices de clorofila o de ficocianina
                             clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                            ficocianina_indices = {"UV_PC_Gral_cal","PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                            ficocianina_indices = {"UV_PC_Gral_cal","PC_Val_cal", "PCI_B5/B4","PC_Bellus_cal"}
                             
                             hay_clorofila = any(indice in selected_indices for indice in clorofila_indices)
                             hay_ficocianina = any(indice in selected_indices for indice in ficocianina_indices)
@@ -1151,7 +1151,7 @@ with tab2:
                                             min_val, max_val = 5, 100
                                         elif index_name == "PC_Bellus_cal":
                                             min_val, max_val = 25, 500
-                                        elif index_name == "B5_div_B4":
+                                        elif index_name == "PCI_B5/B4":
                                             min_val, max_val = 0.5, 1.5
                                         elif index_name == "UV_PC_Gral_cal":
                                             min_val, max_val = 0, 100
@@ -1208,7 +1208,7 @@ with tab2:
 
                                 index_palettes = {
                                     "MCI": ['blue', 'green', 'yellow', 'red'],
-                                    "B5_div_B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
+                                    "PCI_B5/B4": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # PCI
                                     "NDCI_ind": ['blue', 'green', 'yellow', 'red'],
                                     "UV_PC_Gral_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "PC_Val_cal": ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"],  # Paleta específica para PC
@@ -1296,7 +1296,7 @@ with tab2:
                                                 vis_params["min"] = 0
                                                 vis_params["max"] = 10
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
-                                            elif index == "B5_div_B4":
+                                            elif index == "PCI_B5/B4":
                                                 vis_params["min"] = 0.5
                                                 vis_params["max"] = 1.5
                                                 vis_params["palette"] = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]
@@ -1607,7 +1607,7 @@ with tab4:
                                     start_date = start_date.strftime('%Y-%m-%d')
                                     end_date = end_date.strftime('%Y-%m-%d')
                         
-                                    available_indices = ["MCI", "B5_div_B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
+                                    available_indices = ["MCI", "PCI_B5/B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
                                     selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices, key="graficas_indices")
                         
                                     if st.button("Ejecutar modo rápido"):
@@ -1641,7 +1641,7 @@ with tab4:
                         
                                         data_time = []
                                         clorofila_indices = {"MCI", "NDCI_ind", "Chla_Val_cal", "Chla_Bellus_cal"}
-                                        ficocianina_indices = {"UV_PC_Gral_cal""PC_Val_cal", "B5_div_B4","PC_Bellus_cal"}
+                                        ficocianina_indices = {"UV_PC_Gral_cal""PC_Val_cal", "PCI_B5/B4","PC_Bellus_cal"}
                         
                                         hay_clorofila = any(i in selected_indices for i in clorofila_indices)
                                         hay_ficocianina = any(i in selected_indices for i in ficocianina_indices)
