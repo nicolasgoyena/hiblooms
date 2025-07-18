@@ -88,7 +88,7 @@ try:
             puntos_interes[embalse] = {}
         puntos_interes[embalse][row["nombre"]] = (row["latitud"], row["longitud"])
 except Exception as e:
-    st.(f"Error cargando puntos de interés desde S3: {e}")
+    st.error(f"Error cargando puntos de interés desde S3: {e}")
     puntos_interes = {}
 
 
