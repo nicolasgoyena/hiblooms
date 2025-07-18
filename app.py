@@ -897,30 +897,47 @@ with tab2:
                     st.success("Puntos de interés disponibles por defecto para este embalse.")
                     pois_embalse = puntos_interes[reservoir_name]
                 else:
-                    st.warning("Este embalse no tiene puntos de interés definidos. Puedes subir un archivo CSV con tus propios puntos.")
-    
-                    archivo_pois = st.file_uploader("Sube un archivo CSV con columnas: nombre, lat, lon", type=["csv"])
+                    st.warning(
+                        "Este embalse no tiene puntos de interés definidos. "
+                        "Puedes subir un archivo CSV con tus propios puntos."
+                    )
+                
+                    st.markdown(
+                        "**ℹ️ El archivo debe tener tres columnas en este orden:**\n"
+                        "1. Nombre del punto\n"
+                        "2. Latitud\n"
+                        "3. Longitud\n\n"
+                        "✅ Los nombres de las columnas no importan, pero el orden **sí es importante**."
+                    )
+                
+                    archivo_pois = st.file_uploader("Sube tu archivo CSV", type=["csv"])
                     pois_embalse = {}
-    
+                
                     if archivo_pois is not None:
                         try:
-                            df_pois = pd.read_csv(archivo_pois)
-                            if all(col in df_pois.columns for col in ["nombre", "lat", "lon"]):
-                                pois_embalse = {
-                                    row["nombre"]: (row["lat"], row["lon"]) for _, row in df_pois.iterrows()
-                                }
-                                st.success("Puntos cargados correctamente.")
+                            df_pois = pd.read_csv(archivo_pois, header=0)
+                
+                            if df_pois.shape[1] < 3:
+                                st.error("❌ El archivo debe tener al menos tres columnas.")
                             else:
-                                st.error("El archivo debe contener las columnas: nombre, lat, lon.")
+                                # Tomar las tres primeras columnas
+                                df_pois = df_pois.iloc[:, :3]
+                                df_pois.columns = ["nombre", "latitud", "longitud"]
+                
+                                pois_embalse = {
+                                    row["nombre"]: (row["latitud"], row["longitud"]) for _, row in df_pois.iterrows()
+                                }
+                                st.success("✅ Puntos cargados correctamente.")
                         except Exception as e:
                             st.error(f"Error al leer el archivo: {e}")
-    
-                # (Opcional) Mostrar los puntos si están cargados
-                if pois_embalse:
-                    st.markdown("**Puntos de interés cargados:**")
-                    st.dataframe(pd.DataFrame([
-                        {"nombre": nombre, "lat": lat, "lon": lon} for nombre, (lat, lon) in pois_embalse.items()
-                    ]))
+                
+                    # Mostrar los puntos si están cargados
+                    if pois_embalse:
+                        st.markdown("**Puntos de interés cargados:**")
+                        st.dataframe(pd.DataFrame([
+                            {"nombre": nombre, "latitud": lat, "longitud": lon} for nombre, (lat, lon) in pois_embalse.items()
+                        ]))
+
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
