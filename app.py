@@ -893,50 +893,47 @@ with tab2:
                 aoi = gdf_to_ee_geometry(gdf)
                 st.subheader("Puntos de interés")
 
-                if reservoir_name in puntos_interes:
-                    st.success("Puntos de interés disponibles por defecto para este embalse.")
-                    pois_embalse = puntos_interes[reservoir_name]
-                else:
-                    st.warning(
-                        "Este embalse no tiene puntos de interés definidos. "
-                        "Puedes subir un archivo CSV con tus propios puntos."
-                    )
+                # Inicializar los puntos por defecto (ya cargados desde S3)
+                pois_embalse = {}
                 
-                    st.markdown(
-                        "**⚠️ El archivo debe tener exactamente estas tres columnas, con estos nombres en minúsculas:**\n"
-                        "`nombre`, `latitud`, `longitud`\n\n"
-                        "🔁 No uses `lat`, `lon`, `name`, ni otras variantes. Es importante que los nombres coincidan exactamente."
-                    )
+                # Si el usuario desea usar puntos de interés
+                usar_pois = st.radio("¿Quieres consultar valores en puntos de interés?", ["Sí", "No"])
                 
-                    archivo_pois = st.file_uploader("Sube tu archivo CSV", type=["csv"])
-                    pois_embalse = {}
+                if usar_pois == "Sí":
+                    if reservoir_name in puntos_interes:
+                        st.success("Puntos de interés por defecto disponibles para este embalse.")
+                        pois_embalse = puntos_interes[reservoir_name]
+                    else:
+                        st.warning("Este embalse no tiene puntos de interés por defecto. Puedes subir un archivo CSV con tus propios puntos.")
+                
+                    # Siempre permitir subir archivo, incluso si hay puntos por defecto (el archivo tendrá prioridad)
+                    archivo_pois = st.file_uploader("Sube un archivo CSV con tus propios puntos de interés (3 columnas: nombre, latitud, longitud)", type=["csv"])
                 
                     if archivo_pois is not None:
                         try:
                             df_pois = pd.read_csv(archivo_pois)
-                
-                            columnas_requeridas = {"nombre", "latitud", "longitud"}
-                            columnas_csv = set(df_pois.columns.str.lower())  # Por si vienen con mayúsculas
-                
-                            if columnas_requeridas.issubset(columnas_csv):
-                                # Renombrar columnas si vienen con mayúsculas o espacios
-                                df_pois.columns = [col.strip().lower() for col in df_pois.columns]
-                
+                            if df_pois.shape[1] >= 3:
+                                # Tomar las 3 primeras columnas como nombre, latitud, longitud
+                                df_pois.columns = ["nombre", "latitud", "longitud"] + list(df_pois.columns[3:])
                                 pois_embalse = {
                                     row["nombre"]: (row["latitud"], row["longitud"]) for _, row in df_pois.iterrows()
                                 }
-                                st.success("✅ Puntos cargados correctamente.")
+                                st.success("Puntos cargados desde archivo. Estos reemplazarán los puntos por defecto.")
                             else:
-                                st.error("❌ El archivo no contiene las columnas requeridas: `nombre`, `latitud`, `longitud`.")
+                                st.error("El archivo debe tener al menos tres columnas: nombre, latitud y longitud.")
                         except Exception as e:
                             st.error(f"Error al leer el archivo: {e}")
                 
-                    # (Opcional) Mostrar los puntos si están cargados
+                    # Mostrar puntos cargados (por defecto o por el usuario)
                     if pois_embalse:
-                        st.markdown("**Puntos de interés cargados:**")
+                        st.markdown("**Puntos de interés activos:**")
                         st.dataframe(pd.DataFrame([
                             {"nombre": nombre, "latitud": lat, "longitud": lon} for nombre, (lat, lon) in pois_embalse.items()
                         ]))
+                
+                else:
+                    st.info("No se consultarán valores en puntos de interés.")
+
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
