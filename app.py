@@ -1496,7 +1496,7 @@ with tab2:
                                         st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")                       
 
                             if reservoir_name.lower() == "val" and hay_clorofila:
-                                with st.expander("📈 Serie temporal real de clorofila (sonda SAICA)", expanded=False):
+                                with st.expander("📈 Valores reales de clorofila-a (valores de sonda Aquadam en 41.8761,-1.7883)", expanded=False):
                                     url_cloro_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/clorofila_val_entero.csv"
                                     try:
                                         df_cloro = pd.read_csv(url_cloro_val)
