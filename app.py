@@ -892,69 +892,53 @@ with tab2:
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
                 st.subheader("Puntos de interés")
-
+    
                 if reservoir_name in puntos_interes:
                     st.success("Puntos de interés disponibles por defecto para este embalse.")
                     pois_embalse = puntos_interes[reservoir_name]
                 else:
                     st.warning("Este embalse no tiene puntos de interés definidos. Puedes subir un archivo CSV con tus propios puntos.")
     
-                    archivo_pois = st.file_uploader("Sube un archivo CSV con columnas: nombre, lat, lon", type=["csv"])
+                    archivo_pois = st.file_uploader("Sube un archivo CSV con columnas de nombre, latitud y longitud", type=["csv"])
                     pois_embalse = {}
     
                     if archivo_pois is not None:
                         try:
-                            df_pois = pd.read_csv(archivo_pois)
-                            def detectar_columnas(df):
-                                posibles_lat = [col for col in df.columns if df[col].dtype in [float, int] and df[col].between(-90, 90).mean() > 0.5]
-                                posibles_lon = [col for col in df.columns if df[col].dtype in [float, int] and df[col].between(-180, 180).mean() > 0.5]
-                                posibles_nombre = [col for col in df.columns if df[col].dtype == object or df[col].dtype.name == "string"]
-                            
-                                lat_col = posibles_lat[0] if posibles_lat else None
-                                lon_col = posibles_lon[0] if posibles_lon else None
-                                nombre_col = posibles_nombre[0] if posibles_nombre else None
-                            
-                                return nombre_col, lat_col, lon_col
-                            
-                            # Leer archivo CSV
-                            try:
-                                df_pois = pd.read_csv(archivo_pois)
-                            
-                                # Detectar columnas
+                            # Leer CSV detectando separador automáticamente
+                            df_pois = pd.read_csv(archivo_pois, sep=None, engine="python")
+    
+                            if df_pois.empty:
+                                st.error("⚠️ El archivo CSV está vacío.")
+                            else:
+                                st.write("Contenido detectado:")
+                                st.dataframe(df_pois)
+    
+                                # Intentar detección automática
                                 nombre_col, lat_col, lon_col = detectar_columnas(df_pois)
-                            
+    
                                 if None in [nombre_col, lat_col, lon_col]:
                                     st.warning("No se detectaron correctamente las columnas. Por favor, asígnalas manualmente:")
                                     nombre_col = st.selectbox("Columna de nombre:", df_pois.columns)
                                     lat_col = st.selectbox("Columna de latitud:", df_pois.columns)
                                     lon_col = st.selectbox("Columna de longitud:", df_pois.columns)
-                            
-                                # Validar si hay valores numéricos válidos
+    
+                                # Validación final
                                 if df_pois[lat_col].between(-90, 90).all() and df_pois[lon_col].between(-180, 180).all():
                                     pois_embalse = {
                                         str(row[nombre_col]): (row[lat_col], row[lon_col]) for _, row in df_pois.iterrows()
                                     }
                                     st.success("Puntos cargados correctamente.")
                                 else:
-                                    st.error("Los valores de latitud o longitud no parecen válidos.")
-                                    pois_embalse = {}
-                            
-                            except Exception as e:
-                                st.error(f"Error al leer el archivo: {e}")
-                                pois_embalse = {}
-
-                                st.success("Puntos cargados correctamente.")
-                            else:
-                                st.error("El archivo debe contener las columnas: nombre, lat, lon.")
+                                    st.error("❌ Los valores de latitud o longitud no parecen válidos.")
+    
                         except Exception as e:
                             st.error(f"Error al leer el archivo: {e}")
-
-            # (Opcional) Mostrar los puntos si están cargados
-            if pois_embalse:
-                st.markdown("**Puntos de interés cargados:**")
-                st.dataframe(pd.DataFrame([
-                    {"nombre": nombre, "lat": lat, "lon": lon} for nombre, (lat, lon) in pois_embalse.items()
-                ]))
+    
+                if pois_embalse:
+                    st.markdown("**Puntos de interés cargados:**")
+                    st.dataframe(pd.DataFrame([
+                        {"nombre": nombre, "lat": lat, "lon": lon} for nombre, (lat, lon) in pois_embalse.items()
+                    ]))
 
                 # Slider de nubosidad
                 st.subheader("Selecciona un porcentaje máximo de nubosidad:")
