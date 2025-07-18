@@ -76,42 +76,21 @@ except Exception as e:
     st.error(f"❌ No se pudo inicializar Google Earth Engine: {str(e)}")
     st.stop()
 
-puntos_interes = {
-    "EUGUI": {
-        "EU-1": (42.972554580588245, -1.5153927772290117),
-        "EU-2": (42.979363533124015, -1.5133104333288598),
-        "EU-3": (42.99334922635716, -1.5164716652855823)
-    },
-    "ALLOZ": {
-        "All-1": (42.7094165624961, -1.94727650210385),
-        "All-2": (42.72287216, -1.94302458),
-        "All-3": (42.72821464, -1.93702794),
-        "All-4": (42.73680851, -1.930444394)
-    },
-    "VAL": {
-        "VAL-1": (41.87977480764112, -1.8052571871777034),
-        "VAL-2": (41.8765336, -1.792419161),
-        "Sonda-SAICA": (41.8761, -1.7883)
-    },
-    "ITOIZ": {
-        "IT-1": (42.81359078720846, -1.3675024704573298),
-        "IT-2": (42.8133203, -1.365784146),
-        "IT-3": (42.80699069, -1.36347659)
-    },
-    "GONZALEZ LACASA": {
-        "G-1": (42.18173801436588, -2.6810543962707656),
-        "G-2": (42.17967448, -2.687254697),
-        "G-3": (42.1855258, -2.681117803)
-    },
-    "URRUNAGA": {
-        "Urr-1": (42.960690852708, -2.6501586877888),
-        "Urr-2": (42.983643076227516, -2.6477366856877382),
-        "Urr-3": (42.980077967705235, -2.674754078553591)
-    },
-    "BELLUS": {
-    "Sonda-Bellús": (38.936974, -0.479160) 
-}
-}
+# URL pública del archivo CSV en S3
+url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/puntos_interes.csv"
+
+try:
+    df_poi = pd.read_csv(url_csv)
+    puntos_interes = {}
+    for _, row in df_poi.iterrows():
+        embalse = row["embalse"]
+        if embalse not in puntos_interes:
+            puntos_interes[embalse] = {}
+        puntos_interes[embalse][row["nombre"]] = (row["lat"], row["lon"])
+except Exception as e:
+    st.error(f"Error cargando puntos de interés desde S3: {e}")
+    puntos_interes = {}
+
 
 @st.cache_data
 def cargar_fechas_csv(url: str) -> pd.DataFrame:
