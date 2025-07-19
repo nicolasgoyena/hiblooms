@@ -1318,7 +1318,6 @@ with tab2:
                                                 vis_params["palette"] = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
 
 
-
                                             index_layer = folium.raster_layers.TileLayer(
                                                 tiles=indices_image.select(index).visualize(**vis_params).getMapId()[
                                                     "tile_fetcher"].url_format,
@@ -1396,7 +1395,7 @@ with tab2:
                             
                                         for index_name in st.session_state["selected_indices"]:
                                             # Obtener min/max según vis_params (utilizando la paleta exacta para cada índice)
-                                            min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']  # valores por defecto y colores
+                                            min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red'] 
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 30
@@ -1414,9 +1413,7 @@ with tab2:
                                                 min_val, max_val = 0, 100
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                             
-                                            # Definir siempre 4 bins
                                             bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
-                            
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
                             
@@ -1453,9 +1450,7 @@ with tab2:
                             
                                         # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
-
-
-                            
+                                        
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
