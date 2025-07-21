@@ -1398,8 +1398,8 @@ with tab2:
                                             min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red'] 
                             
                                             if index_name == "PC_Val_cal":
-                                                min_val, max_val = 0, 30
-                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF0000"]  # Azul, verde, amarillo, rojo
+                                                min_val, max_val = 0, 25
+                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF8000", "#FF0000"]  # Azul, verde, amarillo,naranja, rojo
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
@@ -1413,7 +1413,10 @@ with tab2:
                                                 min_val, max_val = 0, 100
                                                 palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
                             
-                                            bins = np.linspace(min_val, max_val, 5)  # 4 categorías, por lo tanto, 5 puntos
+                                            if index_name == "PC_Val_cal":
+                                                bins = np.linspace(min_val, max_val, 6)
+                                            else: 
+                                                bins = np.linspace(min_val, max_val, 5)# 4 categorías, por lo tanto, 5 puntos
                                             # Llamar a la función para calcular la distribución por clases
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
                             
