@@ -695,14 +695,18 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Raleway:wght@600;700&display=swap');
 
-    /* Fondo y fuente general */
-    html, body, .stApp, div, p, span, label, section, input, textarea, select, .css-1cpxqw2, .css-ffhzg2 {
-        font-family: 'Playfair Display', serif !important;
-        background-color: #e8e3d9;
+    /* Fondo general solo detrás */
+    .stApp {
+        background-color: #e8e3d9 !important;
+    }
+
+    /* Tipografía general: Playfair Display */
+    html, body, .stApp {
+        font-family: 'Playfair Display', serif;
         color: #000000;
     }
 
-    /* TITULARES */
+    /* TITULARES con Aquatico simulado (Raleway) */
     h1, h2, h3, .main-title, .important-header {
         font-family: 'Raleway', sans-serif !important;
         color: #475a23;
@@ -710,17 +714,11 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* HEADER PRINCIPAL */
-    .header {
-        font-family: 'Raleway', sans-serif;
-        font-size: 30px;
-        text-align: center;
-        padding: 16px;
-        background-color: #e8e3d9;
-        color: #475a23;
-        border: 2px solid #475a23;
-        border-radius: 10px;
-        margin-bottom: 25px;
+    /* Evitamos sobreescribir elementos interactivos de Streamlit */
+    .stAlert, .stFileUploader, .stDataFrame, .stTable, .stExpander, .stButton, .stSelectbox, .stSlider {
+        background-color: white !important;
+        color: black !important;
+        border-radius: 8px;
     }
 
     /* Tabs */
@@ -728,8 +726,8 @@ st.markdown("""
         font-family: 'Playfair Display', serif;
         display: flex;
         justify-content: center;
-        font-size: 18px !important;
-        font-weight: bold !important;
+        font-size: 18px;
+        font-weight: bold;
     }
 
     button[role="tab"] {
@@ -749,7 +747,7 @@ st.markdown("""
         border-color: #5297d2 !important;
     }
 
-    /* Botones principales */
+    /* Botones */
     .stButton>button {
         background-color: #5297d2;
         color: white;
@@ -765,7 +763,7 @@ st.markdown("""
         color: black;
     }
 
-    /* Cuadros informativos */
+    /* Cuadros informativos propios */
     .info-box {
         background-color: white;
         border-left: 6px solid #babf0a;
@@ -775,11 +773,7 @@ st.markdown("""
         font-family: 'Playfair Display', serif;
     }
 
-    .highlight {
-        font-weight: bold;
-        color: #5297d2;
-    }
-
+    /* Enlaces */
     a {
         color: #5297d2 !important;
         text-decoration: none;
@@ -789,20 +783,9 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* Tablas */
-    .dataframe th {
-        background-color: #475a23;
-        color: white;
-        font-family: 'Playfair Display', serif;
-    }
-
-    .dataframe td {
-        background-color: #ffffff;
-        color: #000000;
-    }
-
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
@@ -1917,6 +1900,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
