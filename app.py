@@ -782,6 +782,15 @@ st.markdown("""
     a:hover {
         text-decoration: underline;
     }
+    
+    /* Aplica fondo marrón claro a las etiquetas encima de los selectores */
+.stSelectbox label, .stNumberInput label, .stTextInput label, .stSlider label {
+    background-color: #e8e3d9 !important;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    display: inline-block;
+}
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -1897,6 +1906,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
