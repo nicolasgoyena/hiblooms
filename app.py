@@ -693,27 +693,45 @@ def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scal
 
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Raleway:wght@600;700&display=swap');
+
     html, body, [class*="css"] {
-        font-family: 'Lato', sans-serif;
+        font-family: 'Playfair Display', serif;
         color: #000000;
+        background-color: #e8e3d9;
     }
 
-    /* Contenedor principal */
-    .block-container {
-        padding-top: 2rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        background-color: #e8e3d9;  /* gris claro */
+    /* TITULARES - simulando Aquatico */
+    h1, h2, h3, .main-title, .important-header {
+        font-family: 'Raleway', sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #475a23;
+    }
+
+    /* HEADER BOX */
+    .header {
+        font-family: 'Raleway', sans-serif;
+        font-size: 28px;
+        text-align: center;
+        padding: 14px;
+        background-color: #475a23;
+        color: white;
+        border-radius: 8px;
+        margin-bottom: 20px;
     }
 
     /* Tabs */
     div[role="tablist"] {
+        font-family: 'Playfair Display', serif;
         display: flex;
         justify-content: center;
         font-size: 18px !important;
         font-weight: bold !important;
         color: #5297d2;
     }
+
     button[role="tab"] {
         padding: 12px 25px !important;
         font-size: 18px !important;
@@ -721,31 +739,13 @@ st.markdown("""
         background-color: #92c3ea33 !important;
         color: #475a23 !important;
     }
+
     button[role="tab"][aria-selected="true"] {
         background-color: #5297d2 !important;
         color: white !important;
     }
 
-    /* Título principal */
-    h1 {
-        color: #475a23 !important;
-        font-size: 2rem;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-
-    /* Subcabeceras e info boxes */
-    .header {
-        font-size: 22px;
-        font-weight: bold;
-        text-align: center;
-        padding: 12px;
-        background-color: #475a23;
-        color: white;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-
+    /* Cuadros informativos */
     .info-box {
         padding: 15px;
         border-radius: 10px;
@@ -759,36 +759,14 @@ st.markdown("""
         color: #5297d2;
     }
 
-    /* Mensajes de éxito/info/error */
-    .stAlert.success {
-        background-color: #92c3ea33 !important;
-        border-left: 6px solid #5297d2 !important;
-    }
-
-    .stAlert.info {
-        background-color: #babf0a22 !important;
-        border-left: 6px solid #babf0a !important;
-    }
-
-    .stAlert.warning {
-        background-color: #ffebcc !important;
-        border-left: 6px solid #ffa500 !important;
-    }
-
-    .stAlert.error {
-        background-color: #ffcccc !important;
-        border-left: 6px solid #d11a2a !important;
-    }
-
-    /* Links */
     a {
         color: #5297d2 !important;
         text-decoration: none;
     }
+
     a:hover {
         text-decoration: underline;
     }
-
     </style>
 """, unsafe_allow_html=True)
 
@@ -1904,4 +1882,5 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
