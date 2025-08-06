@@ -1116,11 +1116,8 @@ with tab2:
                 calcular = st.button("Calcular y mostrar resultados")
                 
                 # Separador siempre visible
-                st.markdown("""
-                <hr style='border: 1px solid #b4a89b; margin: 2rem 0; width: 100vw; position: relative; left: -8vw;'>
-                """, unsafe_allow_html=True)
-
-                
+    st.markdown("<hr style='border: 1px solid #b4a89b; margin: 2rem 0;'>", unsafe_allow_html=True)
+        
                 # Procesamiento solo si se pulsa
                 if calcular:     
                     with st.spinner("Calculando fechas disponibles..."):
@@ -1971,6 +1968,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
