@@ -845,27 +845,27 @@ div[data-testid="element-container"] {
 """, unsafe_allow_html=True)
 
 
-col1, col2, col3 = st.columns([1.2, 4, 1.5])  # Ajustamos proporciones ligeramente
-
+col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
 with col1:
-    st.image("images/logo_hiblooms.png", width=200)
-    st.image("images/ministerio.png", width=200)
-
+    st.image("images/logo_hiblooms.png", width=350)
+    st.image("images/ministerio.png", width=350)
 with col2:
     st.markdown(
         """
-        <h1 style="text-align: center; line-height: 1.2em; font-size: 28px;">
+        <h1 style="text-align: center; line-height: 1.2em;">
             Visor de indicadores de la calidad del agua en embalses españoles:
-            <br><span style="display: block;">Proyecto HIBLOOMS</span>
+            <br> <span style="display: block; text-align: center;">Proyecto HIBLOOMS</span>
         </h1>
         """,
         unsafe_allow_html=True
     )
-
 with col3:
-    st.image("images/bioma.jpg", width=200)
-    st.image("images/logo_ebro.png", width=100)
-    st.image("images/logo_jucar.png", width=100)
+    st.image("images/bioma.jpg", width=300)  # Nueva imagen que ocupa el ancho de las dos anteriores
+    col3a, col3b = st.columns([1, 1])  # Dividimos col3 en dos partes iguales debajo de la nueva imagen
+    with col3a:
+        st.image("images/logo_ebro.png", width=150)
+    with col3b:
+        st.image("images/logo_jucar.png", width=150)
 
 
 
@@ -1957,6 +1957,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
