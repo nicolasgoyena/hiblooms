@@ -794,12 +794,11 @@ st.markdown("""
     display: block;
     width: 100%;
 }
-    /* Centrar y estilizar el botón principal sin afectar al layout */
-.stButton > button {
-    display: block;
-    margin: 1rem auto;
-    font-family: 'Playfair Display', serif !important;
-    font-weight: 500;
+    /* Elimina fondo blanco en contenedores del botón */
+section[data-testid="stButton"] {
+    background-color: transparent !important;
+}
+
 }
     </style>
 """, unsafe_allow_html=True)
@@ -1916,6 +1915,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
