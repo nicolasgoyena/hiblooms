@@ -799,7 +799,16 @@ section[data-testid="stButton"] {
     background-color: transparent !important;
 }
 
+/* Forzar fondo beige en toda la app excepto en widgets */
+div.block-container {
+    background-color: #eee7dc !important;  /* Marrón claro */
 }
+
+/* Evita que botones, selects y otros elementos tengan fondo blanco lateral */
+.stButton, .stSelectbox, .stTextInput, .stNumberInput, .stDateInput {
+    background-color: transparent !important;
+}
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -1915,6 +1924,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
