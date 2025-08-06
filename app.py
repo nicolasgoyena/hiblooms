@@ -695,7 +695,7 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Raleway:wght@600;700&display=swap');
 
-    html, body, [class*="css"] {
+    html, body, .stApp {
         font-family: 'Playfair Display', serif;
         background-color: #e8e3d9;
         color: #000000;
@@ -1917,6 +1917,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
