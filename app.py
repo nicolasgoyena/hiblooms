@@ -831,10 +831,13 @@ div[data-testid="stFileUploaderDropzone"] {
     border-radius: 0.5rem;
 }
 
-/* Elimina fondo en contenedores de elementos (incluye st.markdown antes de widgets) */
 div[data-testid="element-container"] {
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
     background-color: transparent !important;
 }
+
 
 
 </style>
@@ -1953,6 +1956,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
