@@ -697,11 +697,11 @@ st.markdown("""
 
     html, body, [class*="css"] {
         font-family: 'Playfair Display', serif;
-        color: #000000;
         background-color: #e8e3d9;
+        color: #000000;
     }
 
-    /* TITULARES estilo Aquatico (simulada) */
+    /* TITULARES */
     h1, h2, h3, .main-title, .important-header {
         font-family: 'Raleway', sans-serif;
         font-weight: 700;
@@ -710,16 +710,17 @@ st.markdown("""
         color: #475a23;
     }
 
-    /* HEADER destacado */
+    /* HEADER PRINCIPAL */
     .header {
         font-family: 'Raleway', sans-serif;
-        font-size: 28px;
+        font-size: 30px;
         text-align: center;
-        padding: 14px;
-        background-color: #475a23;
-        color: white;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        padding: 16px;
+        background-color: #e8e3d9;
+        color: #475a23;
+        border: 2px solid #475a23;
+        border-radius: 10px;
+        margin-bottom: 25px;
     }
 
     /* Tabs */
@@ -729,30 +730,48 @@ st.markdown("""
         justify-content: center;
         font-size: 18px !important;
         font-weight: bold !important;
-        color: #5297d2;
     }
 
     button[role="tab"] {
-        padding: 12px 25px !important;
-        font-size: 18px !important;
-        border-radius: 0.5rem !important;
         background-color: #92c3ea33 !important;
         color: #475a23 !important;
+        padding: 10px 25px;
+        margin: 2px;
+        border-radius: 0.5rem;
+        font-size: 18px;
         font-family: 'Playfair Display', serif;
+        border: 2px solid #92c3ea;
     }
 
     button[role="tab"][aria-selected="true"] {
         background-color: #5297d2 !important;
         color: white !important;
+        border-color: #5297d2 !important;
+    }
+
+    /* Botones principales */
+    .stButton>button {
+        background-color: #5297d2;
+        color: white;
+        font-family: 'Playfair Display', serif;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-size: 16px;
+    }
+
+    .stButton>button:hover {
+        background-color: #92c3ea;
+        color: black;
     }
 
     /* Cuadros informativos */
     .info-box {
+        background-color: white;
+        border-left: 6px solid #babf0a;
         padding: 15px;
-        border-radius: 10px;
-        background-color: #ffffff;
-        border-left: 5px solid #babf0a;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
         font-family: 'Playfair Display', serif;
     }
 
@@ -761,7 +780,6 @@ st.markdown("""
         color: #5297d2;
     }
 
-    /* Links */
     a {
         color: #5297d2 !important;
         text-decoration: none;
@@ -771,22 +789,21 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* Botones */
-    .stButton>button {
-        background-color: #5297d2;
+    /* Tablas */
+    .dataframe th {
+        background-color: #475a23;
         color: white;
         font-family: 'Playfair Display', serif;
-        padding: 10px 20px;
-        border-radius: 8px;
-        border: none;
     }
 
-    .stButton>button:hover {
-        background-color: #92c3ea;
-        color: black;
+    .dataframe td {
+        background-color: #ffffff;
+        color: #000000;
     }
+
     </style>
 """, unsafe_allow_html=True)
+
 
 
 col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
@@ -1900,6 +1917,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
