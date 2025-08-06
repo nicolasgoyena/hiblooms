@@ -822,9 +822,10 @@ div[data-testid="stFileUploader"] > div {
     background-color: transparent !important;
 }
 
+/* También aplicar al dropzone principal */
 div[data-testid="stFileUploaderDropzone"] {
-    background-color: #e8e3d9 !important;
-    border: none !important;
+    background-color: #e8e3d9 !important;  /* mismo fondo que el resto */
+    border: 1px dashed #ccc;
     border-radius: 0.5rem;
 }
 
@@ -1945,6 +1946,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
