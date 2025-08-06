@@ -868,7 +868,7 @@ with col3:
     with col3a:
         st.image("images/logo_ebro.png", width=120)
     with col3b:
-        st.image("images/logo_jucar.png", width=120)
+        st.image("images/logo_jucar.png", width=160)
 
 
 
@@ -1961,6 +1961,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
