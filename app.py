@@ -1002,7 +1002,7 @@ with tab2:
             st.error("❌ No se encontró ningún archivo .shp válido en el ZIP.")
 
     # ──────────────────────────────
-    st.markdown("<hr style='border: 1px solid #ccc; margin: 2rem 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 1px solid #b4a89b; margin: 2rem 0;'>", unsafe_allow_html=True)
     # Dividimos el contenido en dos columnas
     row1 = st.columns([2, 2])
     row2 = st.columns([2, 2])
@@ -1968,6 +1968,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
