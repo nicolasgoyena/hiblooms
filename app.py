@@ -695,18 +695,18 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Raleway:wght@600;700&display=swap');
 
-    /* Fondo general solo detrás */
+    /* Fondo beige solo detrás de todo */
     .stApp {
         background-color: #e8e3d9 !important;
     }
 
-    /* Tipografía general: Playfair Display */
-    html, body, .stApp {
-        font-family: 'Playfair Display', serif;
+    /* Tipografía global en todo el contenido */
+    html, body, .stApp, p, label, span, h4, h5, h6, li, ul, ol, th, td, div, button, input, textarea, select, .css-1cpxqw2, .css-ffhzg2 {
+        font-family: 'Playfair Display', serif !important;
         color: #000000;
     }
 
-    /* TITULARES con Aquatico simulado (Raleway) */
+    /* TITULARES en "Aquatico" (simulado con Raleway) */
     h1, h2, h3, .main-title, .important-header {
         font-family: 'Raleway', sans-serif !important;
         color: #475a23;
@@ -714,7 +714,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Evitamos sobreescribir elementos interactivos de Streamlit */
+    /* Evitamos que ciertos elementos pierdan sus estilos */
     .stAlert, .stFileUploader, .stDataFrame, .stTable, .stExpander, .stButton, .stSelectbox, .stSlider {
         background-color: white !important;
         color: black !important;
@@ -763,7 +763,7 @@ st.markdown("""
         color: black;
     }
 
-    /* Cuadros informativos propios */
+    /* Cuadros informativos personalizados */
     .info-box {
         background-color: white;
         border-left: 6px solid #babf0a;
@@ -782,11 +782,8 @@ st.markdown("""
     a:hover {
         text-decoration: underline;
     }
-
     </style>
 """, unsafe_allow_html=True)
-
-
 
 
 col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
@@ -1900,6 +1897,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
