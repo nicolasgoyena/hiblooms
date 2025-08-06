@@ -693,31 +693,105 @@ def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scal
 
 st.markdown("""
     <style>
+    html, body, [class*="css"] {
+        font-family: 'Lato', sans-serif;
+        color: #000000;
+    }
+
+    /* Contenedor principal */
     .block-container {
-        padding-top: 3rem;
+        padding-top: 2rem;
         padding-left: 2rem;
         padding-right: 2rem;
-        max-width: 100% !important;
+        background-color: #e8e3d9;  /* gris claro */
     }
-    .header-container {
-        margin-top: 30px;  /* Ajusta este valor para bajar más */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100px; /* Ajusta la altura según necesites */
-    }
+
+    /* Tabs */
     div[role="tablist"] {
         display: flex;
         justify-content: center;
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: bold !important;
+        color: #5297d2;
     }
     button[role="tab"] {
-        padding: 15px 30px !important;
-        font-size: 20px !important;
+        padding: 12px 25px !important;
+        font-size: 18px !important;
+        border-radius: 0.5rem !important;
+        background-color: #92c3ea33 !important;
+        color: #475a23 !important;
     }
+    button[role="tab"][aria-selected="true"] {
+        background-color: #5297d2 !important;
+        color: white !important;
+    }
+
+    /* Título principal */
+    h1 {
+        color: #475a23 !important;
+        font-size: 2rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Subcabeceras e info boxes */
+    .header {
+        font-size: 22px;
+        font-weight: bold;
+        text-align: center;
+        padding: 12px;
+        background-color: #475a23;
+        color: white;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .info-box {
+        padding: 15px;
+        border-radius: 10px;
+        background-color: #ffffff;
+        border-left: 5px solid #babf0a;
+        margin-bottom: 15px;
+    }
+
+    .highlight {
+        font-weight: bold;
+        color: #5297d2;
+    }
+
+    /* Mensajes de éxito/info/error */
+    .stAlert.success {
+        background-color: #92c3ea33 !important;
+        border-left: 6px solid #5297d2 !important;
+    }
+
+    .stAlert.info {
+        background-color: #babf0a22 !important;
+        border-left: 6px solid #babf0a !important;
+    }
+
+    .stAlert.warning {
+        background-color: #ffebcc !important;
+        border-left: 6px solid #ffa500 !important;
+    }
+
+    .stAlert.error {
+        background-color: #ffcccc !important;
+        border-left: 6px solid #d11a2a !important;
+    }
+
+    /* Links */
+    a {
+        color: #5297d2 !important;
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
+
 
 col1, col2, col3 = st.columns([1, 4, 1.25])  # Ajustamos la proporción para más espacio en col3
 with col1:
@@ -1830,3 +1904,4 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
