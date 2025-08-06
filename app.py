@@ -701,7 +701,7 @@ st.markdown("""
         background-color: #e8e3d9;
     }
 
-    /* TITULARES - simulando Aquatico */
+    /* TITULARES estilo Aquatico (simulada) */
     h1, h2, h3, .main-title, .important-header {
         font-family: 'Raleway', sans-serif;
         font-weight: 700;
@@ -710,7 +710,7 @@ st.markdown("""
         color: #475a23;
     }
 
-    /* HEADER BOX */
+    /* HEADER destacado */
     .header {
         font-family: 'Raleway', sans-serif;
         font-size: 28px;
@@ -738,6 +738,7 @@ st.markdown("""
         border-radius: 0.5rem !important;
         background-color: #92c3ea33 !important;
         color: #475a23 !important;
+        font-family: 'Playfair Display', serif;
     }
 
     button[role="tab"][aria-selected="true"] {
@@ -752,6 +753,7 @@ st.markdown("""
         background-color: #ffffff;
         border-left: 5px solid #babf0a;
         margin-bottom: 15px;
+        font-family: 'Playfair Display', serif;
     }
 
     .highlight {
@@ -759,6 +761,7 @@ st.markdown("""
         color: #5297d2;
     }
 
+    /* Links */
     a {
         color: #5297d2 !important;
         text-decoration: none;
@@ -766,6 +769,21 @@ st.markdown("""
 
     a:hover {
         text-decoration: underline;
+    }
+
+    /* Botones */
+    .stButton>button {
+        background-color: #5297d2;
+        color: white;
+        font-family: 'Playfair Display', serif;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+    }
+
+    .stButton>button:hover {
+        background-color: #92c3ea;
+        color: black;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -1882,5 +1900,6 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
