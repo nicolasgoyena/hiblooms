@@ -863,14 +863,7 @@ with col2:
     )
 
 with col3:
-    st.markdown(
-        """
-        <div style="margin-left: 25px;">
-            <img src="images/logo_bioma.png" width="300">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.image("images/logo_bioma.png", width=300)
     col3a, col3b = st.columns([1, 1])
     with col3a:
         st.image("images/logo_ebro.png", width=120)
@@ -1966,6 +1959,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
