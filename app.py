@@ -715,11 +715,19 @@ st.markdown("""
     }
 
     /* Evitamos que ciertos elementos pierdan sus estilos */
-    .stAlert, .stFileUploader, .stDataFrame, .stTable, .stExpander, .stButton, .stSelectbox, .stSlider {
+    .stAlert, .stFileUploader, .stDataFrame, .stTable, .stExpander {
         background-color: white !important;
         color: black !important;
         border-radius: 8px;
     }
+    
+    /* Fondo transparente para sliders */
+    .stSlider > div {
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
 
     /* Tabs */
     div[role="tablist"] {
@@ -1959,6 +1967,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
