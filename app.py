@@ -866,7 +866,7 @@ with col3:
     st.markdown(
         """
         <div style="margin-left: 25px;">
-            <img src="images/logo_bioma.jpg" width="300">
+            <img src="images/logo_bioma.png" width="300">
         </div>
         """,
         unsafe_allow_html=True
@@ -1966,6 +1966,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
