@@ -695,19 +695,19 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Raleway:wght@600;700&display=swap');
 
-    html, body, .stApp {
-        font-family: 'Playfair Display', serif;
+    /* Fondo y fuente general */
+    html, body, .stApp, div, p, span, label, section, input, textarea, select, .css-1cpxqw2, .css-ffhzg2 {
+        font-family: 'Playfair Display', serif !important;
         background-color: #e8e3d9;
         color: #000000;
     }
 
     /* TITULARES */
     h1, h2, h3, .main-title, .important-header {
-        font-family: 'Raleway', sans-serif;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
+        font-family: 'Raleway', sans-serif !important;
         color: #475a23;
+        text-transform: uppercase;
+        font-weight: 700;
     }
 
     /* HEADER PRINCIPAL */
@@ -1917,6 +1917,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
