@@ -863,12 +863,12 @@ with col2:
     )
 
 with col3:
-    st.image("images/logo_bioma.png", width=320)
+    st.image("images/logo_bioma.png", width=340)
     col3a, col3b = st.columns([1, 1])
     with col3a:
         st.image("images/logo_ebro.png", width=140)
     with col3b:
-        st.image("images/logo_jucar.png", width=160)
+        st.image("images/logo_jucar.png", width=180)
 
 
 tab1, tab2, tab3, tab4 = st.tabs(["Introducción", "Visualización", "Tablas", "Modo rápido"])
@@ -1959,6 +1959,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
