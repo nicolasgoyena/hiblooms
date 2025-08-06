@@ -810,6 +810,15 @@ div.block-container {
 }
 
     </style>
+
+/* Fondo beige también para texto suelto antes de inputs */
+div[data-testid="stMarkdownContainer"] > p {
+    background-color: #e8e3d9 !important;
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.3rem;
+    display: inline-block;
+}
+
 """, unsafe_allow_html=True)
 
 
@@ -1924,6 +1933,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
