@@ -1119,7 +1119,7 @@ with tab2:
     st.markdown("<hr style='border: 1px solid #b4a89b; margin: 2rem 0;'>", unsafe_allow_html=True)
         
                 # Procesamiento solo si se pulsa
-                if calcular:     
+    if calcular:     
                     with st.spinner("Calculando fechas disponibles..."):
                         usar_csv_val = reservoir_name.lower() == "val" and int(max_cloud_percentage) == 60
                         usar_csv_bellus = reservoir_name.lower() == "bellus" and int(max_cloud_percentage) == 60
@@ -1968,6 +1968,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
