@@ -968,7 +968,7 @@ with tab1:
         "🔬 HIBLOOMS no solo estudia el presente, sino que reconstruye el pasado para entender el futuro de la calidad del agua en España.")
 with tab2:
     # 🔄 Cargar shapefile personalizado (fuera de las columnas para que esté disponible antes)
-    st.subheader("🔄 Cargar shapefile propio con todos los embalses de tu interés (opcional)")
+    st.subheader("🔄 Cargar shapefile propio con todos los embalses de interés (opcional)")
     st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
 
     uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses", type=["zip"])
@@ -1959,6 +1959,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
