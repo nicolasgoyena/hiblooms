@@ -831,7 +831,10 @@ div[data-testid="stFileUploaderDropzone"] {
     border-radius: 0.5rem;
 }
 
-
+/* Eliminar fondo ligeramente más oscuro de textos previos a widgets */
+.stMarkdown, .stMarkdown div, .stText, .stText div {
+    background-color: transparent !important;
+}
 
 </style>
 
@@ -1949,6 +1952,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
