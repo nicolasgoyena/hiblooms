@@ -783,12 +783,16 @@ st.markdown("""
         text-decoration: underline;
     }
     
-    /* Aplica fondo marrón claro a las etiquetas encima de los selectores */
-.stSelectbox label, .stNumberInput label, .stTextInput label, .stSlider label {
+    /* Fondo beige completo para los textos encima de los inputs */
+.stSelectbox label, 
+.stNumberInput label, 
+.stTextInput label, 
+.stSlider label {
     background-color: #e8e3d9 !important;
-    padding: 0.2rem 0.5rem;
+    padding: 0.3rem 0.7rem;
     border-radius: 0.3rem;
-    display: inline-block;
+    display: block;
+    width: 100%;
 }
 
     </style>
@@ -1906,6 +1910,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
