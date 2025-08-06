@@ -817,17 +817,20 @@ label[data-testid="stWidgetLabel"] > div {
     display: inline-block;
 }
 
-/* Quitar fondo blanco de la caja del file_uploader */
-div[data-testid="stFileUploader"] > div {
-    background-color: transparent !important;
-}
-
-/* También aplicar al dropzone principal */
-div[data-testid="stFileUploaderDropzone"] {
-    background-color: #e8e3d9 !important;  /* mismo fondo que el resto */
-    border: 1px dashed #ccc;
+/* Forzar fondo beige del contenedor completo del file_uploader */
+div[data-testid="stFileUploader"] {
+    background-color: #e8e3d9 !important;
+    padding: 0.5rem;
     border-radius: 0.5rem;
 }
+
+/* También aplicarlo al dropzone interno */
+div[data-testid="stFileUploaderDropzone"] {
+    background-color: #e8e3d9 !important;
+    border: none !important;
+    border-radius: 0.5rem;
+}
+
 
 
 </style>
@@ -1946,6 +1949,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
