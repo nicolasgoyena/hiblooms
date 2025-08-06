@@ -1112,13 +1112,14 @@ with tab2:
                     - **PC_Bellus_cal (Ficocianina Bellús):** Ajuste específico para el embalse de Bellús, basado en la fórmula empírica derivada de la relación espectral MCI. Se estima la concentración de ficocianina en µg/L.
                     """)
 
-                if st.button("Calcular y mostrar resultados"):
-                    # Limpiar resultados anteriores
-                    st.session_state["data_time"].clear()
-                    st.session_state["urls_exportacion"].clear()
-                    st.session_state["used_cloud_results"].clear()
-                    st.session_state["cloud_results"].clear()        
+                # Botón fuera del if
+                calcular = st.button("Calcular y mostrar resultados")
                 
+                # Separador siempre visible
+                st.markdown("<hr style='border: 1px solid #b4a89b; margin: 2rem 0;'>", unsafe_allow_html=True)
+                
+                # Procesamiento solo si se pulsa
+                if calcular:     
                     with st.spinner("Calculando fechas disponibles..."):
                         usar_csv_val = reservoir_name.lower() == "val" and int(max_cloud_percentage) == 60
                         usar_csv_bellus = reservoir_name.lower() == "bellus" and int(max_cloud_percentage) == 60
@@ -1354,7 +1355,6 @@ with tab2:
                                     "Chla_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c'],
                                     "PC_Bellus_cal": ['#2171b5', '#c7e9c0', '#238b45', '#e31a1c']
                                 }
-                                st.markdown("<hr style='border: 1px solid #ccc; margin: 2rem 0;'>", unsafe_allow_html=True)
                                 with row2[0]:
                                     image_date_fmt = datetime.strptime(image_date, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y %H:%M")
                                     with st.expander(f"📅 Mapa de Índices para {image_date_fmt}"):
@@ -1968,6 +1968,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
