@@ -1072,6 +1072,7 @@ with col3:
 
 tab1, tab2, tab3, tab4 = st.tabs([t("tabs.intro"), t("tabs.map"), t("tabs.tables"), t("tabs.quick")])
 with tab1:
+    # ==== Estilos: los dejas tal cual ====
     st.markdown("""
         <style>
             .header {
@@ -1097,74 +1098,143 @@ with tab1:
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="header">Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles (HIBLOOMS)</div>',
-        unsafe_allow_html=True)
+    # ==== Contenido bilingüe con el MISMO formato ====
+    if lang() == "es":
+        st.markdown(
+            '<div class="header">Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles (HIBLOOMS)</div>',
+            unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="info-box"><b>Alineación con estrategias nacionales:</b><br>📌 Plan Nacional de Adaptación al Cambio Climático (PNACC 2021-2030)<br>📌 Directiva Marco del Agua 2000/60/EC<br>📌 Objetivo de Desarrollo Sostenible 6: Agua limpia y saneamiento</div>',
-        unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box"><b>Alineación con estrategias nacionales:</b><br>📌 Plan Nacional de Adaptación al Cambio Climático (PNACC 2021-2030)<br>📌 Directiva Marco del Agua 2000/60/EC<br>📌 Objetivo de Desarrollo Sostenible 6: Agua limpia y saneamiento</div>',
+            unsafe_allow_html=True)
 
-    st.subheader("Justificación")
-    st.markdown("""
-        La proliferación de cianobacterias en embalses es una preocupación ambiental y de salud pública.
-        El proyecto **HIBLOOMS** busca evaluar la evolución histórica y actual de estos eventos en los embalses de España, contribuyendo a:
-        - La monitorización de parámetros clave del cambio climático y sus efectos en los ecosistemas acuáticos.
-        - La identificación de factores ambientales y de contaminación que influyen en la proliferación de cianobacterias.
-        - La generación de información para mejorar la gestión y calidad del agua en España.
-    """)
+        st.subheader("Justificación")
+        st.markdown("""
+            La proliferación de cianobacterias en embalses es una preocupación ambiental y de salud pública.
+            El proyecto **HIBLOOMS** busca evaluar la evolución histórica y actual de estos eventos en los embalses de España, contribuyendo a:
+            - La monitorización de parámetros clave del cambio climático y sus efectos en los ecosistemas acuáticos.
+            - La identificación de factores ambientales y de contaminación que influyen en la proliferación de cianobacterias.
+            - La generación de información para mejorar la gestión y calidad del agua en España.
+        """)
 
-    st.subheader("Hipótesis y Relevancia del Proyecto")
-    st.markdown("""
-        Se estima que **40% de los embalses españoles** son susceptibles a episodios de proliferación de cianobacterias.
-        En un contexto de cambio climático, donde las temperaturas y la eutrofización aumentan, el riesgo de proliferaciones tóxicas es mayor.
+        st.subheader("Hipótesis y Relevancia del Proyecto")
+        st.markdown("""
+            Se estima que **40% de los embalses españoles** son susceptibles a episodios de proliferación de cianobacterias.
+            En un contexto de cambio climático, donde las temperaturas y la eutrofización aumentan, el riesgo de proliferaciones tóxicas es mayor.
 
-        🛰 **¿Cómo abordamos este desafío?**
-        - Uso de **teledetección satelital** para monitoreo en tiempo real.
-        - Implementación de **técnicas avanzadas de análisis ambiental** para evaluar las causas y patrones de proliferación.
-        - Creación de modelos para predecir episodios de blooms y sus impactos en la salud y el medio ambiente.
-    """)
+            🛰 **¿Cómo abordamos este desafío?**
+            - Uso de **teledetección satelital** para monitoreo en tiempo real.
+            - Implementación de **técnicas avanzadas de análisis ambiental** para evaluar las causas y patrones de proliferación.
+            - Creación de modelos para predecir episodios de blooms y sus impactos en la salud y el medio ambiente.
+        """)
 
-    st.subheader("Impacto esperado")
-    st.markdown("""
-        El proyecto contribuirá significativamente a la gestión sostenible de embalses, proporcionando herramientas innovadoras para:
-        - Evaluar la **calidad del agua** con técnicas avanzadas.
-        - Diseñar estrategias de mitigación para **minimizar el riesgo de toxicidad**.
-        - Colaborar con administraciones públicas y expertos para la **toma de decisiones basada en datos**.
-    """)
+        st.subheader("Impacto esperado")
+        st.markdown("""
+            El proyecto contribuirá significativamente a la gestión sostenible de embalses, proporcionando herramientas innovadoras para:
+            - Evaluar la **calidad del agua** con técnicas avanzadas.
+            - Diseñar estrategias de mitigación para **minimizar el riesgo de toxicidad**.
+            - Colaborar con administraciones públicas y expertos para la **toma de decisiones basada en datos**.
+        """)
 
-    st.subheader("Equipo de Investigación")
+        st.subheader("Equipo de Investigación")
+        st.markdown("""
+            <div class="info-box">
+                <b>Equipo de Investigación:</b><br>
+                🔬 <b>David Elustondo (DEV)</b> - BIOMA/UNAV, calidad del agua, QA/QC y biogeoquímica.<br>
+                🔬 <b>Yasser Morera Gómez (YMG)</b> - BIOMA/UNAV, geoquímica isotópica y geocronología con <sup>210</sup>Pb.<br>
+                🔬 <b>Esther Lasheras Adot (ELA)</b> - BIOMA/UNAV, técnicas analíticas y calidad del agua.<br>
+                🔬 <b>Jesús Miguel Santamaría (JSU)</b> - BIOMA/UNAV, calidad del agua y técnicas analíticas.<br>
+                🔬 <b>Carolina Santamaría Elola (CSE)</b> - BIOMA/UNAV, técnicas analíticas y calidad del agua.<br>
+                🔬 <b>Adriana Rodríguez Garraus (ARG)</b> - MITOX/UNAV, análisis toxicológico.<br>
+                🔬 <b>Sheila Izquieta Rojano (SIR)</b> - BIOMA/UNAV, SIG y teledetección, datos FAIR, digitalización.<br>
+            </div>
 
-    st.markdown("""
-        <div class="info-box">
-            <b>Equipo de Investigación:</b><br>
-            🔬 <b>David Elustondo (DEV)</b> - BIOMA/UNAV, calidad del agua, QA/QC y biogeoquímica.<br>
-            🔬 <b>Yasser Morera Gómez (YMG)</b> - BIOMA/UNAV, geoquímica isotópica y geocronología con <sup>210</sup>Pb.<br>
-            🔬 <b>Esther Lasheras Adot (ELA)</b> - BIOMA/UNAV, técnicas analíticas y calidad del agua.<br>
-            🔬 <b>Jesús Miguel Santamaría (JSU)</b> - BIOMA/UNAV, calidad del agua y técnicas analíticas.<br>
-            🔬 <b>Carolina Santamaría Elola (CSE)</b> - BIOMA/UNAV, técnicas analíticas y calidad del agua.<br>
-            🔬 <b>Adriana Rodríguez Garraus (ARG)</b> - MITOX/UNAV, análisis toxicológico.<br>
-            🔬 <b>Sheila Izquieta Rojano (SIR)</b> - BIOMA/UNAV, SIG y teledetección, datos FAIR, digitalización.<br>
-        </div>
+            <div class="info-box">
+                <b>Equipo de Trabajo:</b><br>
+                🔬 <b>Aimee Valle Pombrol (AVP)</b> - BIOMA/UNAV, taxonomía de cianobacterias e identificación de toxinas.<br>
+                🔬 <b>Carlos Manuel Alonso Hernández (CAH)</b> - Laboratorio de Radioecología/IAEA, geocronología con <sup>210</sup>Pb.<br>
+                🔬 <b>David Widory (DWI)</b> - GEOTOP/UQAM, geoquímica isotópica y calidad del agua.<br>
+                🔬 <b>Ángel Ramón Moreira González (AMG)</b> - CEAC, taxonomía de fitoplancton y algas.<br>
+                🔬 <b>Augusto Abilio Comas González (ACG)</b> - CEAC, taxonomía de cianobacterias y ecología acuática.<br>
+                🔬 <b>Lorea Pérez Babace (LPB)</b> - BIOMA/UNAV, técnicas analíticas y muestreo de campo.<br>
+                🔬 <b>José Miguel Otano Calvente (JOC)</b> - BIOMA/UNAV, técnicas analíticas y muestreo de campo.<br>
+                🔬 <b>Alain Suescun Santamaría (ASS)</b> - BIOMA/UNAV, técnicas analíticas.<br>
+                🔬 <b>Leyre López Alonso (LLA)</b> - BIOMA/UNAV, análisis de datos.<br>
+                🔬 <b>María José Rodríguez Pérez (MRP)</b> - Confederación Hidrográfica del Ebro, calidad del agua.<br>
+                🔬 <b>María Concepción Durán Lalaguna (MDL)</b> - Confederación Hidrográfica del Júcar, calidad del agua.<br>
+            </div>
+        """, unsafe_allow_html=True)
 
-        <div class="info-box">
-            <b>Equipo de Trabajo:</b><br>
-            🔬 <b>Aimee Valle Pombrol (AVP)</b> - BIOMA/UNAV, taxonomía de cianobacterias e identificación de toxinas.<br>
-            🔬 <b>Carlos Manuel Alonso Hernández (CAH)</b> - Laboratorio de Radioecología/IAEA, geocronología con <sup>210</sup>Pb.<br>
-            🔬 <b>David Widory (DWI)</b> - GEOTOP/UQAM, geoquímica isotópica y calidad del agua.<br>
-            🔬 <b>Ángel Ramón Moreira González (AMG)</b> - CEAC, taxonomía de fitoplancton y algas.<br>
-            🔬 <b>Augusto Abilio Comas González (ACG)</b> - CEAC, taxonomía de cianobacterias y ecología acuática.<br>
-            🔬 <b>Lorea Pérez Babace (LPB)</b> - BIOMA/UNAV, técnicas analíticas y muestreo de campo.<br>
-            🔬 <b>José Miguel Otano Calvente (JOC)</b> - BIOMA/UNAV, técnicas analíticas y muestreo de campo.<br>
-            🔬 <b>Alain Suescun Santamaría (ASS)</b> - BIOMA/UNAV, técnicas analíticas.<br>
-            🔬 <b>Leyre López Alonso (LLA)</b> - BIOMA/UNAV, análisis de datos.<br>
-            🔬 <b>María José Rodríguez Pérez (MRP)</b> - Confederación Hidrográfica del Ebro, calidad del agua.<br>
-            🔬 <b>María Concepción Durán Lalaguna (MDL)</b> - Confederación Hidrográfica del Júcar, calidad del agua.<br>
-        </div>
-    """, unsafe_allow_html=True)
+        st.success("🔬 HIBLOOMS no solo estudia el presente, sino que reconstruye el pasado para entender el futuro de la calidad del agua en España.")
 
-    st.success(
-        "🔬 HIBLOOMS no solo estudia el presente, sino que reconstruye el pasado para entender el futuro de la calidad del agua en España.")
+    else:
+        st.markdown(
+            '<div class="header">Historical Reconstruction and Current Status of Cyanobacterial Blooms in Spanish Reservoirs (HIBLOOMS)</div>',
+            unsafe_allow_html=True)
+
+        st.markdown(
+            '<div class="info-box"><b>Alignment with National Strategies:</b><br>📌 National Climate Change Adaptation Plan (PNACC 2021–2030)<br>📌 EU Water Framework Directive 2000/60/EC<br>📌 Sustainable Development Goal 6: Clean Water and Sanitation</div>',
+            unsafe_allow_html=True)
+
+        st.subheader("Rationale")
+        st.markdown("""
+            The proliferation of cyanobacteria in reservoirs is an environmental and public health concern.
+            The **HIBLOOMS** project aims to assess the historical and current evolution of these events in Spanish reservoirs, contributing to:
+            - Monitoring key climate change parameters and their effects on aquatic ecosystems.
+            - Identifying environmental and pollution factors influencing cyanobacterial blooms.
+            - Generating information to improve water management and water quality in Spain.
+        """)
+
+        st.subheader("Hypothesis and Project Relevance")
+        st.markdown("""
+            It is estimated that **40% of Spanish reservoirs** are susceptible to cyanobacterial bloom episodes.
+            In a context of climate change, where temperatures and eutrophication are increasing, the risk of toxic blooms is even higher.
+
+            🛰 **How do we address this challenge?**
+            - Use of **satellite remote sensing** for near real-time monitoring.
+            - Implementation of **advanced environmental analysis techniques** to assess the causes and patterns of blooms.
+            - Development of models to predict bloom episodes and their impacts on health and the environment.
+        """)
+
+        st.subheader("Expected Impact")
+        st.markdown("""
+            The project will significantly contribute to the sustainable management of reservoirs by providing innovative tools to:
+            - Assess **water quality** with advanced techniques.
+            - Design mitigation strategies to **minimize toxicity risks**.
+            - Collaborate with public administrations and experts for **data-driven decision making**.
+        """)
+
+        st.subheader("Research Team")
+        st.markdown("""
+            <div class="info-box">
+                <b>Research Team:</b><br>
+                🔬 <b>David Elustondo (DEV)</b> – BIOMA/UNAV, water quality, QA/QC, biogeochemistry.<br>
+                🔬 <b>Yasser Morera Gómez (YMG)</b> – BIOMA/UNAV, isotopic geochemistry and <sup>210</sup>Pb geochronology.<br>
+                🔬 <b>Esther Lasheras Adot (ELA)</b> – BIOMA/UNAV, analytical techniques, water quality.<br>
+                🔬 <b>Jesús Miguel Santamaría (JSU)</b> – BIOMA/UNAV, water quality, analytical techniques.<br>
+                🔬 <b>Carolina Santamaría Elola (CSE)</b> – BIOMA/UNAV, analytical techniques, water quality.<br>
+                🔬 <b>Adriana Rodríguez Garraus (ARG)</b> – MITOX/UNAV, toxicological analysis.<br>
+                🔬 <b>Sheila Izquieta Rojano (SIR)</b> – BIOMA/UNAV, GIS & remote sensing, FAIR data, digitalization.<br>
+            </div>
+
+            <div class="info-box">
+                <b>Collaborating Team:</b><br>
+                🔬 <b>Aimee Valle Pombrol (AVP)</b> – BIOMA/UNAV, cyanobacteria taxonomy and toxin identification.<br>
+                🔬 <b>Carlos Manuel Alonso Hernández (CAH)</b> – Radioecology Laboratory/IAEA, <sup>210</sup>Pb geochronology.<br>
+                🔬 <b>David Widory (DWI)</b> – GEOTOP/UQAM, isotopic geochemistry, water quality.<br>
+                🔬 <b>Ángel Ramón Moreira González (AMG)</b> – CEAC, phytoplankton and algae taxonomy.<br>
+                🔬 <b>Augusto Abilio Comas González (ACG)</b> – CEAC, cyanobacteria taxonomy, aquatic ecology.<br>
+                🔬 <b>Lorea Pérez Babace (LPB)</b> – BIOMA/UNAV, analytical techniques, field sampling.<br>
+                🔬 <b>José Miguel Otano Calvente (JOC)</b> – BIOMA/UNAV, analytical techniques, field sampling.<br>
+                🔬 <b>Alain Suescun Santamaría (ASS)</b> – BIOMA/UNAV, analytical techniques.<br>
+                🔬 <b>Leyre López Alonso (LLA)</b> – BIOMA/UNAV, data analysis.<br>
+                🔬 <b>María José Rodríguez Pérez (MRP)</b> – Ebro River Basin Authority, water quality.<br>
+                🔬 <b>María Concepción Durán Lalaguna (MDL)</b> – Júcar River Basin Authority, water quality.<br>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.success("🔬 HIBLOOMS not only studies the present, but also reconstructs the past to better understand the future of water quality in Spain.")
+
 with tab2:
     st.subheader(t("upload.shp.h"))
     st.info(t("upload.shp.i"))
@@ -2139,6 +2209,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
