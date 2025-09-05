@@ -3,8 +3,187 @@
 import ee
 import streamlit as st
 from streamlit_extras.switch_page_button import switch_page
+from datetime import datetime
+# ==== i18n: idioma ES/EN con URL ?lang= y session_state ====
 
-st.set_page_config(initial_sidebar_state="collapsed", page_title="HIBLOOMS – Visor de embalses", layout="wide")
+
+_LANGS = ["es", "en"]
+
+_STR = {
+    "es": {
+        "meta.title": "HIBLOOMS – Visor de embalses",
+        "ui.language": "Idioma",
+        "tabs.intro": "Introducción",
+        "tabs.map": "Visualización",
+        "tabs.tables": "Tablas",
+        "tabs.quick": "Modo rápido",
+        "hero.l1": "Visor de indicadores de la calidad del agua en embalses españoles:",
+        "hero.l2": "Proyecto HIBLOOMS",
+
+        "upload.shp.h": "🔄 Cargar shapefile propio con todos los embalses de interés (opcional)",
+        "upload.shp.i": "📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.",
+        "upload.shp.zip": "Sube un archivo ZIP con tu shapefile de embalses",
+
+        "map.title": "Mapa de Embalses",
+        "reservoir.pick.h": "Selección de Embalse",
+        "reservoir.pick.label": "Selecciona un embalse:",
+        "poi.h": "Puntos de interés",
+        "poi.ok": "Puntos de interés por defecto disponibles para este embalse.",
+        "poi.none": "Este embalse no tiene puntos de interés por defecto. Puedes subir un archivo CSV con columnas llamadas exactamente: 'nombre', 'latitud' y 'longitud'.",
+        "poi.csv": "Sube un archivo CSV con los puntos de interés",
+        "poi.active": "**Puntos de interés activos:**",
+
+        "cloud.h": "Selecciona un porcentaje máximo de nubosidad:",
+        "cloud.label": "Es recomendable elegir hasta el 60%. Si quieres ver más imágenes, aumenta la tolerancia:",
+        "cloud.100": "🔁 Has seleccionado un 100 % de nubosidad: se mostrarán todas las imágenes del periodo. Se estimará igualmente la nubosidad de cada imagen.",
+
+        "dates.h": "Selecciona el intervalo de fechas:",
+        "dates.label": "Rango de fechas:",
+
+        "idx.h": "Selecciona los índices a visualizar:",
+        "idx.label": "Selecciona uno o varios índices para visualizar y analizar:",
+        "idx.help": "ℹ️ ¿Qué significa cada índice?",
+        "btn.compute": "Calcular y mostrar resultados",
+
+        "spinner.img": "🕒 Analizando imagen del",
+        "spinner.proc": "Calculando fechas disponibles...",
+        "warn.no_imgs": "⚠️ No se han encontrado imágenes dentro del rango y porcentaje de nubosidad seleccionados.",
+
+        "avail.h": "📅 Fechas disponibles dentro del rango seleccionado:",
+        "legend.exp": "🗺️ Leyenda de índices y capas",
+        "cloud.exp": "☁️ Nubosidad estimada por imagen",
+        "mean.exp": "📊 Evolución de la media diaria de concentraciones del embalse",
+        "dist.exp": "📊 Distribución diaria por clases del índice en el embalse",
+        "legend.title": "📌 Leyenda de Índices y Capas",
+
+        "map.rgb": "RGB",
+        "map.scl": "SCL - Clasificación de Escena",
+        "map.cloudprob": "Probabilidad de Nubes (MSK_CLDPRB)",
+        "map.poi": "Puntos de Interés",
+        "map.index.for": "📅 Mapa de Índices para",
+        "mean.index": "🧪 Índice",
+        "axis.conc": "Concentración (μg/L)",
+        "axis.idx": "Valor del índice",
+
+        "col.date": "Fecha",
+        "col.time": "Hora",
+        "col.cloud": "Nubosidad aproximada (%)",
+
+        # SCL labels
+        "scl.1": "Píxeles saturados/defectuosos",
+        "scl.2": "Área oscura",
+        "scl.3": "Sombras de nube",
+        "scl.4": "Vegetación",
+        "scl.5": "Suelo desnudo",
+        "scl.6": "Agua",
+        "scl.7": "Prob. baja de nubes / No clasificada",
+        "scl.8": "Prob. media de nubes",
+        "scl.9": "Prob. alta de nubes",
+        "scl.10": "Cirro",
+        "scl.11": "Nieve o hielo",
+    },
+    "en": {
+        "meta.title": "HIBLOOMS – Reservoir viewer",
+        "ui.language": "Language",
+        "tabs.intro": "Introduction",
+        "tabs.map": "Map",
+        "tabs.tables": "Tables",
+        "tabs.quick": "Quick mode",
+        "hero.l1": "Water-quality indicator viewer for Spanish reservoirs:",
+        "hero.l2": "HIBLOOMS Project",
+
+        "upload.shp.h": "🔄 Load your own shapefile with all reservoirs of interest (optional)",
+        "upload.shp.i": "📄 Make sure the shapefile contains a **'NOMBRE'** column with each reservoir name.",
+        "upload.shp.zip": "Upload a ZIP file with your reservoir shapefile",
+
+        "map.title": "Reservoir map",
+        "reservoir.pick.h": "Reservoir selection",
+        "reservoir.pick.label": "Select a reservoir:",
+        "poi.h": "Points of interest",
+        "poi.ok": "Default points of interest are available for this reservoir.",
+        "poi.none": "No default POIs for this reservoir. You can upload a CSV with columns exactly named: 'nombre', 'latitud', 'longitud'.",
+        "poi.csv": "Upload a CSV with points of interest",
+        "poi.active": "**Active points of interest:**",
+
+        "cloud.h": "Pick a maximum cloud percentage:",
+        "cloud.label": "Values up to 60% are recommended. Increase tolerance to see more images:",
+        "cloud.100": "🔁 You selected 100% clouds: all images in the period will be included. We still estimate cloud probability per image.",
+
+        "dates.h": "Select the date range:",
+        "dates.label": "Date range:",
+
+        "idx.h": "Pick the indices to display:",
+        "idx.label": "Select one or more indices for visualization and analysis:",
+        "idx.help": "ℹ️ What does each index mean?",
+        "btn.compute": "Compute & show results",
+
+        "spinner.img": "🕒 Analyzing image from",
+        "spinner.proc": "Calculating available dates...",
+        "warn.no_imgs": "⚠️ No images found within the selected range and cloud threshold.",
+
+        "avail.h": "📅 Available dates in the selected range:",
+        "legend.exp": "🗺️ Legend for indices and layers",
+        "cloud.exp": "☁️ Estimated cloud per image",
+        "mean.exp": "📊 Daily mean evolution for the reservoir",
+        "dist.exp": "📊 Daily per-class distribution in the reservoir",
+        "legend.title": "📌 Indices & Layers Legend",
+
+        "map.rgb": "RGB",
+        "map.scl": "SCL - Scene Classification",
+        "map.cloudprob": "Cloud probability (MSK_CLDPRB)",
+        "map.poi": "Points of Interest",
+        "map.index.for": "📅 Index maps for",
+        "mean.index": "🧪 Index",
+        "axis.conc": "Concentration (μg/L)",
+        "axis.idx": "Index value",
+
+        "col.date": "Date",
+        "col.time": "Time",
+        "col.cloud": "Approx. cloud (%)",
+
+        # SCL labels
+        "scl.1": "Saturated/defective pixels",
+        "scl.2": "Dark area pixels",
+        "scl.3": "Cloud shadows",
+        "scl.4": "Vegetation",
+        "scl.5": "Bare soil",
+        "scl.6": "Water",
+        "scl.7": "Low cloud probability / Unclassified",
+        "scl.8": "Medium cloud probability",
+        "scl.9": "High cloud probability",
+        "scl.10": "Cirrus",
+        "scl.11": "Snow or ice",
+    },
+}
+
+def _ensure_lang(x: str) -> str:
+    return x if x in _LANGS else "es"
+
+def i18n_init():
+    qp = st.query_params
+    url_lang = qp.get("lang", None)
+    if "lang" not in st.session_state:
+        st.session_state["lang"] = _ensure_lang(url_lang) if url_lang else "es"
+    elif url_lang and url_lang != st.session_state["lang"]:
+        st.session_state["lang"] = _ensure_lang(url_lang)
+
+def set_lang(lang: str):
+    st.session_state["lang"] = _ensure_lang(lang)
+    st.query_params.update({"lang": st.session_state["lang"]})
+    st.rerun()
+
+def lang() -> str:
+    return _ensure_lang(st.session_state.get("lang", "es"))
+
+def t(key: str) -> str:
+    return _STR.get(lang(), {}).get(key) or _STR["es"].get(key, key)
+
+# Inicializar idioma ANTES de set_page_config
+i18n_init()
+
+# Usa el título traducido
+st.set_page_config(initial_sidebar_state="collapsed", page_title=t("meta.title"), layout="wide")
+
 st.markdown("""
     <style>
         [data-testid="stSidebarNav"] {
@@ -179,7 +358,7 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
         .filterDate(start_date, end_date)
 
     if sentinel2.size().getInfo() == 0:
-        st.warning("❌ No se encontraron imágenes de Sentinel-2 para este embalse y rango de fechas.")
+        st.warning(t("warn.no_imgs"))
         return []
 
     images = sentinel2.toList(sentinel2.size())
@@ -195,7 +374,7 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
         if any(r["Fecha"] == formatted_date for r in results_list):
             continue
 
-        with st.spinner(f"🕒 Analizando imagen del {formatted_date}..."):
+        with st.spinner(f"{t('spinner.img')} {formatted_date}..."):
             cloud_obj = calculate_cloud_percentage(image, aoi)
             if cloud_obj is None:
                 continue
@@ -612,25 +791,25 @@ def generar_leyenda(indices_seleccionados):
     }
 
     leyenda_html = "<div style='border: 2px solid #ddd; padding: 10px; border-radius: 5px; background-color: white;'>"
-    leyenda_html += "<h4 style='text-align: center;'>📌 Leyenda de Índices y Capas</h4>"
+    leyenda_html += f"<h4 style='text-align: center;'>{t('legend.title')}</h4>"
 
     # Leyenda para la capa SCL (Scene Classification Layer)
     scl_palette = {
-        1: ('#ff0004', 'Píxeles saturados/defectuosos'),
-        2: ('#000000', 'Píxeles de área oscura'),
-        3: ('#8B4513', 'Sombras de nube'),
-        4: ('#00FF00', 'Vegetación'),
-        5: ('#FFD700', 'Suelo desnudo'),
-        6: ('#0000FF', 'Agua'),
-        7: ('#F4EEEC', 'Probabilidad baja de nubes / No clasificada'),
-        8: ('#C8C2C0', 'Probabilidad media de nubes'),
-        9: ('#706C6B', 'Probabilidad alta de nubes'),
-        10: ('#87CEFA', 'Cirro'),
-        11: ('#00FFFF', 'Nieve o hielo')
+        1: ('#ff0004', t('scl.1')),
+        2: ('#000000', t('scl.2')),
+        3: ('#8B4513', t('scl.3')),
+        4: ('#00FF00', t('scl.4')),
+        5: ('#FFD700', t('scl.5')),
+        6: ('#0000FF', t('scl.6')),
+        7: ('#F4EEEC', t('scl.7')),
+        8: ('#C8C2C0', t('scl.8')),
+        9: ('#706C6B', t('scl.9')),
+        10: ('#87CEFA', t('scl.10')),
+        11: ('#00FFFF', t('scl.11'))
     }
 
-    leyenda_html += "<b>Capa SCL (Clasificación de Escena):</b><br>"
-    for val, (color, desc) in scl_palette.items():
+    leyenda_html += "<b>SCL:</b><br>"
+    for _, (color, desc) in scl_palette.items():
         leyenda_html += f"<div style='display: flex; align-items: center;'><div style='width: 15px; height: 15px; background-color: {color}; border: 1px solid black; margin-right: 5px;'></div> {desc}</div>"
 
     leyenda_html += "<br>"
@@ -856,15 +1035,15 @@ div[data-testid="element-container"] {
 col1, col2, col3 = st.columns([1, 4, 1.25])
 
 with col1:
-    st.image("images/logo_hiblooms.png", width=280)  # reducido ligeramente
+    st.image("images/logo_hiblooms.png", width=280)
     st.image("images/ministerio.png", width=280)
 
 with col2:
     st.markdown(
-        """
+        f"""
         <h1 style="text-align: center; line-height: 1.1em; font-size: 32px; margin: 0.3em 0;">
-            Visor de indicadores de la calidad del agua en embalses españoles:
-            <br><span style="display: block; text-align: center;">Proyecto HIBLOOMS</span>
+            {t("hero.l1")}
+            <br><span style="display: block; text-align: center;">{t("hero.l2")}</span>
         </h1>
         """,
         unsafe_allow_html=True
@@ -878,8 +1057,20 @@ with col3:
     with col3b:
         st.image("images/logo_jucar.png", width=170)
 
+    # === Selector de idioma ===
+    st.write("")  # pequeño respiro
+    chosen = st.selectbox(
+        t("ui.language"),
+        options=_LANGS,
+        format_func=lambda x: "Español" if x=="es" else "English",
+        index=_LANGS.index(lang()),
+    )
+    if chosen != lang():
+        set_lang(chosen)
 
-tab1, tab2, tab3, tab4 = st.tabs(["Introducción", "Visualización", "Tablas", "Modo rápido"])
+
+
+tab1, tab2, tab3, tab4 = st.tabs([t("tabs.intro"), t("tabs.map"), t("tabs.tables"), t("tabs.quick")])
 with tab1:
     st.markdown("""
         <style>
@@ -975,11 +1166,9 @@ with tab1:
     st.success(
         "🔬 HIBLOOMS no solo estudia el presente, sino que reconstruye el pasado para entender el futuro de la calidad del agua en España.")
 with tab2:
-    # 🔄 Cargar shapefile personalizado (fuera de las columnas para que esté disponible antes)
-    st.subheader("🔄 Cargar shapefile propio con todos los embalses de interés (opcional)")
-    st.info("📄 Asegúrate de que el shapefile contiene una columna llamada **'NOMBRE'** con el nombre de cada embalse.")
-
-    uploaded_zip = st.file_uploader("Sube un archivo ZIP con tu shapefile de embalses", type=["zip"])
+    st.subheader(t("upload.shp.h"))
+    st.info(t("upload.shp.i"))
+    uploaded_zip = st.file_uploader(t("upload.shp.zip"), type=["zip"])
 
     custom_shapefile_path = None
 
@@ -1008,7 +1197,7 @@ with tab2:
     row2 = st.columns([2, 2])
 
     with row1[0]:
-        st.subheader("Mapa de Embalses")
+        st.subheader(t("map.title"))
         map_embalses = geemap.Map(center=[42.0, 0.5], zoom=8)
         cargar_y_mostrar_embalses(
             map_embalses,
@@ -1018,26 +1207,23 @@ with tab2:
         folium_static(map_embalses, width=1000, height=600)
 
     with row1[1]:
-        st.subheader("Selección de Embalse")
-
+        st.subheader(t("reservoir.pick.h"))
         nombres_embalses = obtener_nombres_embalses(custom_shapefile_path) if custom_shapefile_path else obtener_nombres_embalses()
-
-        # Seleccionar embalse
-        reservoir_name = st.selectbox("Selecciona un embalse:", nombres_embalses)
+        reservoir_name = st.selectbox(t("reservoir.pick.label"), nombres_embalses)
 
         if reservoir_name:
             gdf = load_reservoir_shapefile(reservoir_name, shapefile_path=custom_shapefile_path) if custom_shapefile_path else load_reservoir_shapefile(reservoir_name)
             if gdf is not None:
                 aoi = gdf_to_ee_geometry(gdf)
-                st.subheader("Puntos de interés")
+                st.subheader(t("poi.h"))
 
                 pois_embalse = {}
                 
                 if reservoir_name in puntos_interes:
-                    st.success("Puntos de interés por defecto disponibles para este embalse.")
+                    st.success(t("poi.ok"))
                     pois_embalse = puntos_interes[reservoir_name]
                 else:
-                    st.warning("Este embalse no tiene puntos de interés por defecto. Puedes subir un archivo CSV con columnas llamadas exactamente: 'nombre', 'latitud' y 'longitud'.")
+                    st.warning(t("poi.none"))
                     archivo_pois = st.file_uploader("Sube un archivo CSV con los puntos de interés", type=["csv"])
                 
                     if archivo_pois is not None:
@@ -1062,30 +1248,25 @@ with tab2:
                             st.error(f"❌ Error al leer el archivo: {e}")
                 
                 if pois_embalse:
-                    st.markdown("**Puntos de interés activos:**")
+                    st.markdown(t("poi.active"))
                     st.dataframe(pd.DataFrame([
                         {"nombre": nombre, "latitud": lat, "longitud": lon} for nombre, (lat, lon) in pois_embalse.items()
                     ]))
 
                 # Slider de nubosidad
-                st.subheader("Selecciona un porcentaje máximo de nubosidad:")
+                st.subheader(t("cloud.h"))
                 max_cloud_percentage = st.selectbox(
-                    "Dado que las nubes pueden alterar los valores estimados de concentraciones, es importante definir un límite máximo de nubosidad permitida. Es recomendable elegir valores de hasta el 60%, aunque si se quiere ver más imágenes disponibles, se puede aumentar la tolerancia:",
+                    t("cloud.label"),
                     options=[60, 80, 100],
-                    index=0  # Valor por defecto: 50%
+                    index=0
                 )
                 if max_cloud_percentage == 100:
-                    st.info("🔁 Has seleccionado un 100 % de nubosidad permitida: se mostrarán todas las imágenes del periodo. Aun así, se estimará la nubosidad de cada imagen.")
+                    st.info(t("cloud.100"))
 
                 # Selección de intervalo de fechas
-                st.subheader("Selecciona el intervalo de fechas:")
-                date_range = st.date_input(
-                    "Rango de fechas:",
-                    value=(datetime.today() - timedelta(days=15), datetime.today()),  # Últimos 15 días hasta hoy
-                    min_value=datetime(2017, 7, 1),  # Fecha mínima permitida
-                    max_value=datetime.today(),  # Restringe la selección hasta el día actual
-                    format="DD-MM-YYYY"
-                )
+                st.subheader(t("dates.h"))
+                date_range = st.date_input(t("dates.label"), value=(datetime.today() - timedelta(days=15), datetime.today()),
+                                           min_value=datetime(2017, 7, 1), max_value=datetime.today(), format="DD-MM-YYYY")
 
                 # Extraer fechas seleccionadas
                 if isinstance(date_range, tuple) and len(date_range) == 2:
@@ -1097,23 +1278,26 @@ with tab2:
                 end_date = end_date.strftime('%Y-%m-%d')
 
                 # Selección de índices
-                st.subheader("Selecciona los índices a visualizar:")
+                st.subheader(t("idx.h"))
                 available_indices = ["MCI", "PCI_B5/B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
-                selected_indices = st.multiselect("Selecciona uno o varios índices para visualizar y analizar:", available_indices)
-                with st.expander("ℹ️ ¿Qué significa cada índice?"):
-                    st.markdown("""
-                    - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
-                    - **PCI_B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), es un buen indicador de ficocianina para todo tipo de embalses, pero no proporciona concentraciones directas.
-                    - **NDCI_ind (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
-                    - **UV_PC_Gral_cal:** Estimación cuantitativa general de ficocianina basada en la relación espectral entre el infrarrojo cercano (B5) y el rojo (B4). Ajustada mediante una función exponencial, proporciona concentraciones aproximadas de ficocianina en µg/L. Desarrollado por la Universidad de Valencia a partir de datos del estudio en embalses de la cuenca del Ebro (Pérez-González et al., 2021).
-                    - **PC_Val_cal (Ficocianina en El Val):** Estimador cuantitativo de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val.
-                    - **Chla_Val_cal:** Calibración cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
-                    - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
-                    - **PC_Bellus_cal (Ficocianina Bellús):** Ajuste específico para el embalse de Bellús, basado en la fórmula empírica derivada de la relación espectral MCI. Se estima la concentración de ficocianina en µg/L.
-                    """)
+                selected_indices = st.multiselect(t("idx.label"), available_indices)
+                with st.expander(t("idx.help")):
+                    if lang()=="es":
+                        st.markdown("""
+                        - **MCI (Maximum Chlorophyll Index):** Detecta altas concentraciones de clorofila-a, útil para identificar blooms intensos.
+                        - **PCI_B5/B4:** Relación espectral entre el infrarrojo cercano (B5) y el rojo (B4), es un buen indicador de ficocianina para todo tipo de embalses, pero no proporciona concentraciones directas.
+                        - **NDCI_ind (Normalized Difference Chlorophyll Index):** Relación normalizada entre bandas del rojo e infrarrojo cercano. Se asocia a clorofila-a.
+                        - **UV_PC_Gral_cal:** Estimación cuantitativa general de ficocianina basada en la relación espectral entre el infrarrojo cercano (B5) y el rojo (B4). Ajustada mediante una función exponencial, proporciona concentraciones aproximadas de ficocianina en µg/L. Desarrollado por la Universidad de Valencia a partir de datos del estudio en embalses de la cuenca del Ebro (Pérez-González et al., 2021).
+                        - **PC_Val_cal (Ficocianina en El Val):** Estimador cuantitativo de ficocianina, un pigmento exclusivo de cianobacterias. Basado en la relación espectral entre el infrarrojo cercano y el rojo, ha sido ajustado a partir de mediciones de ficocianina en el Embalse de El Val.
+                        - **Chla_Val_cal:** Calibración cuantitativa de clorofila-a derivada del NDCI mediante ajuste exponencial a partir de mediciones en el embalse de El Val.
+                        - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
+                        - **PC_Bellus_cal (Ficocianina Bellús):** Ajuste específico para el embalse de Bellús, basado en la fórmula empírica derivada de la relación espectral MCI. Se estima la concentración de ficocianina en µg/L.
+                        """)
+                     else:
+                         st.markdown("""- **MCI** ... (traducción EN del resumen)""")
 
                 # Botón fuera del if
-                calcular = st.button("Calcular y mostrar resultados")
+                calcular = st.button(t("btn.compute"))
                 
                 # Separador siempre visible
     st.markdown("<hr style='border: 1px solid #b4a89b; margin: 2rem 0;'>", unsafe_allow_html=True)
@@ -1173,7 +1357,7 @@ with tab2:
                     
 
                         if not available_dates:
-                            st.warning("⚠️ No se han encontrado imágenes dentro del rango de fechas y porcentaje de nubosidad seleccionados.")
+                            st.warning(t("warn.no_imgs"))
                             st.session_state["data_time"] = []
                             st.stop()
 
@@ -1181,7 +1365,7 @@ with tab2:
                             st.session_state['available_dates'] = available_dates
                             st.session_state['selected_indices'] = selected_indices
 
-                            st.subheader("📅 Fechas disponibles dentro del rango seleccionado:")
+                            st.subheader(t("avail.h"))
 
                             df_available = pd.DataFrame(available_dates, columns=["Fecha"])
                             df_available["Fecha"] = pd.to_datetime(df_available["Fecha"])
@@ -1357,7 +1541,7 @@ with tab2:
                                 }
                                 with row2[0]:
                                     image_date_fmt = datetime.strptime(image_date, "%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y %H:%M")
-                                    with st.expander(f"📅 Mapa de Índices para {image_date_fmt}"):
+                                    with st.expander(f"{t('map.index.for')} {image_date_fmt}"):
                                         gdf_4326 = gdf.to_crs(epsg=4326)
                                         map_center = [gdf_4326.geometry.centroid.y.mean(),
                                                       gdf_4326.geometry.centroid.x.mean()]
@@ -1368,7 +1552,7 @@ with tab2:
                                             tiles=scaled_image.visualize(bands=['B4', 'B3', 'B2'], min=0, max=0.3,
                                                                          gamma=1.4).getMapId()[
                                                 "tile_fetcher"].url_format,
-                                            name="RGB",
+                                            name=t("map.rgb"),
                                             overlay=True,
                                             control=True,
                                             show=True,  # Mostrar esta por defecto
@@ -1379,7 +1563,7 @@ with tab2:
                                             tiles=indices_image.select('SCL').visualize(min=1, max=11,
                                                                                         palette=scl_colors).getMapId()[
                                                 "tile_fetcher"].url_format,
-                                            name="SCL - Clasificación de Escena",
+                                            name=t("map.scl"),
                                             overlay=True,
                                             control=True,
                                             show=False,
@@ -1392,7 +1576,7 @@ with tab2:
                                                                                                         'yellow', 'red',
                                                                                                         'black']).getMapId()[
                                                 "tile_fetcher"].url_format,
-                                            name="Probabilidad de Nubes (MSK_CLDPRB)",
+                                            name=t("map.cloudprob"),
                                             overlay=True,
                                             control=True,
                                             show=False,
@@ -1400,7 +1584,7 @@ with tab2:
                                         )
 
                                         # Crear el grupo de puntos de interés (no activado por defecto)
-                                        poi_group = folium.FeatureGroup(name="Puntos de Interés", show=False)
+                                        poi_group = folium.FeatureGroup(name=t("map.poi"), show=False)
                                         tiene_puntos = False  # Variable de control
                                         
                                         # Añadir marcadores al grupo si existen
@@ -1479,43 +1663,30 @@ with tab2:
 
                         with row2[1]:
                             # Leyenda de índices y capas
-                            with st.expander("🗺️ Leyenda de índices y capas", expanded=False):
+                            with st.expander(t("legend.exp"), expanded=False):
                                 generar_leyenda(selected_indices)
                         
                             # Tabla de nubosidad estimada por imagen
                             if "used_cloud_results" in st.session_state and st.session_state["used_cloud_results"]:
-                                with st.expander("☁️ Nubosidad estimada por imagen", expanded=False):
-                                    df_results = pd.DataFrame(st.session_state["used_cloud_results"])
+                                with st.expander(t("cloud.exp"), expanded=False):
+                                    df_results = pd.DataFrame(st.session_state["used_cloud_results"]).copy()
                                     df_results["Fecha"] = pd.to_datetime(df_results["Fecha"], errors='coerce').dt.strftime("%d-%m-%Y")
+                                    df_results = df_results.rename(columns={"Fecha": t("col.date"), "Hora": t("col.time"), "Nubosidad aproximada (%)": t("col.cloud")})
                                     st.dataframe(df_results)
 
-                            with st.expander("📊 Evolución de la media diaria de concentraciones del embalse", expanded=False):
+                           with st.expander(t("mean.exp"), expanded=False)
                                 df_media = df_time[df_time["Point"] == "Media_Embalse"].copy()
                                 df_media["Date"] = pd.to_datetime(df_media["Date"], errors='coerce')
                             
                                 for indice in selected_indices:
                                     if indice in df_media.columns:
                                         df_indice = df_media[["Date", indice]].dropna()
-                            
-                                        # Determinar si es un índice calibrado según si contiene 'cal' (insensible a mayúsculas)
-                                        if 'cal' in indice.lower():
-                                            y_axis_title = 'Concentración (μg/L)'
-                                        else:
-                                            y_axis_title = 'Valor del índice'
-                            
+                                        y_title = t("axis.conc") if 'cal' in indice.lower() else t("axis.idx")
                                         chart = alt.Chart(df_indice).mark_bar().encode(
-                                            x=alt.X('Date:T', title='Fecha', axis=alt.Axis(format="%d-%b", labelAngle=0)),
-                                            y=alt.Y(f'{indice}:Q', title=y_axis_title),
-                                            tooltip=[
-                                                alt.Tooltip('Date:T', title='Fecha'),
-                                                alt.Tooltip(f'{indice}:Q', title=f'{indice}')
-                                            ]
-                                        ).properties(
-                                            title=f"🧪 Índice: {indice}",
-                                            width=500,
-                                            height=300
-                                        )
-                            
+                                            x=alt.X('Date:T', title=t("col.date"), axis=alt.Axis(format="%d-%b", labelAngle=0)),
+                                            y=alt.Y(f'{indice}:Q', title=y_title),
+                                            tooltip=[alt.Tooltip('Date:T', title=t("col.date")), alt.Tooltip(f'{indice}:Q', title=f'{indice}')]
+                                        ).properties(title=f"{t('mean.index')}: {indice}", width=500, height=300)
                                         st.altair_chart(chart, use_container_width=True)
 
 
@@ -1968,6 +2139,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
