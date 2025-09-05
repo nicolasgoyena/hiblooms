@@ -1674,7 +1674,7 @@ with tab2:
                                     df_results = df_results.rename(columns={"Fecha": t("col.date"), "Hora": t("col.time"), "Nubosidad aproximada (%)": t("col.cloud")})
                                     st.dataframe(df_results)
 
-                            with st.expander(t("mean.exp"), expanded=False)
+                            with st.expander(t("mean.exp"), expanded=False):
                                 df_media = df_time[df_time["Point"] == "Media_Embalse"].copy()
                                 df_media["Date"] = pd.to_datetime(df_media["Date"], errors='coerce')
                             
@@ -2139,6 +2139,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
