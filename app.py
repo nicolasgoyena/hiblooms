@@ -1293,8 +1293,8 @@ with tab2:
                         - **Chla_Bellus_cal:** Estimación cuantitativa de clorofila-a específicamente calibrada para el embalse de Bellús.
                         - **PC_Bellus_cal (Ficocianina Bellús):** Ajuste específico para el embalse de Bellús, basado en la fórmula empírica derivada de la relación espectral MCI. Se estima la concentración de ficocianina en µg/L.
                         """)
-                     else:
-                         st.markdown("""- **MCI** ... (traducción EN del resumen)""")
+                    else:
+                        st.markdown("""- **MCI** ... (traducción EN del resumen)""")
 
                 # Botón fuera del if
                 calcular = st.button(t("btn.compute"))
@@ -2139,6 +2139,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
