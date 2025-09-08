@@ -261,6 +261,25 @@ url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/puntos_interes.csv
 try:
     df_poi = pd.read_csv(url_csv)
     puntos_interes = {}
+    def _reservoir_key(name: str) -> str | None:
+        if not name:
+            return None
+        n = name.strip().lower()
+        if n in ("el val", "val"):
+            return "val"
+        if n in ("bellús", "bellus"):
+            return "bellus"
+        return None
+    
+    def get_available_indices_for_reservoir(reservoir_name: str) -> list[str]:
+        base = ["MCI", "PCI_B5/B4", "NDCI_ind", "UV_PC_Gral_cal"]  # índices generales
+        rk = _reservoir_key(reservoir_name)
+        if rk == "val":
+            base += ["PC_Val_cal", "Chla_Val_cal"]
+        elif rk == "bellus":
+            base += ["Chla_Bellus_cal", "PC_Bellus_cal"]
+        return base
+
     for _, row in df_poi.iterrows():
         embalse = row["embalse"]
         if embalse not in puntos_interes:
@@ -1349,7 +1368,7 @@ with tab2:
 
                 # Selección de índices
                 st.subheader(t("idx.h"))
-                available_indices = ["MCI", "PCI_B5/B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal","PC_Bellus_cal"]
+                available_indices = get_available_indices_for_reservoir(reservoir_name)
                 selected_indices = st.multiselect(t("idx.label"), available_indices)
                 with st.expander(t("idx.help")):
                     if lang()=="es":
@@ -1432,6 +1451,10 @@ with tab2:
                             st.stop()
 
                         if available_dates:
+                            # Asegura que sólo índices permitidos para el embalse pasen a session_state
+                            allowed = set(get_available_indices_for_reservoir(reservoir_name))
+                            selected_indices = [i for i in selected_indices if i in allowed]
+
                             st.session_state['available_dates'] = available_dates
                             st.session_state['selected_indices'] = selected_indices
 
@@ -2026,10 +2049,12 @@ with tab4:
                                     start_date = start_date.strftime('%Y-%m-%d')
                                     end_date = end_date.strftime('%Y-%m-%d')
                         
-                                    available_indices = ["MCI", "PCI_B5/B4", "NDCI_ind","UV_PC_Gral_cal", "PC_Val_cal", "Chla_Val_cal", "Chla_Bellus_cal", "PC_Bellus_cal"]
+                                    available_indices = get_available_indices_for_reservoir(reservoir_name)
                                     selected_indices = st.multiselect("Selecciona los índices a visualizar:", available_indices, key="graficas_indices")
-                        
+          
                                     if st.button("Ejecutar modo rápido"):
+                                        allowed = set(get_available_indices_for_reservoir(reservoir_name))
+                                        selected_indices = [i for i in selected_indices if i in allowed]
                                         st.session_state["data_time"] = []
                                         # Mapeo de nombres para los CSV precalculados
                                         csv_name_map = {
@@ -2209,6 +2234,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
