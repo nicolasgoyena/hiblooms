@@ -78,7 +78,7 @@ HIBLOOMS Project — Detection and Visualization of Cyanobacterial Blooms in Res
 
 ## License
 
-[MIT License](LICENSE)
+[MIT License](https://opensource.org/licenses/MIT)
 
 ---
 
