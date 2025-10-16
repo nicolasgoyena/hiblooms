@@ -184,20 +184,23 @@ i18n_init()
 # Usa el título traducido
 st.set_page_config(initial_sidebar_state="collapsed", page_title=t("meta.title"), layout="wide")
 
-st.markdown("""
+# Sustituye tu bloque CSS actual por este:
+st.markdown(f"""
     <style>
-        [data-testid="stSidebarNav"] {
-            display: none;
-        }
+        /* Solo ocultar la navegación mientras NO esté logueado */
+        [data-testid="stSidebarNav"] {{
+            display: {'none' if not st.session_state.get('logged_in', False) else 'block'} !important;
+        }}
 
-        /* Ocultar completamente los enlaces automáticos de encabezados (ícono + funcionalidad) */
-        h1 a, h2 a, h3 a {
+        /* Ocultar completamente los enlaces automáticos de encabezados */
+        h1 a, h2 a, h3 a {{
             display: none !important;
             pointer-events: none !important;
             text-decoration: none !important;
-        }
+        }}
     </style>
 """, unsafe_allow_html=True)
+
 
 # Bloquear acceso si no está logueado
 if not st.session_state.get("logged_in", False):
@@ -2244,6 +2247,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
