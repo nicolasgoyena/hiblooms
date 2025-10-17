@@ -351,22 +351,31 @@ if df.empty:
 else:
     for idx, row in df.iterrows():
         with st.container(border=True):
-            # Título principal con el ID
-            title = f"**#{row[pk]}** — `{table}`" if pk in row else f"`{table}`"
-            st.markdown(title)
+            # Caso especial: tabla de imágenes
+            if table == "lab_images" and "image_url" in row:
+                img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
+                img_url = normalize_drive_url(img_url)
+                if img_url:
+                    st.image(img_url, use_container_width=True)
+                extraction_id = row.get("extraction_id", "(sin extraction_id)")
+                st.markdown(f"🧪 **Extraction ID:** {extraction_id}")
+            else:
+                # Título principal con el ID
+                title = f"**#{row[pk]}** — `{table}`" if pk in row else f"`{table}`"
+                st.markdown(title)
 
-            # Campos principales en una línea
-            col_data = []
-            for f in basic_fields:
-                if f in row and pd.notna(row[f]):
-                    val = row[f]
-                    if isinstance(val, float):
-                        val = round(val, 4)
-                    elif isinstance(val, (datetime, date)):
-                        val = val.strftime("%Y-%m-%d")
-                    col_data.append(f"**{f}**: {val}")
-            if col_data:
-                st.markdown(" · ".join(col_data))
+                # Campos principales en una línea
+                col_data = []
+                for f in basic_fields:
+                    if f in row and pd.notna(row[f]) and f != "image_url":
+                        val = row[f]
+                        if isinstance(val, float):
+                            val = round(val, 4)
+                        elif isinstance(val, (datetime, date)):
+                            val = val.strftime("%Y-%m-%d")
+                        col_data.append(f"**{f}**: {val}")
+                if col_data:
+                    st.markdown(" · ".join(col_data))
 
             # Botones de acción alineados en la parte inferior
             b1, b2, b3 = st.columns([1, 1, 1])
@@ -380,7 +389,10 @@ else:
                     for c in cols:
                         cname = c["name"]
                         val = row.get(cname)
-                        if cname == "image_url" and table == "lab_images" and pd.notna(val):
+                        # No mostrar la URL explícita
+                        if cname == "image_url":
+                            continue
+                        if cname == "image_url" and pd.notna(val):
                             drive_image(str(val))
                         else:
                             st.write(f"**{cname}**: {val}")
@@ -394,6 +406,9 @@ else:
                             cname = c["name"]
                             if cname == pk:
                                 st.text_input(cname, value=str(row.get(cname)), disabled=True)
+                            elif cname == "image_url":
+                                # No editar la URL desde la interfaz
+                                st.text_input(cname, value="(no editable)", disabled=True)
                             else:
                                 new_values[cname] = render_input_for_column(c, default=row.get(cname))
                         s = st.form_submit_button("Guardar cambios")
