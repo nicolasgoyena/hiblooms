@@ -352,11 +352,9 @@ else:
     for idx, row in df.iterrows():
         with st.container(border=True):
             # --- antes del bloque lab_images ---
-            st.subheader(f"📄 Registros en {table}")
             
             # Si es la tabla de imágenes, mostramos galería y salimos
             if table == "lab_images":
-                st.markdown("### 🖼️ Galería de imágenes (lab_images)")
             
                 # Definir columnas por fila
                 n_cols = 2
