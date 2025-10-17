@@ -338,93 +338,90 @@ if add_open:
                     st.error(f"❌ Error creando registro: {e}")
 
 # ---------------------------
-# Vista tipo filas (listado)
+# Vista tipo tarjetas compactas (una casilla por registro)
 # ---------------------------
 
 st.subheader(f"📋 Registros en {table}")
 
 display_fields = pick_display_fields(cols)
-basic_fields = display_fields[:4]  # columnas visibles por defecto
+basic_fields = display_fields[:5]  # hasta 5 campos clave por registro
 
 if df.empty:
     st.info("No se han encontrado registros con los criterios actuales.")
 else:
-    # Encabezado de tabla
-    headers = basic_fields + ["Acciones"]
-    st.markdown(
-        "| " + " | ".join(f"**{h}**" for h in headers) + " |\n" +
-        "| " + " | ".join(["---"] * len(headers)) + " |"
-    )
-
-    # Iterar registros como filas compactas
     for idx, row in df.iterrows():
-        values = []
-        for f in basic_fields:
-            val = row.get(f, "")
-            if isinstance(val, float):
-                val = round(val, 4)
-            elif isinstance(val, (datetime, date)):
-                val = val.strftime("%Y-%m-%d")
-            values.append(str(val))
-        action_col = f"🔎 [Ver](#{idx})  |  ✏️ [Editar](#{idx})  |  🗑️ [Borrar](#{idx})"
-        st.markdown("| " + " | ".join(values + [action_col]) + " |")
+        with st.container(border=True):
+            # Título principal con el ID
+            title = f"**#{row[pk]}** — `{table}`" if pk in row else f"`{table}`"
+            st.markdown(title)
 
-        # --- Acciones interactivas ---
-        c1, c2, c3 = st.columns([1, 1, 1])
-        with c1:
-            show = st.button("🔎 Ver", key=f"view_{table}_{idx}")
-        with c2:
-            edit = st.button("✏️ Editar", key=f"edit_{table}_{idx}")
-        with c3:
-            delete = st.button("🗑️ Borrar", key=f"del_{table}_{idx}") if pk else None
+            # Campos principales en una línea
+            col_data = []
+            for f in basic_fields:
+                if f in row and pd.notna(row[f]):
+                    val = row[f]
+                    if isinstance(val, float):
+                        val = round(val, 4)
+                    elif isinstance(val, (datetime, date)):
+                        val = val.strftime("%Y-%m-%d")
+                    col_data.append(f"**{f}**: {val}")
+            if col_data:
+                st.markdown(" · ".join(col_data))
 
-        # --- Ver detalles ---
-        if show:
-            with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
-                for c in cols:
-                    cname = c["name"]
-                    val = row.get(cname)
-                    if cname == "image_url" and table == "lab_images" and pd.notna(val):
-                        drive_image(str(val))
-                    else:
-                        st.write(f"**{cname}**: {val}")
+            # Botones de acción alineados en la parte inferior
+            b1, b2, b3 = st.columns([1, 1, 1])
+            show = b1.button("🔎 Ver", key=f"view_{table}_{idx}")
+            edit = b2.button("✏️ Editar", key=f"edit_{table}_{idx}")
+            delete = b3.button("🗑️ Borrar", key=f"del_{table}_{idx}") if pk else None
 
-        # --- Editar ---
-        if edit:
-            with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
-                with st.form(f"form_edit_{table}_{idx}", clear_on_submit=False):
-                    new_values = {}
+            # --- Ver detalles ---
+            if show:
+                with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
                     for c in cols:
                         cname = c["name"]
-                        if cname == pk:
-                            st.text_input(cname, value=str(row.get(cname)), disabled=True)
+                        val = row.get(cname)
+                        if cname == "image_url" and table == "lab_images" and pd.notna(val):
+                            drive_image(str(val))
                         else:
-                            new_values[cname] = render_input_for_column(c, default=row.get(cname))
-                    s = st.form_submit_button("Guardar cambios")
-                    if s:
-                        try:
-                            if not pk:
-                                st.warning("No se puede actualizar sin clave primaria.")
-                            else:
-                                update_record(engine, table, pk, row[pk], new_values)
-                                st.success("✅ Cambios guardados.")
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error actualizando: {e}")
+                            st.write(f"**{cname}**: {val}")
 
-        # --- Borrar ---
-        if delete:
-            if not pk:
-                st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
-            else:
-                if st.checkbox(f"Confirmar borrado #{row[pk]}", key=f"chk_{table}_{idx}"):
-                    try:
-                        delete_record(engine, table, pk, row[pk])
-                        st.success("✅ Registro eliminado.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Error borrando: {e}")
+            # --- Editar ---
+            if edit:
+                with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
+                    with st.form(f"form_edit_{table}_{idx}", clear_on_submit=False):
+                        new_values = {}
+                        for c in cols:
+                            cname = c["name"]
+                            if cname == pk:
+                                st.text_input(cname, value=str(row.get(cname)), disabled=True)
+                            else:
+                                new_values[cname] = render_input_for_column(c, default=row.get(cname))
+                        s = st.form_submit_button("Guardar cambios")
+                        if s:
+                            try:
+                                if not pk:
+                                    st.warning("No se puede actualizar sin clave primaria.")
+                                else:
+                                    update_record(engine, table, pk, row[pk], new_values)
+                                    st.success("✅ Cambios guardados.")
+                                    st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Error actualizando: {e}")
+
+            # --- Borrar ---
+            if delete:
+                if not pk:
+                    st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
+                else:
+                    if st.checkbox(f"Confirmar borrado #{row[pk]}", key=f"chk_{table}_{idx}"):
+                        try:
+                            delete_record(engine, table, pk, row[pk])
+                            st.success("✅ Registro eliminado.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error borrando: {e}")
 
 # Paginación
 total_pages = max(1, (total + page_size - 1) // page_size)
 st.markdown(f"Página **{page}** de **{total_pages}**")
+
