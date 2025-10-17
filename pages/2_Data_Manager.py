@@ -18,7 +18,18 @@ st.title("📚 HIBLOOMS · Gestión de Datos (Drive URLs)")
 # =========================
 SCHEMA = "public"
 # Ajusta esta lista a tus tablas reales:
-ALLOWED_TABLES = ["samples", "measurements", "images", "reservoirs"]
+ALLOWED_TABLES = [
+    "extraction_points",
+    "insitu_determinations",
+    "insitu_sampling",
+    "lab_images",
+    "profiles_data",
+    "reservoirs_spain",
+    "rivers_spain",
+    "samples",
+    "sediment_data",
+    "sensor_data",
+]
 # Nombres de columnas que contienen la URL de imagen:
 IMAGE_URL_COLUMNS = ["image_url", "url", "photo_url"]
 
