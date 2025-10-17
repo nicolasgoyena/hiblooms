@@ -370,7 +370,7 @@ else:
                 )
             
                 # Número de columnas por fila
-                n_cols = 5
+                n_cols = 4
                 rows = [df.iloc[i:i + n_cols] for i in range(0, len(df), n_cols)]
             
                 for chunk in rows:
