@@ -355,7 +355,7 @@ else:
             if table == "lab_images":
                 st.subheader("🖼️ Galería de imágenes (lab_images)")
             
-                # 2 columnas por fila
+                # Número de columnas por fila (2)
                 n_cols = 2
                 rows = [df.iloc[i:i + n_cols] for i in range(0, len(df), n_cols)]
             
@@ -366,61 +366,47 @@ else:
                         with col_ui:
                             unique_id = f"{table}_{row[pk]}" if pk and pk in row else f"{table}_{idx}"
             
-                            # === Tarjeta individual con borde y fondo ===
-                            st.markdown(
-                                f"""
-                                <div style="
-                                    text-align: center;
-                                    border: 1px solid #ddd;
-                                    border-radius: 12px;
-                                    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-                                    padding: 12px;
-                                    margin-bottom: 16px;
-                                    background-color: #fff;
-                                    transition: all 0.2s ease-in-out;
-                                "
-                                onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.12)'"
-                                onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'">
-                            """,
-                                unsafe_allow_html=True
-                            )
-            
-                            # Imagen principal
+                            # === Tarjeta individual ===
                             img_url = str(row.get("image_url", "")) if pd.notna(row.get("image_url", "")) else ""
                             img_url = normalize_drive_url(img_url)
                             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
-                            if proxy_url:
-                                st.markdown(
-                                    f"""
-                                    <img src="{proxy_url}" alt="imagen" style="
-                                        max-width:100%;
-                                        height:220px;
-                                        object-fit:contain;
-                                        border-radius:10px;
-                                        border:1px solid #ccc;
-                                        background:#fafafa;
-                                    ">
-                                    """,
-                                    unsafe_allow_html=True
-                                )
-                            else:
-                                st.warning("⚠️ Imagen no disponible.")
-            
-                            # Extraction ID
+                            # Tarjeta completa centrada dentro de la columna
                             st.markdown(
-                                f"<p style='margin-top:6px; font-weight:600;'>🧪 Extraction ID:<br>"
-                                f"<span style='color:#1e88e5;'>{row.get('extraction_id', '(sin extraction_id)')}</span></p>",
+                                f"""
+                                <div style="
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    justify-content: center;
+                                    border: 1px solid #ddd;
+                                    border-radius: 12px;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+                                    padding: 12px;
+                                    background-color: #fff;
+                                    max-width: 420px;
+                                    margin: 0 auto 16px auto;
+                                    transition: all 0.2s ease-in-out;
+                                "
+                                onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'"
+                                onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'">
+                                    {"<img src='" + proxy_url + "' alt='imagen' style='max-width:100%; height:auto; border-radius:10px; border:1px solid #ccc; background:#fafafa;'>" if proxy_url else "<p style='color:#888;'>⚠️ Imagen no disponible.</p>"}
+                                    <p style="margin-top:6px; font-weight:600; text-align:center;">
+                                        🧪 Extraction ID:<br>
+                                        <span style="color:#1e88e5;">{row.get('extraction_id', '(sin extraction_id)')}</span>
+                                    </p>
+                                </div>
+                                """,
                                 unsafe_allow_html=True
                             )
             
-                            # --- Botones en fila ---
-                            b1, b2, b3 = st.columns([1, 1, 1])
-                            show = b1.button("🔎 Ver", key=f"view_{unique_id}")
-                            edit = b2.button("✏️ Editar", key=f"edit_{unique_id}")
-                            delete = b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
+                            # --- Botones centrados (solo uno por registro) ---
+                            col_b1, col_b2, col_b3 = st.columns(3)
+                            show = col_b1.button("🔎 Ver", key=f"view_{unique_id}")
+                            edit = col_b2.button("✏️ Editar", key=f"edit_{unique_id}")
+                            delete = col_b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
             
-                            # --- Detalles ---
+                            # --- Ver detalles ---
                             if show:
                                 with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
                                     for c in cols:
@@ -428,7 +414,7 @@ else:
                                         if cname != "image_url":
                                             st.write(f"**{cname}**: {row.get(cname)}")
             
-                            # --- Edición ---
+                            # --- Editar ---
                             if edit:
                                 with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
                                     with st.form(f"form_edit_{table}_{unique_id}", clear_on_submit=False):
@@ -450,7 +436,7 @@ else:
                                             except Exception as e:
                                                 st.error(f"❌ Error actualizando: {e}")
             
-                            # --- Borrado ---
+                            # --- Borrar ---
                             if delete:
                                 if not pk:
                                     st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
@@ -463,10 +449,8 @@ else:
                                         except Exception as e:
                                             st.error(f"❌ Error borrando: {e}")
             
-                            # Cerrar la tarjeta
-                            st.markdown("</div>", unsafe_allow_html=True)
-
             
+                        
                         
                         
                                                 
