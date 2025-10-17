@@ -61,19 +61,26 @@ def infer_pk(engine: Engine, table: str, schema: str = "public") -> Optional[str
     Intenta inferir el nombre de la clave primaria usando pg_index.
     Devuelve None si no encuentra PK.
     """
-    q = text("""
+    # Construye la referencia completa al estilo "public.mi_tabla"
+    schema_table = f"{schema}.{table}"
+
+    # Inyecta directamente el nombre, escapando comillas dobles si las hubiera
+    query = f"""
         SELECT a.attname AS col
         FROM pg_index i
         JOIN pg_attribute a
           ON a.attrelid = i.indrelid
          AND a.attnum  = ANY(i.indkey)
-        WHERE i.indrelid = :schema_table::regclass
+        WHERE i.indrelid = '{schema_table}'::regclass
           AND i.indisprimary = true
-        LIMIT 1
-    """)
+        LIMIT 1;
+    """
+
     with engine.connect() as con:
-        r = con.execute(q, {"schema_table": f"{schema}.{table}"}).first()
+        r = con.execute(text(query)).first()
+
     return r[0] if r else None
+
 
 
 # =========================
