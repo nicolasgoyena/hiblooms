@@ -392,9 +392,11 @@ else:
             
                             # Botones de acción
                             b1, b2, b3 = st.columns([1, 1, 1])
-                            show = b1.button("🔎 Ver", key=f"view_{table}_{idx}")
-                            edit = b2.button("✏️ Editar", key=f"edit_{table}_{idx}")
-                            delete = b3.button("🗑️ Borrar", key=f"del_{table}_{idx}") if pk else None
+                            unique_id = f"{table}_{row[pk]}" if pk and pk in row else f"{table}_{idx}"
+                            show = b1.button("🔎 Ver", key=f"view_{unique_id}")
+                            edit = b2.button("✏️ Editar", key=f"edit_{unique_id}")
+                            delete = b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
+
             
                             # Detalles
                             if show:
