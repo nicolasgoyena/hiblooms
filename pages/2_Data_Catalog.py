@@ -352,36 +352,94 @@ else:
     for idx, row in df.iterrows():
         with st.container(border=True):
             # Caso especial: tabla de imágenes
-            if table == "lab_images" and "image_url" in row:
-                img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
-                img_url = normalize_drive_url(img_url)
+            if table == "lab_images":
+                st.subheader("🖼️ Galería de imágenes (lab_images)")
             
-                # Proxy para evitar bloqueos de Google Drive
-                proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
+                # Dividir las imágenes en filas de 2 columnas
+                n_cols = 2
+                rows = [df.iloc[i:i+n_cols] for i in range(0, len(df), n_cols)]
             
-                # Contenedor más estrecho y centrado
-                st.markdown(
-                    f"""
-                    <div style="
-                        margin: 0 auto;
-                        max-width: 420px;
-                        text-align: center;
-                        border: 1px solid #ddd;
-                        border-radius: 12px;
-                        box-shadow: 0 0 8px rgba(0,0,0,0.05);
-                        padding: 12px;
-                        background-color: #fff;
-                    ">
-                        {"<img src='" + proxy_url + "' alt='imagen' style='max-width:100%; height:auto; border-radius:10px; border:1px solid #ccc; background:#fafafa;'>" if proxy_url else "<p style='color:#888;'>⚠️ Imagen no disponible.</p>"}
-                        <p style="margin-top:8px; font-weight:600;">
-                            🧪 Extraction ID:
-                            <span style="color:#1e88e5;">{row.get('extraction_id','(sin extraction_id)')}</span>
-                        </p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                for chunk in rows:
+                    cols_ui = st.columns(n_cols, gap="large")
+                    for (idx, row), col_ui in zip(chunk.iterrows(), cols_ui):
+                        with col_ui:
+                            img_url = str(row.get("image_url", "")) if pd.notna(row.get("image_url", "")) else ""
+                            img_url = normalize_drive_url(img_url)
+                            proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
+                            # Tarjeta compacta centrada dentro de la columna
+                            st.markdown(
+                                f"""
+                                <div style="
+                                    text-align: center;
+                                    border: 1px solid #ddd;
+                                    border-radius: 10px;
+                                    box-shadow: 0 0 8px rgba(0,0,0,0.05);
+                                    padding: 10px;
+                                    background-color: #fff;
+                                    max-width: 420px;
+                                    margin: 0 auto;
+                                ">
+                                    {"<img src='" + proxy_url + "' alt='imagen' style='max-width:100%; height:220px; object-fit:contain; border-radius:8px; border:1px solid #ccc; background:#fafafa;'>" if proxy_url else "<p style='color:#888;'>⚠️ Imagen no disponible.</p>"}
+                                    <p style="margin-top:6px; font-weight:600;">
+                                        🧪 Extraction ID:
+                                        <span style="color:#1e88e5;">{row.get('extraction_id','(sin extraction_id)')}</span>
+                                    </p>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+            
+                            # Botones de acción
+                            b1, b2, b3 = st.columns([1, 1, 1])
+                            show = b1.button("🔎 Ver", key=f"view_{table}_{idx}")
+                            edit = b2.button("✏️ Editar", key=f"edit_{table}_{idx}")
+                            delete = b3.button("🗑️ Borrar", key=f"del_{table}_{idx}") if pk else None
+            
+                            # Detalles
+                            if show:
+                                with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
+                                    for c in cols:
+                                        cname = c["name"]
+                                        if cname != "image_url":
+                                            st.write(f"**{cname}**: {row.get(cname)}")
+            
+                            # Edición
+                            if edit:
+                                with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
+                                    with st.form(f"form_edit_{table}_{idx}", clear_on_submit=False):
+                                        new_values = {}
+                                        for c in cols:
+                                            cname = c["name"]
+                                            if cname == pk:
+                                                st.text_input(cname, value=str(row.get(cname)), disabled=True)
+                                            elif cname == "image_url":
+                                                st.text_input(cname, value="(no editable)", disabled=True)
+                                            else:
+                                                new_values[cname] = render_input_for_column(c, default=row.get(cname))
+                                        s = st.form_submit_button("Guardar cambios")
+                                        if s:
+                                            try:
+                                                update_record(engine, table, pk, row[pk], new_values)
+                                                st.success("✅ Cambios guardados.")
+                                                st.rerun()
+                                            except Exception as e:
+                                                st.error(f"❌ Error actualizando: {e}")
+            
+                            # Borrado
+                            if delete:
+                                if not pk:
+                                    st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
+                                else:
+                                    if st.checkbox(f"Confirmar borrado #{row[pk]}", key=f"chk_{table}_{idx}"):
+                                        try:
+                                            delete_record(engine, table, pk, row[pk])
+                                            st.success("✅ Registro eliminado.")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"❌ Error borrando: {e}")
+            
+                        
                                                 
             else:
                 # Título principal con el ID
