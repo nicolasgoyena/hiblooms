@@ -352,34 +352,47 @@ else:
     for idx, row in df.iterrows():
         with st.container(border=True):
             # Caso especial: tabla de imágenes
-            if table == "lab_images" and "image_url" in row:
-                raw_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
-                clean_url = normalize_drive_url(raw_url)
+           if table == "lab_images" and "image_url" in row:
+                img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
+                img_url = normalize_drive_url(img_url)
             
-                if clean_url:
-                    # Proxy para evitar bloqueos de Google Drive
-                    proxy_url = f"https://images.weserv.nl/?url={clean_url.replace('https://', '')}"
+                if img_url:
+                    # Servir imagen vía proxy para evitar bloqueos
+                    proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
                     st.markdown(
                         f"""
-                        <div style="text-align:center;">
+                        <div style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto;
+                            max-width: 420px;
+                            padding: 10px 15px 5px 15px;
+                            border-radius: 12px;
+                            box-shadow: 0 0 8px rgba(0,0,0,0.05);
+                            background-color: #fff;
+                        ">
                             <img src="{proxy_url}" alt="imagen" style="
-                                width:auto;
-                                max-width:95%;
-                                height:220px;
-                                object-fit:contain;
-                                border-radius:10px;
-                                border:1px solid #ccc;
-                                background-color:#fafafa;
+                                width: auto;
+                                max-width: 100%;
+                                height: 220px;
+                                object-fit: contain;
+                                border-radius: 10px;
+                                border: 1px solid #ccc;
+                                background-color: #fafafa;
+                                margin-bottom: 8px;
                             ">
+                            <p style="font-weight:600; margin:0;">
+                                🧪 Extraction ID:
+                                <span style="color:#1e88e5;">{row.get('extraction_id','(sin extraction_id)')}</span>
+                            </p>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
                 else:
                     st.warning("⚠️ Imagen no disponible.")
-            
-                extraction_id = row.get("extraction_id", "(sin extraction_id)")
-                st.markdown(f"🧪 **Extraction ID:** `{extraction_id}`")
             
 
             else:
