@@ -351,11 +351,14 @@ if df.empty:
 else:
     for idx, row in df.iterrows():
         with st.container(border=True):
-            # Caso especial: tabla de imágenes
-            if table == "lab_images":
-                st.subheader("🖼️ Galería de imágenes (lab_images)")
+            # --- antes del bloque lab_images ---
+            st.subheader(f"📄 Registros en {table}")
             
-                # Número de columnas por fila (2)
+            # Si es la tabla de imágenes, mostramos galería y salimos
+            if table == "lab_images":
+                st.markdown("### 🖼️ Galería de imágenes (lab_images)")
+            
+                # Definir columnas por fila
                 n_cols = 2
                 rows = [df.iloc[i:i + n_cols] for i in range(0, len(df), n_cols)]
             
@@ -371,22 +374,22 @@ else:
                             img_url = normalize_drive_url(img_url)
                             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
-                            # Tarjeta centrada dentro de la columna
+                            # Tarjeta visualmente compacta
                             st.markdown(
                                 f"""
                                 <div style="
-                                    display: flex;
-                                    flex-direction: column;
-                                    align-items: center;
-                                    justify-content: center;
-                                    border: 1px solid #ddd;
-                                    border-radius: 12px;
-                                    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-                                    padding: 12px;
-                                    background-color: #fff;
-                                    max-width: 420px;
-                                    margin: 0 auto 16px auto;
-                                    transition: all 0.2s ease-in-out;
+                                    display:flex;
+                                    flex-direction:column;
+                                    align-items:center;
+                                    justify-content:center;
+                                    border:1px solid #ddd;
+                                    border-radius:12px;
+                                    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                                    padding:12px;
+                                    background-color:#fff;
+                                    max-width:420px;
+                                    margin:0 auto 16px auto;
+                                    transition:all 0.2s ease-in-out;
                                 "
                                 onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'"
                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'">
@@ -400,7 +403,7 @@ else:
                                 unsafe_allow_html=True
                             )
             
-                            # --- Botones centrados (solo uno por registro) ---
+                            # --- Botones centrados (una sola vez) ---
                             col_b1, col_b2, col_b3 = st.columns(3)
                             show = col_b1.button("🔎 Ver", key=f"view_{unique_id}")
                             edit = col_b2.button("✏️ Editar", key=f"edit_{unique_id}")
@@ -449,9 +452,9 @@ else:
                                         except Exception as e:
                                             st.error(f"❌ Error borrando: {e}")
             
-                # 🔚 Importante: detenemos la ejecución para evitar que se renderice el bloque general
+                # 🔚 Importante: detener ejecución para evitar el contenedor global
                 st.stop()
-            
+
                         
                         
                         
