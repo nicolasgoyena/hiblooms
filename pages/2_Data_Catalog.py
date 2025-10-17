@@ -353,21 +353,23 @@ else:
         with st.container(border=True):
             # Caso especial: tabla de imágenes
             if table == "lab_images" and "image_url" in row:
-                img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
-                img_url = normalize_drive_url(img_url)
+                raw_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
+                clean_url = normalize_drive_url(raw_url)
             
-                if img_url:
-                    # Usamos HTML para asegurar que la imagen se muestra incluso si st.image falla
+                if clean_url:
+                    # Proxy para evitar bloqueos de Google Drive
+                    proxy_url = f"https://images.weserv.nl/?url={clean_url.replace('https://', '')}"
                     st.markdown(
                         f"""
                         <div style="text-align:center;">
-                            <img src="{img_url}" alt="imagen" style="
+                            <img src="{proxy_url}" alt="imagen" style="
                                 width:auto;
-                                max-width:100%;
-                                height:200px;
+                                max-width:95%;
+                                height:220px;
                                 object-fit:contain;
                                 border-radius:10px;
-                                border:1px solid #ddd;
+                                border:1px solid #ccc;
+                                background-color:#fafafa;
                             ">
                         </div>
                         """,
@@ -378,6 +380,7 @@ else:
             
                 extraction_id = row.get("extraction_id", "(sin extraction_id)")
                 st.markdown(f"🧪 **Extraction ID:** `{extraction_id}`")
+            
 
             else:
                 # Título principal con el ID
