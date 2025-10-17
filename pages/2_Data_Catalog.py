@@ -356,44 +356,33 @@ else:
                 img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
                 img_url = normalize_drive_url(img_url)
             
-                if img_url:
-                    # Servir imagen vía proxy para evitar bloqueos
-                    proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
-                    st.markdown(
-                        f"""
-                        <div style="
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            margin: 0 auto;
-                            max-width: 420px;
-                            padding: 10px 15px 5px 15px;
-                            border-radius: 12px;
-                            box-shadow: 0 0 8px rgba(0,0,0,0.05);
-                            background-color: #fff;
-                        ">
-                            <img src="{proxy_url}" alt="imagen" style="
-                                width: auto;
-                                max-width: 100%;
-                                height: 220px;
-                                object-fit: contain;
-                                border-radius: 10px;
-                                border: 1px solid #ccc;
-                                background-color: #fafafa;
-                                margin-bottom: 8px;
-                            ">
-                            <p style="font-weight:600; margin:0;">
-                                🧪 Extraction ID:
-                                <span style="color:#1e88e5;">{row.get('extraction_id','(sin extraction_id)')}</span>
-                            </p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                else:
-                    st.warning("⚠️ Imagen no disponible.")
-                                    
+                # Proxy para evitar bloqueos de Google Drive
+                proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
+            
+                # Contenedor más estrecho y centrado
+                st.markdown(
+                    f"""
+                    <div style="
+                        margin: 0 auto;
+                        max-width: 420px;
+                        text-align: center;
+                        border: 1px solid #ddd;
+                        border-radius: 12px;
+                        box-shadow: 0 0 8px rgba(0,0,0,0.05);
+                        padding: 12px;
+                        background-color: #fff;
+                    ">
+                        {"<img src='" + proxy_url + "' alt='imagen' style='max-width:100%; height:auto; border-radius:10px; border:1px solid #ccc; background:#fafafa;'>" if proxy_url else "<p style='color:#888;'>⚠️ Imagen no disponible.</p>"}
+                        <p style="margin-top:8px; font-weight:600;">
+                            🧪 Extraction ID:
+                            <span style="color:#1e88e5;">{row.get('extraction_id','(sin extraction_id)')}</span>
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            
+                                                
             else:
                 # Título principal con el ID
                 title = f"**#{row[pk]}** — `{table}`" if pk in row else f"`{table}`"
