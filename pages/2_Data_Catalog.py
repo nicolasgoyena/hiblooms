@@ -371,7 +371,7 @@ else:
                             img_url = normalize_drive_url(img_url)
                             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
-                            # Tarjeta completa centrada dentro de la columna
+                            # Tarjeta centrada dentro de la columna
                             st.markdown(
                                 f"""
                                 <div style="
@@ -449,7 +449,11 @@ else:
                                         except Exception as e:
                                             st.error(f"❌ Error borrando: {e}")
             
+                # 🔚 Importante: detenemos la ejecución para evitar que se renderice el bloque general
+                st.stop()
             
+                        
+                        
                         
                         
                         
