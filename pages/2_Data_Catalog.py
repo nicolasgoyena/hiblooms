@@ -355,10 +355,30 @@ else:
             if table == "lab_images" and "image_url" in row:
                 img_url = str(row["image_url"]) if pd.notna(row["image_url"]) else ""
                 img_url = normalize_drive_url(img_url)
+            
                 if img_url:
-                    st.image(img_url, use_container_width=True)
+                    # Usamos HTML para asegurar que la imagen se muestra incluso si st.image falla
+                    st.markdown(
+                        f"""
+                        <div style="text-align:center;">
+                            <img src="{img_url}" alt="imagen" style="
+                                width:auto;
+                                max-width:100%;
+                                height:200px;
+                                object-fit:contain;
+                                border-radius:10px;
+                                border:1px solid #ddd;
+                            ">
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.warning("⚠️ Imagen no disponible.")
+            
                 extraction_id = row.get("extraction_id", "(sin extraction_id)")
-                st.markdown(f"🧪 **Extraction ID:** {extraction_id}")
+                st.markdown(f"🧪 **Extraction ID:** `{extraction_id}`")
+
             else:
                 # Título principal con el ID
                 title = f"**#{row[pk]}** — `{table}`" if pk in row else f"`{table}`"
