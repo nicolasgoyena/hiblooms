@@ -351,12 +351,23 @@ if df.empty:
 else:
     for idx, row in df.iterrows():
         with st.container(border=True):
-            # --- antes del bloque lab_images ---
+            if table == "lab_images":            
+                # Contenedor principal centrado y con ancho limitado
+                st.markdown(
+                    """
+                    <div style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        max-width: 900px;
+                        margin: 0 auto;
+                    ">
+                    """,
+                    unsafe_allow_html=True
+                )
             
-            # Si es la tabla de imágenes, mostramos galería y salimos
-            if table == "lab_images":
-            
-                # Definir columnas por fila
+                # Número de columnas por fila
                 n_cols = 2
                 rows = [df.iloc[i:i + n_cols] for i in range(0, len(df), n_cols)]
             
@@ -372,7 +383,6 @@ else:
                             img_url = normalize_drive_url(img_url)
                             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
-                            # Tarjeta visualmente compacta
                             st.markdown(
                                 f"""
                                 <div style="
@@ -401,13 +411,12 @@ else:
                                 unsafe_allow_html=True
                             )
             
-                            # --- Botones centrados (una sola vez) ---
+                            # --- Botones centrados (solo uno por registro) ---
                             col_b1, col_b2, col_b3 = st.columns(3)
                             show = col_b1.button("🔎 Ver", key=f"view_{unique_id}")
                             edit = col_b2.button("✏️ Editar", key=f"edit_{unique_id}")
                             delete = col_b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
             
-                            # --- Ver detalles ---
                             if show:
                                 with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
                                     for c in cols:
@@ -415,7 +424,6 @@ else:
                                         if cname != "image_url":
                                             st.write(f"**{cname}**: {row.get(cname)}")
             
-                            # --- Editar ---
                             if edit:
                                 with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
                                     with st.form(f"form_edit_{table}_{unique_id}", clear_on_submit=False):
@@ -437,7 +445,6 @@ else:
                                             except Exception as e:
                                                 st.error(f"❌ Error actualizando: {e}")
             
-                            # --- Borrar ---
                             if delete:
                                 if not pk:
                                     st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
@@ -450,14 +457,11 @@ else:
                                         except Exception as e:
                                             st.error(f"❌ Error borrando: {e}")
             
-                # 🔚 Importante: detener ejecución para evitar el contenedor global
-                st.stop()
-
-                        
-                        
-                        
-                        
-                        
+                # Cerrar contenedor HTML
+                st.markdown("</div>", unsafe_allow_html=True)
+            
+                # Evita que se renderice el bloque general
+                st.stop()     
                                                 
             else:
                 # Título principal con el ID
