@@ -355,7 +355,7 @@ else:
             if table == "lab_images":
                 st.subheader("🖼️ Galería de imágenes (lab_images)")
             
-                # Dividir las imágenes en filas de 2 columnas
+                # 2 columnas por fila
                 n_cols = 2
                 rows = [df.iloc[i:i + n_cols] for i in range(0, len(df), n_cols)]
             
@@ -366,87 +366,106 @@ else:
                         with col_ui:
                             unique_id = f"{table}_{row[pk]}" if pk and pk in row else f"{table}_{idx}"
             
-                            # --- Tarjeta completa con borde y fondo ---
-                            with st.container(border=True):
-                                img_url = str(row.get("image_url", "")) if pd.notna(row.get("image_url", "")) else ""
-                                img_url = normalize_drive_url(img_url)
-                                proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
+                            # === Tarjeta individual con borde y fondo ===
+                            st.markdown(
+                                f"""
+                                <div style="
+                                    text-align: center;
+                                    border: 1px solid #ddd;
+                                    border-radius: 12px;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+                                    padding: 12px;
+                                    margin-bottom: 16px;
+                                    background-color: #fff;
+                                    transition: all 0.2s ease-in-out;
+                                "
+                                onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.12)'"
+                                onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'">
+                            """,
+                                unsafe_allow_html=True
+                            )
             
-                                # Imagen centrada
-                                if proxy_url:
-                                    st.markdown(
-                                        f"""
-                                        <div style="text-align:center;">
-                                            <img src="{proxy_url}" alt="imagen" style="
-                                                max-width:100%;
-                                                height:220px;
-                                                object-fit:contain;
-                                                border-radius:10px;
-                                                border:1px solid #ccc;
-                                                background:#fafafa;
-                                            ">
-                                        </div>
-                                        """,
-                                        unsafe_allow_html=True
-                                    )
-                                else:
-                                    st.warning("⚠️ Imagen no disponible.")
+                            # Imagen principal
+                            img_url = str(row.get("image_url", "")) if pd.notna(row.get("image_url", "")) else ""
+                            img_url = normalize_drive_url(img_url)
+                            proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else ""
             
-                                # Extraction ID
+                            if proxy_url:
                                 st.markdown(
-                                    f"<p style='text-align:center; margin-top:6px; font-weight:600;'>🧪 Extraction ID: "
-                                    f"<span style='color:#1e88e5;'>{row.get('extraction_id', '(sin extraction_id)')}</span></p>",
+                                    f"""
+                                    <img src="{proxy_url}" alt="imagen" style="
+                                        max-width:100%;
+                                        height:220px;
+                                        object-fit:contain;
+                                        border-radius:10px;
+                                        border:1px solid #ccc;
+                                        background:#fafafa;
+                                    ">
+                                    """,
                                     unsafe_allow_html=True
                                 )
+                            else:
+                                st.warning("⚠️ Imagen no disponible.")
             
-                                # --- Botones de acción alineados ---
-                                b1, b2, b3 = st.columns([1, 1, 1])
-                                show = b1.button("🔎 Ver", key=f"view_{unique_id}")
-                                edit = b2.button("✏️ Editar", key=f"edit_{unique_id}")
-                                delete = b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
+                            # Extraction ID
+                            st.markdown(
+                                f"<p style='margin-top:6px; font-weight:600;'>🧪 Extraction ID:<br>"
+                                f"<span style='color:#1e88e5;'>{row.get('extraction_id', '(sin extraction_id)')}</span></p>",
+                                unsafe_allow_html=True
+                            )
             
-                                # --- Ver detalles ---
-                                if show:
-                                    with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
+                            # --- Botones en fila ---
+                            b1, b2, b3 = st.columns([1, 1, 1])
+                            show = b1.button("🔎 Ver", key=f"view_{unique_id}")
+                            edit = b2.button("✏️ Editar", key=f"edit_{unique_id}")
+                            delete = b3.button("🗑️ Borrar", key=f"del_{unique_id}") if pk else None
+            
+                            # --- Detalles ---
+                            if show:
+                                with st.expander(f"Detalles del registro #{row[pk] if pk else idx}", expanded=True):
+                                    for c in cols:
+                                        cname = c["name"]
+                                        if cname != "image_url":
+                                            st.write(f"**{cname}**: {row.get(cname)}")
+            
+                            # --- Edición ---
+                            if edit:
+                                with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
+                                    with st.form(f"form_edit_{table}_{unique_id}", clear_on_submit=False):
+                                        new_values = {}
                                         for c in cols:
                                             cname = c["name"]
-                                            if cname != "image_url":
-                                                st.write(f"**{cname}**: {row.get(cname)}")
-            
-                                # --- Editar ---
-                                if edit:
-                                    with st.expander(f"Editar registro #{row[pk] if pk else idx}", expanded=True):
-                                        with st.form(f"form_edit_{table}_{unique_id}", clear_on_submit=False):
-                                            new_values = {}
-                                            for c in cols:
-                                                cname = c["name"]
-                                                if cname == pk:
-                                                    st.text_input(cname, value=str(row.get(cname)), disabled=True)
-                                                elif cname == "image_url":
-                                                    st.text_input(cname, value="(no editable)", disabled=True)
-                                                else:
-                                                    new_values[cname] = render_input_for_column(c, default=row.get(cname))
-                                            s = st.form_submit_button("Guardar cambios")
-                                            if s:
-                                                try:
-                                                    update_record(engine, table, pk, row[pk], new_values)
-                                                    st.success("✅ Cambios guardados.")
-                                                    st.rerun()
-                                                except Exception as e:
-                                                    st.error(f"❌ Error actualizando: {e}")
-            
-                                # --- Borrar ---
-                                if delete:
-                                    if not pk:
-                                        st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
-                                    else:
-                                        if st.checkbox(f"Confirmar borrado #{row[pk]}", key=f"chk_{unique_id}"):
+                                            if cname == pk:
+                                                st.text_input(cname, value=str(row.get(cname)), disabled=True)
+                                            elif cname == "image_url":
+                                                st.text_input(cname, value="(no editable)", disabled=True)
+                                            else:
+                                                new_values[cname] = render_input_for_column(c, default=row.get(cname))
+                                        s = st.form_submit_button("Guardar cambios")
+                                        if s:
                                             try:
-                                                delete_record(engine, table, pk, row[pk])
-                                                st.success("✅ Registro eliminado.")
+                                                update_record(engine, table, pk, row[pk], new_values)
+                                                st.success("✅ Cambios guardados.")
                                                 st.rerun()
                                             except Exception as e:
-                                                st.error(f"❌ Error borrando: {e}")
+                                                st.error(f"❌ Error actualizando: {e}")
+            
+                            # --- Borrado ---
+                            if delete:
+                                if not pk:
+                                    st.warning("Esta tabla no tiene PK inferida; no se puede borrar de forma segura.")
+                                else:
+                                    if st.checkbox(f"Confirmar borrado #{row[pk]}", key=f"chk_{unique_id}"):
+                                        try:
+                                            delete_record(engine, table, pk, row[pk])
+                                            st.success("✅ Registro eliminado.")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"❌ Error borrando: {e}")
+            
+                            # Cerrar la tarjeta
+                            st.markdown("</div>", unsafe_allow_html=True)
+
             
                         
                         
