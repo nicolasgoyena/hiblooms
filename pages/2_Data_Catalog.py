@@ -344,8 +344,6 @@ if add_open:
 # Vista tipo tarjetas
 # ---------------------------
 
-st.subheader(f"📋 Registros en {table}")
-
 display_fields = pick_display_fields(cols)
 basic_fields = display_fields[:5]
 
