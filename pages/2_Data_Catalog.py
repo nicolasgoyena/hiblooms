@@ -100,14 +100,17 @@ def filter_widgets(cols: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         for c in cols:
             cname = c["name"]
             ctype = str(c.get("type", ""))
-
             if is_temporal(ctype):
-                col1, col2 = st.columns(2)
-                with col1:
-                    start = st.date_input(f"{cname} desde", value=None, format="DD-MM-YYYY", key=f"f_{cname}_start")
-                with col2:
-                    end = st.date_input(f"{cname} hasta", value=None, format="DD-MM-YYYY", key=f"f_{cname}_end")
-                filters[cname] = {"mode": "date", "value": (start, end)}
+                use_date = st.checkbox(f"Filtrar por {cname}", value=False, key=f"f_{cname}_use")
+                if use_date:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        start = st.date_input(f"{cname} desde", format="DD-MM-YYYY", key=f"f_{cname}_start")
+                    with col2:
+                        end = st.date_input(f"{cname} hasta", format="DD-MM-YYYY", key=f"f_{cname}_end")
+                    filters[cname] = {"mode": "date", "value": (start, end)}
+                else:
+                    filters[cname] = {"mode": "date", "value": (None, None)}
             elif is_numeric(ctype):
                 col1, col2 = st.columns(2)
                 with col1:
