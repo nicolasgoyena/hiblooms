@@ -395,15 +395,24 @@ with col2:
         st.markdown(
             """
             <style>
-            div[data-baseweb="input"] > div {
+            /* Ajustar ancho del input pero mantener flechas visibles */
+            div[data-baseweb="input"] input[type="number"] {
                 width: 70px !important;
                 text-align: center !important;
                 margin: 0 auto !important;
+            }
+        
+            /* Asegurar que las flechas de número sigan visibles */
+            div[data-baseweb="input"] input[type="number"]::-webkit-inner-spin-button,
+            div[data-baseweb="input"] input[type="number"]::-webkit-outer-spin-button {
+                opacity: 1 !important;
+                display: block !important;
             }
             </style>
             """,
             unsafe_allow_html=True
         )
+
 
 with col3:
     if page < total_pages:
