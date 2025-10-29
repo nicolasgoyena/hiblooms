@@ -339,9 +339,10 @@ if table == "lab_images":
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
-    # Ajustar índice para que empiece en 1
-    df.index = df.index + 1
+    # Calcular índice global (no reiniciado por página)
+    df.index = df.index + 1 + offset
     st.dataframe(df, use_container_width=True)
+
 
 
 # =====================
