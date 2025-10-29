@@ -159,8 +159,8 @@ all_tables = insp.get_table_names(schema="public")
 
 # Detectar si estamos en modo detalle
 params = st.query_params
-if "page" in params and params.get("page") == ["lab_image"] and "id" in params:
-    record_id = params.get("id")[0]
+if params.get("page") == "lab_image" and "id" in params:
+    record_id = params.get("id")
     table = "lab_images"
     cols = get_table_columns(engine, table)
     pk = infer_pk(engine, table) or cols[0]["name"]
@@ -210,14 +210,14 @@ if "page" in params and params.get("page") == ["lab_image"] and "id" in params:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("⬅️ Volver al catálogo"):
-            st.experimental_set_query_params()
+            st.query_params.clear()
             st.rerun()
     with col2:
         if st.button("🗑️ Borrar registro"):
             try:
                 delete_record(engine, table, pk, record_id)
                 st.success("✅ Registro eliminado.")
-                st.experimental_set_query_params()
+                st.query_params.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ Error borrando: {e}")
@@ -266,8 +266,9 @@ if table == "lab_images":
                 record_id = rrow.get(pk)
 
                 if st.button(f"🖼️ ID {record_id}", key=f"open_{record_id}"):
-                    st.experimental_set_query_params(page="lab_image", id=str(record_id))
+                    st.query_params.update(page="lab_image", id=str(record_id))
                     st.rerun()
+
 
                 st.markdown(
                     f"""
