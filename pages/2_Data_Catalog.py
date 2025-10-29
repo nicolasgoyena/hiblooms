@@ -379,34 +379,60 @@ with col2:
             "<div style='text-align:right; font-size:14px; color:#555;'>Ir a página:</div>",
             unsafe_allow_html=True
         )
-    with c2:
-        new_page = st.number_input(
-            "",
-            min_value=1,
-            max_value=total_pages,
-            value=page,
-            step=1,
-            label_visibility="collapsed",
-            key="go_to_page",
-            format="%d"
-        )
-        if new_page != page:
-            st.session_state["page"] = new_page
-            st.rerun()
-
-        # Reducir ancho visual del input
+    with col2:
+        # Cabecera centrada
         st.markdown(
-            """
-            <style>
-            div[data-baseweb="input"] > div {
-                width: 70px !important;
-                text-align: center !important;
-                margin: 0 auto !important;
-            }
-            </style>
+            f"""
+            <div style='text-align:center; font-size:15px;'>
+                Página <b>{page}</b> de <b>{total_pages}</b> · 
+                Registros {start_rec}–{end_rec} de {total}
+            </div>
             """,
             unsafe_allow_html=True
         )
+    
+        # Contenedor flex centrado con texto + selector alineados
+        st.markdown(
+            """
+            <div style='height:6px;'></div>
+            <div style='display:flex; justify-content:center; align-items:center; gap:8px;'>
+                <span style='font-size:14px; color:#555;'>Ir a página:</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        # Campo numérico centrado justo debajo
+        center_col = st.columns([4, 1, 4])[1]
+        with center_col:
+            new_page = st.number_input(
+                "",
+                min_value=1,
+                max_value=total_pages,
+                value=page,
+                step=1,
+                label_visibility="collapsed",
+                key="go_to_page",
+                format="%d"
+            )
+            if new_page != page:
+                st.session_state["page"] = new_page
+                st.rerun()
+    
+            # Reducir ancho visual del input
+            st.markdown(
+                """
+                <style>
+                div[data-baseweb="input"] > div {
+                    width: 70px !important;
+                    text-align: center !important;
+                    margin: 0 auto !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
 
 with col3:
     if page < total_pages:
