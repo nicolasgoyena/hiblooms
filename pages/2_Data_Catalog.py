@@ -420,11 +420,6 @@ with col3:
             st.rerun()
 
 
-with col3:
-    if page < total_pages:
-        if st.button("Siguiente ➡️"):
-            st.session_state["page"] = page + 1
-            st.rerun()
 
 
 
