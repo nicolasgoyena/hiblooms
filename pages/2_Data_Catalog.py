@@ -344,7 +344,7 @@ else:
     st.dataframe(df, use_container_width=True)
 
 # =====================
-# Paginación final (alineada, funcional y centrada)
+# Paginación final (alineada, compacta y con flechas funcionales)
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
@@ -360,21 +360,39 @@ with col1:
             st.rerun()
 
 with col2:
-    # Contenedor principal centrado
+    # Cabecera centrada con texto informativo
     st.markdown(
         f"""
-        <div style='display:flex; justify-content:center; align-items:center; gap:8px; font-size:15px;'>
-            <span>Página <b>{page}</b> de <b>{total_pages}</b></span>
-            <span style="color:#999;">·</span>
-            <span>Registros {start_rec}–{end_rec} de {total}</span>
-            <span style="color:#999;">·</span>
-            <span style='font-size:14px;color:#555;'>Ir a:</span>
+        <div style='text-align:center; font-size:15px;'>
+            Página <b>{page}</b> de <b>{total_pages}</b> · 
+            Registros {start_rec}–{end_rec} de {total}
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # Campo numérico estrecho justo debajo, centrado
+    # Selector con flechas funcionales y número centrado
+    st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c1:
+        if st.button("−", key="minus_page"):
+            if page > 1:
+                st.session_state["page"] = page - 1
+                st.rerun()
+    with c2:
+        st.markdown(
+            f"<div style='text-align:center; font-size:15px; padding-top:4px; font-weight:bold;'>{page}</div>",
+            unsafe_allow_html=True
+        )
+    with c3:
+        if st.button("+", key="plus_page"):
+            if page < total_pages:
+                st.session_state["page"] = page + 1
+                st.rerun()
+
+    # Texto de "Ir a página" y campo directo
+    st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; font-size:14px; color:#555;'>Ir directamente a:</div>", unsafe_allow_html=True)
     center_col = st.columns([4, 1, 4])[1]
     with center_col:
         new_page = st.number_input(
@@ -395,30 +413,22 @@ with col2:
         st.markdown(
             """
             <style>
-            /* Ajustar ancho del input pero mantener flechas visibles */
-            div[data-baseweb="input"] input[type="number"] {
+            div[data-baseweb="input"] > div {
                 width: 70px !important;
                 text-align: center !important;
                 margin: 0 auto !important;
-            }
-        
-            /* Asegurar que las flechas de número sigan visibles */
-            div[data-baseweb="input"] input[type="number"]::-webkit-inner-spin-button,
-            div[data-baseweb="input"] input[type="number"]::-webkit-outer-spin-button {
-                opacity: 1 !important;
-                display: block !important;
             }
             </style>
             """,
             unsafe_allow_html=True
         )
 
-
 with col3:
     if page < total_pages:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
+
 
 
 
