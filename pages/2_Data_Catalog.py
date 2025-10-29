@@ -174,9 +174,11 @@ if params.get("page") == "lab_image" and "id" in params:
 
     img_url = normalize_drive_url(str(row.get("image_url", "")))
     if img_url:
-        st.image(img_url, use_container_width=True)
+        proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
+        st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
     else:
         st.info("⚠️ Imagen no disponible.")
+
 
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
