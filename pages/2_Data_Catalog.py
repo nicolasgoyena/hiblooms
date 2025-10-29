@@ -277,20 +277,35 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                if st.button(f"🖼️ ID {record_id}", key=f"open_{record_id}"):
-                    st.query_params.update(page="lab_image", id=str(record_id))
-                    st.rerun()
+                # Enlace directo clicable en toda la tarjeta
+                detail_url = f"?page=lab_image&id={record_id}"
 
                 st.markdown(
                     f"""
-                    <div style="text-align:center; border:1px solid #ccc; border-radius:10px; padding:10px; background:#fff;">
-                        {"<img src='" + proxy_url + "' style='max-width:100%; height:auto; border-radius:8px;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
-                        <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID: <span style="color:#1e88e5;">{extraction_id}</span></p>
-                    </div>
-                    """, unsafe_allow_html=True
+                    <a href="{detail_url}" style="text-decoration:none; color:inherit;">
+                        <div style="
+                            text-align:center;
+                            border:1px solid #ccc;
+                            border-radius:10px;
+                            padding:10px;
+                            background:#fff;
+                            transition:all 0.2s ease-in-out;
+                            box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                        " 
+                        onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
+                        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';">
+                            {"<img src='" + proxy_url + "' style='max-width:100%; height:auto; border-radius:8px;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                            <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID: <span style="color:#1e88e5;">{extraction_id}</span></p>
+                            <p style="color:#666;">ID {record_id}</p>
+                        </div>
+                    </a>
+                    """,
+                    unsafe_allow_html=True
                 )
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
+
 
 # ===== Tablas normales =====
 if df.empty:
