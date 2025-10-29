@@ -343,36 +343,46 @@ else:
     df.index = df.index + 1 + offset
     st.dataframe(df, use_container_width=True)
 
-
-
 # =====================
-# Paginación al final
+# Paginación al final (compacta)
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
+col1, col2, col3 = st.columns([1, 3, 1])
 
-col1, col2, col3 = st.columns([1, 2, 1])
+# Calcular rango de registros mostrados
+start_rec = offset + 1 if total > 0 else 0
+end_rec = min(offset + page_size, total)
+
 with col1:
     if page > 1:
         if st.button("⬅️ Anterior"):
             st.session_state["page"] = page - 1
             st.rerun()
+
 with col2:
+    # Bloque central con info + salto directo
     st.markdown(
-        f"<div style='text-align:center; font-size:16px;'>Página <b>{page}</b> de <b>{total_pages}</b></div>",
+        f"""
+        <div style='text-align:center; font-size:15px;'>
+            Página <b>{page}</b> de <b>{total_pages}</b> 
+            &nbsp;·&nbsp;
+            Mostrando registros {start_rec}–{end_rec} de {total}
+            &nbsp;·&nbsp;
+            <span style='font-size:14px; color:#555;'>Ir a:</span>
+        </div>
+        """,
         unsafe_allow_html=True
     )
+    c1, c2 = st.columns([4, 1])
+    with c2:
+        new_page = st.number_input("", min_value=1, max_value=total_pages, value=page, step=1, label_visibility="collapsed")
+        if new_page != page:
+            st.session_state["page"] = new_page
+            st.rerun()
 
 with col3:
     if page < total_pages:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
-
-# Permitir también salto directo
-st.markdown("---")
-st.markdown("Ir directamente a una página:")
-new_page = st.number_input("Número de página", min_value=1, max_value=total_pages, value=page, step=1)
-if new_page != page:
-    st.session_state["page"] = new_page
-    st.rerun()
