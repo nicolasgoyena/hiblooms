@@ -355,9 +355,10 @@ with col1:
             st.rerun()
 with col2:
     st.markdown(
-        f"<div style='text-align:center; font-size:16px;'>Página **{page}** de **{total_pages}**</div>",
+        f"<div style='text-align:center; font-size:16px;'>Página <b>{page}</b> de <b>{total_pages}</b></div>",
         unsafe_allow_html=True
     )
+
 with col3:
     if page < total_pages:
         if st.button("Siguiente ➡️"):
