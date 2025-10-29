@@ -270,6 +270,7 @@ with st.sidebar:
 
     st.markdown("---")
     page_size = st.select_slider("Registros por página", options=[20, 50, 100], value=20)
+    page = st.session_state.get("page", 1)
 
 
 # Cachear columnas y metadatos
@@ -370,4 +371,3 @@ new_page = st.number_input("Número de página", min_value=1, max_value=total_pa
 if new_page != page:
     st.session_state["page"] = new_page
     st.rerun()
-
