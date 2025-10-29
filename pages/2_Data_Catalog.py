@@ -361,7 +361,7 @@ with col1:
 
 with col2:
     # Crea layout horizontal con texto + selector en línea
-    cols_pag = st.columns([5, 1])
+    cols_pag = st.columns([6, 0.8])
     with cols_pag[0]:
         st.markdown(
             f"""
@@ -390,6 +390,21 @@ with col2:
         if new_page != page:
             st.session_state["page"] = new_page
             st.rerun()
+
+        # Estilo para reducir el ancho y alinear con el texto
+        st.markdown(
+            """
+            <style>
+            div[data-baseweb="input"] > div {
+                width: 70px !important;
+                text-align: center !important;
+                margin-top: -6px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
 
 with col3:
     if page < total_pages:
