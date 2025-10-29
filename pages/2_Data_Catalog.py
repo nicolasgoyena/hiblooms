@@ -270,7 +270,6 @@ with st.sidebar:
 
     st.markdown("---")
     page_size = st.select_slider("Registros por página", options=[20, 50, 100], value=20)
-    page = st.number_input("Página", min_value=1, step=1, value=1)
 
 
 # Cachear columnas y metadatos
@@ -341,4 +340,34 @@ if df.empty:
 else:
     st.dataframe(df, use_container_width=True)
 
-st.markdown(f"Página **{page}** de **{max(1,(total+page_size-1)//page_size)}**")
+# =====================
+# Paginación al final
+# =====================
+
+total_pages = max(1, (total + page_size - 1) // page_size)
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col1:
+    if page > 1:
+        if st.button("⬅️ Anterior"):
+            st.session_state["page"] = page - 1
+            st.rerun()
+with col2:
+    st.markdown(
+        f"<div style='text-align:center; font-size:16px;'>Página **{page}** de **{total_pages}**</div>",
+        unsafe_allow_html=True
+    )
+with col3:
+    if page < total_pages:
+        if st.button("Siguiente ➡️"):
+            st.session_state["page"] = page + 1
+            st.rerun()
+
+# Permitir también salto directo
+st.markdown("---")
+st.markdown("Ir directamente a una página:")
+new_page = st.number_input("Número de página", min_value=1, max_value=total_pages, value=page, step=1)
+if new_page != page:
+    st.session_state["page"] = new_page
+    st.rerun()
+
