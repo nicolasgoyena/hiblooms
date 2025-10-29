@@ -162,7 +162,9 @@ except Exception as e:
     st.stop()
 
 insp = inspect(engine)
-all_tables = insp.get_table_names(schema="public")
+# Obtener todas las tablas del esquema público y filtrar las internas
+all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "spatial_ref_sys"]
+
 
 # Detectar modo detalle
 params = st.query_params
