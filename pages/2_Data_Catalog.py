@@ -9,6 +9,38 @@ from typing import Any, Dict, List, Optional, Tuple
 from db_utils import get_engine, infer_pk
 
 # =========================
+# CACHÉ Y OPTIMIZACIÓN
+# =========================
+
+@st.cache_resource
+def get_cached_engine() -> Engine:
+    """Mantiene viva la conexión SQLAlchemy durante toda la sesión."""
+    return get_engine()
+
+@st.cache_data(ttl=600)
+def get_cached_columns(engine: Engine, table: str):
+    """Devuelve columnas de una tabla (cacheadas 10 min)."""
+    insp = inspect(engine)
+    return insp.get_columns(table, schema="public")
+
+@st.cache_data(ttl=600)
+def count_cached_records(engine: Engine, table: str, where: str, params: Dict[str, Any]) -> int:
+    sql = f'SELECT COUNT(*) FROM "{table}"{where}'
+    with engine.connect() as con:
+        c = con.execute(text(sql), params).scalar()
+    return int(c or 0)
+
+@st.cache_data(ttl=60)
+def fetch_cached_records(engine: Engine, table: str, where: str, params: Dict[str, Any], order_col: str, limit: int, offset: int):
+    sql = f'SELECT * FROM "{table}"{where} ORDER BY "{order_col}" DESC LIMIT :_lim OFFSET :_off'
+    p = dict(params)
+    p["_lim"] = limit
+    p["_off"] = offset
+    with engine.connect() as con:
+        df = pd.read_sql(text(sql), con, params=p)
+    return df
+
+# =========================
 # Utilidades
 # =========================
 
@@ -26,13 +58,6 @@ def normalize_drive_url(url: str) -> str:
         except Exception:
             return u
     return u
-
-def drive_image(url: str):
-    u = normalize_drive_url(url or "")
-    if u:
-        st.image(u, use_container_width=True)
-    else:
-        st.info("Sin imagen asociada.")
 
 def python_value_for_sql(val):
     if isinstance(val, (date, datetime)):
@@ -76,21 +101,6 @@ def choose_order_column(cols: List[Dict[str, Any]], pk: Optional[str]) -> str:
 # CRUD helpers
 # =========================
 
-def fetch_records(engine: Engine, table: str, where: str, params: Dict[str, Any], order_col: str, limit: int, offset: int):
-    sql = f'SELECT * FROM "{table}"{where} ORDER BY "{order_col}" DESC LIMIT :_lim OFFSET :_off'
-    p = dict(params)
-    p["_lim"] = limit
-    p["_off"] = offset
-    with engine.connect() as con:
-        df = pd.read_sql(text(sql), con, params=p)
-    return df
-
-def count_records(engine: Engine, table: str, where: str, params: Dict[str, Any]) -> int:
-    sql = f'SELECT COUNT(*) FROM "{table}"{where}'
-    with engine.connect() as con:
-        c = con.execute(text(sql), params).scalar()
-    return int(c or 0)
-
 def get_record_by_id(engine: Engine, table: str, pk: str, pk_value: Any) -> Optional[pd.Series]:
     sql = f'SELECT * FROM "{table}" WHERE "{pk}" = :id'
     with engine.connect() as con:
@@ -119,10 +129,6 @@ def delete_record(engine: Engine, table: str, pk: str, pk_value: Any):
     with engine.begin() as con:
         con.execute(text(sql), {"_pkval": pk_value})
 
-def get_table_columns(engine: Engine, table: str) -> List[Dict[str, Any]]:
-    insp = inspect(engine)
-    return insp.get_columns(table, schema="public")
-
 def render_input_for_column(colmeta: Dict[str, Any], default=None):
     label = colmeta["name"]
     ctype = str(colmeta.get("type", ""))
@@ -149,7 +155,7 @@ st.title("📖 Catálogo HIBLOOMS")
 
 # Conexión
 try:
-    engine = get_engine()
+    engine = get_cached_engine()
 except Exception as e:
     st.error(f"❌ Error obteniendo conexión: {e}")
     st.stop()
@@ -157,12 +163,12 @@ except Exception as e:
 insp = inspect(engine)
 all_tables = insp.get_table_names(schema="public")
 
-# Detectar si estamos en modo detalle
+# Detectar modo detalle
 params = st.query_params
 if params.get("page") == "lab_image" and "id" in params:
     record_id = params.get("id")
     table = "lab_images"
-    cols = get_table_columns(engine, table)
+    cols = get_cached_columns(engine, table)
     pk = infer_pk(engine, table) or cols[0]["name"]
 
     row = get_record_by_id(engine, table, pk, record_id)
@@ -178,7 +184,6 @@ if params.get("page") == "lab_image" and "id" in params:
         st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
     else:
         st.info("⚠️ Imagen no disponible.")
-
 
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
@@ -203,7 +208,7 @@ if params.get("page") == "lab_image" and "id" in params:
                 try:
                     update_record(engine, table, pk, record_id, new_values)
                     st.success("✅ Cambios guardados.")
-                    st.experimental_set_query_params(page="lab_image", id=record_id)
+                    st.query_params.update(page="lab_image", id=record_id)
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ Error actualizando: {e}")
@@ -239,22 +244,26 @@ with st.sidebar:
     page_size = st.select_slider("Registros por página", options=[20, 50, 100], value=20)
     page = st.number_input("Página", min_value=1, step=1, value=1)
 
-cols = get_table_columns(engine, table)
+# Cachear columnas y metadatos
+if "cols_cache" not in st.session_state:
+    st.session_state["cols_cache"] = {}
+
+if table not in st.session_state["cols_cache"]:
+    st.session_state["cols_cache"][table] = get_cached_columns(engine, table)
+
+cols = st.session_state["cols_cache"][table]
 pk = infer_pk(engine, table) or (cols[0]["name"] if cols else None)
 order_col = choose_order_column(cols, pk)
 
 where, params_sql = "", {}
 offset = (page - 1) * page_size
-total = count_records(engine, table, where, params_sql)
-df = fetch_records(engine, table, where, params_sql, order_col, page_size, offset)
+total = count_cached_records(engine, table, where, params_sql)
+df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size, offset)
 
+# ===== Vista especial lab_images =====
 if table == "lab_images":
     st.markdown("### 🖼️ Galería de imágenes (clic para ver detalle)")
-    st.markdown(
-        """
-        <div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>
-        """, unsafe_allow_html=True
-    )
+    st.markdown("<div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>", unsafe_allow_html=True)
 
     n_cols = 4
     rows_chunks = [df.iloc[i:i+n_cols] for i in range(0, len(df), n_cols)]
@@ -271,7 +280,6 @@ if table == "lab_images":
                     st.query_params.update(page="lab_image", id=str(record_id))
                     st.rerun()
 
-
                 st.markdown(
                     f"""
                     <div style="text-align:center; border:1px solid #ccc; border-radius:10px; padding:10px; background:#fff;">
@@ -283,7 +291,7 @@ if table == "lab_images":
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- Tablas normales ---
+# ===== Tablas normales =====
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
