@@ -18,27 +18,28 @@ def get_cached_engine() -> Engine:
     return get_engine()
 
 @st.cache_data(ttl=600)
-def get_cached_columns(engine: Engine, table: str):
+def get_cached_columns(_engine: Engine, table: str):
     """Devuelve columnas de una tabla (cacheadas 10 min)."""
-    insp = inspect(engine)
+    insp = inspect(_engine)
     return insp.get_columns(table, schema="public")
 
 @st.cache_data(ttl=600)
-def count_cached_records(engine: Engine, table: str, where: str, params: Dict[str, Any]) -> int:
+def count_cached_records(_engine: Engine, table: str, where: str, params: Dict[str, Any]) -> int:
     sql = f'SELECT COUNT(*) FROM "{table}"{where}'
-    with engine.connect() as con:
+    with _engine.connect() as con:
         c = con.execute(text(sql), params).scalar()
     return int(c or 0)
 
 @st.cache_data(ttl=60)
-def fetch_cached_records(engine: Engine, table: str, where: str, params: Dict[str, Any], order_col: str, limit: int, offset: int):
+def fetch_cached_records(_engine: Engine, table: str, where: str, params: Dict[str, Any], order_col: str, limit: int, offset: int):
     sql = f'SELECT * FROM "{table}"{where} ORDER BY "{order_col}" DESC LIMIT :_lim OFFSET :_off'
     p = dict(params)
     p["_lim"] = limit
     p["_off"] = offset
-    with engine.connect() as con:
+    with _engine.connect() as con:
         df = pd.read_sql(text(sql), con, params=p)
     return df
+
 
 # =========================
 # Utilidades
