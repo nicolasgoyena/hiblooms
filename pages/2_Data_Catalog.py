@@ -344,7 +344,7 @@ else:
     st.dataframe(df, use_container_width=True)
 
 # =====================
-# Paginación al final (estable y funcional)
+# Paginación final (funcional y con texto "Ir a página:")
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
@@ -360,6 +360,7 @@ with col1:
             st.rerun()
 
 with col2:
+    # Cabecera centrada
     st.markdown(
         f"""
         <div style='text-align:center; font-size:15px;'>
@@ -370,9 +371,15 @@ with col2:
         unsafe_allow_html=True
     )
 
-    # Campo numérico centrado y funcional
-    center_col = st.columns([4, 1, 4])[1]
-    with center_col:
+    # Selector de página centrado con texto
+    st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        st.markdown(
+            "<div style='text-align:right; font-size:14px; color:#555;'>Ir a página:</div>",
+            unsafe_allow_html=True
+        )
+    with c2:
         new_page = st.number_input(
             "",
             min_value=1,
@@ -387,7 +394,7 @@ with col2:
             st.session_state["page"] = new_page
             st.rerun()
 
-        # Ajuste de ancho del campo numérico
+        # Reducir ancho visual del input
         st.markdown(
             """
             <style>
@@ -406,6 +413,7 @@ with col3:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
+
 
 
 
