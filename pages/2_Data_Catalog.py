@@ -344,15 +344,14 @@ else:
     st.dataframe(df, use_container_width=True)
 
 # =====================
-# Paginación al final (compacta)
+# Paginación al final (alineada y compacta)
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
-col1, col2, col3 = st.columns([1, 3, 1])
-
-# Calcular rango de registros mostrados
 start_rec = offset + 1 if total > 0 else 0
 end_rec = min(offset + page_size, total)
+
+col1, col2, col3 = st.columns([1, 4, 1])
 
 with col1:
     if page > 1:
@@ -361,28 +360,37 @@ with col1:
             st.rerun()
 
 with col2:
-    # Bloque central con info + salto directo
+    # Bloque central con texto + selector embebido
     st.markdown(
         f"""
-        <div style='text-align:center; font-size:15px;'>
-            Página <b>{page}</b> de <b>{total_pages}</b> 
-            &nbsp;·&nbsp;
-            Mostrando registros {start_rec}–{end_rec} de {total}
-            &nbsp;·&nbsp;
+        <div style='text-align:center; font-size:15px; display:flex; justify-content:center; align-items:center; gap:6px;'>
+            <span>Página <b>{page}</b> de <b>{total_pages}</b></span>
+            <span style='color:#999;'>·</span>
+            <span>Mostrando registros {start_rec}–{end_rec} de {total}</span>
+            <span style='color:#999;'>·</span>
             <span style='font-size:14px; color:#555;'>Ir a:</span>
         </div>
         """,
         unsafe_allow_html=True
     )
-    c1, c2 = st.columns([4, 1])
-    with c2:
-        new_page = st.number_input("", min_value=1, max_value=total_pages, value=page, step=1, label_visibility="collapsed")
-        if new_page != page:
-            st.session_state["page"] = new_page
-            st.rerun()
+
+    # Selector embebido justo debajo, sin etiqueta visible
+    new_page = st.number_input(
+        label="",
+        min_value=1,
+        max_value=total_pages,
+        value=page,
+        step=1,
+        label_visibility="collapsed",
+        key="go_to_page"
+    )
+    if new_page != page:
+        st.session_state["page"] = new_page
+        st.rerun()
 
 with col3:
     if page < total_pages:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
+
