@@ -165,6 +165,26 @@ insp = inspect(engine)
 # Obtener todas las tablas del esquema público y filtrar las internas
 all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "spatial_ref_sys"]
 
+# Diccionario de nombres amigables en castellano
+TABLE_LABELS = {
+    "reservoirs_spain": "🏞️ Embalses",
+    "extraction_points": "📍 Puntos de extracción",
+    "lab_images": "🧫 Imágenes de laboratorio",
+    "insitu_sampling": "🧪 Muestreos in situ",
+    "profiles_data": "🌡️ Perfiles verticales",
+    "sediment_data": "🪨 Datos de sedimentos",
+    "insitu_determinations": "🔬 Determinaciones in situ",
+    "rivers_spain": "🌊 Ríos",
+    "sensor_data": "📈 Datos de sensores",
+    "samples": "🧫 Muestras de laboratorio",
+}
+
+# Convertir nombres técnicos a etiquetas
+table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
+selected_label = st.sidebar.selectbox("Tabla", table_options)
+# Volver al nombre real de la tabla
+table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
+
 
 # Detectar modo detalle
 params = st.query_params
