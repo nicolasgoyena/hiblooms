@@ -260,13 +260,6 @@ if not all_tables:
     st.warning("No se han encontrado tablas en el esquema 'public'.")
     st.stop()
 
-with st.sidebar:
-    st.header("⚙️ Controles")
-    table = st.selectbox("Tabla", all_tables, index=max(all_tables.index("lab_images") if "lab_images" in all_tables else 0, 0))
-    st.markdown("---")
-    page_size = st.select_slider("Registros por página", options=[20, 50, 100], value=20)
-    page = st.number_input("Página", min_value=1, step=1, value=1)
-
 # Cachear columnas y metadatos
 if "cols_cache" not in st.session_state:
     st.session_state["cols_cache"] = {}
