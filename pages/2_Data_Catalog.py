@@ -344,7 +344,7 @@ else:
     st.dataframe(df, use_container_width=True)
 
 # =====================
-# Paginación al final (ultracompacta y alineada)
+# Paginación final (alineada y funcional)
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
@@ -360,40 +360,42 @@ with col1:
             st.rerun()
 
 with col2:
-    # Bloque central con todo alineado en una sola línea
-    st.markdown(
-        f"""
-        <div style="
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            font-size: 15px;
-        ">
-            <span>Página <b>{page}</b> de <b>{total_pages}</b></span>
-            <span style="color:#999;">·</span>
-            <span>Registros {start_rec}–{end_rec} de {total}</span>
-            <span style="color:#999;">·</span>
-            <label for="goto" style="font-size:14px;color:#555;">Ir a:</label>
-            <input id="goto" type="number" min="1" max="{total_pages}" value="{page}" 
-                style="
-                    width:60px;
-                    font-size:14px;
-                    padding:2px 4px;
-                    border:1px solid #ccc;
-                    border-radius:6px;
-                    text-align:center;
-                "
-                onchange="window.location.search='?page=table_view&id=&p='+this.value;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Crea layout horizontal con texto + selector en línea
+    cols_pag = st.columns([5, 1])
+    with cols_pag[0]:
+        st.markdown(
+            f"""
+            <div style='display:flex; justify-content:center; align-items:center; gap:8px; font-size:15px;'>
+                <span>Página <b>{page}</b> de <b>{total_pages}</b></span>
+                <span style="color:#999;">·</span>
+                <span>Registros {start_rec}–{end_rec} de {total}</span>
+                <span style="color:#999;">·</span>
+                <span style='font-size:14px;color:#555;'>Ir a:</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with cols_pag[1]:
+        new_page = st.number_input(
+            "",
+            min_value=1,
+            max_value=total_pages,
+            value=page,
+            step=1,
+            label_visibility="collapsed",
+            key="go_to_page",
+            format="%d"
+        )
+        if new_page != page:
+            st.session_state["page"] = new_page
+            st.rerun()
 
 with col3:
     if page < total_pages:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
+
 
 
