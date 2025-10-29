@@ -344,7 +344,7 @@ else:
     st.dataframe(df, use_container_width=True)
 
 # =====================
-# Paginación final (funcional y con texto "Ir a página:")
+# Paginación final (centrada, funcional y con texto "Ir a página:")
 # =====================
 
 total_pages = max(1, (total + page_size - 1) // page_size)
@@ -371,67 +371,53 @@ with col2:
         unsafe_allow_html=True
     )
 
-    # Selector de página centrado con texto
-    st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
-    c1, c2 = st.columns([3, 1])
-    with c1:
-        st.markdown(
-            "<div style='text-align:right; font-size:14px; color:#555;'>Ir a página:</div>",
-            unsafe_allow_html=True
+    # Contenedor flex centrado con texto "Ir a página"
+    st.markdown(
+        """
+        <div style='height:6px;'></div>
+        <div style='display:flex; justify-content:center; align-items:center; gap:8px;'>
+            <span style='font-size:14px; color:#555;'>Ir a página:</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Campo numérico centrado justo debajo
+    center_col = st.columns([4, 1, 4])[1]
+    with center_col:
+        new_page = st.number_input(
+            "",
+            min_value=1,
+            max_value=total_pages,
+            value=page,
+            step=1,
+            label_visibility="collapsed",
+            key="go_to_page",
+            format="%d"
         )
-    with col2:
-        # Cabecera centrada
-        st.markdown(
-            f"""
-            <div style='text-align:center; font-size:15px;'>
-                Página <b>{page}</b> de <b>{total_pages}</b> · 
-                Registros {start_rec}–{end_rec} de {total}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    
-        # Contenedor flex centrado con texto + selector alineados
+        if new_page != page:
+            st.session_state["page"] = new_page
+            st.rerun()
+
+        # Reducir ancho visual del input
         st.markdown(
             """
-            <div style='height:6px;'></div>
-            <div style='display:flex; justify-content:center; align-items:center; gap:8px;'>
-                <span style='font-size:14px; color:#555;'>Ir a página:</span>
-            </div>
+            <style>
+            div[data-baseweb="input"] > div {
+                width: 70px !important;
+                text-align: center !important;
+                margin: 0 auto !important;
+            }
+            </style>
             """,
             unsafe_allow_html=True
         )
-    
-        # Campo numérico centrado justo debajo
-        center_col = st.columns([4, 1, 4])[1]
-        with center_col:
-            new_page = st.number_input(
-                "",
-                min_value=1,
-                max_value=total_pages,
-                value=page,
-                step=1,
-                label_visibility="collapsed",
-                key="go_to_page",
-                format="%d"
-            )
-            if new_page != page:
-                st.session_state["page"] = new_page
-                st.rerun()
-    
-            # Reducir ancho visual del input
-            st.markdown(
-                """
-                <style>
-                div[data-baseweb="input"] > div {
-                    width: 70px !important;
-                    text-align: center !important;
-                    margin: 0 auto !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
+
+with col3:
+    if page < total_pages:
+        if st.button("Siguiente ➡️"):
+            st.session_state["page"] = page + 1
+            st.rerun()
 
 
 with col3:
