@@ -322,6 +322,35 @@ if "page" in params and params.get("page") in ["lab_image", "detail"]:
             st.query_params.clear()
             st.rerun()
 
+    # =============================
+    # Detalle de un grupo de muestras
+    # =============================
+    elif params.get("page") == "detail" and "group" in params and "time" in params:
+        point_id = params.get("group")
+        time_group = params.get("time")
+    
+        # Recuperar registros del grupo
+        time_start = pd.to_datetime(time_group)
+        time_end = time_start + pd.Timedelta(minutes=30)
+        sql = text(f"""
+            SELECT * FROM "{table}"
+            WHERE extraction_point_id = :pid
+              AND {time_col} BETWEEN :tstart AND :tend
+            ORDER BY {time_col} ASC
+        """)
+        with engine.connect() as con:
+            df_group = pd.read_sql(sql, con, params={"pid": point_id, "tstart": time_start, "tend": time_end})
+    
+        st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
+        st.dataframe(df_group, use_container_width=True, hide_index=True)
+    
+        st.markdown("---")
+        if st.button("⬅️ Volver al catálogo"):
+            st.query_params.clear()
+            st.rerun()
+    
+        st.stop()
+
     st.stop()
 
 
@@ -420,24 +449,59 @@ if table == "lab_images":
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# ===== Tablas normales con botones de detalle =====
+# ===== Tablas normales agrupadas por punto y hora =====
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
+    # Calcular índice global (no reiniciado por página)
     df.index = df.index + 1 + offset
 
-    st.markdown("### 📋 Registros")
-    for i, row in df.iterrows():
-        with st.container(border=True):
-            cols_row = st.columns([5, 1])
-            with cols_row[0]:
-                preview = ", ".join(f"{k}: {row[k]}" for k in df.columns[:3])
-                st.markdown(f"**{preview}**")
-            with cols_row[1]:
-                if st.button("🔍 Ver detalle", key=f"view_{table}_{i}"):
-                    st.query_params.clear()
-                    st.query_params.update(page="detail", table=table, id=row[pk])
-                    st.rerun()
+    # Si la tabla tiene columnas 'extraction_point_id' y 'date' o 'datetime'
+    if "extraction_point_id" in df.columns and any(c in df.columns for c in ["date", "datetime", "created_at", "timestamp"]):
+        # Determinar la columna temporal más adecuada
+        time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"] if c in df.columns), None)
+
+        # Convertir a datetime si es necesario
+        df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
+
+        # Agrupar por punto de extracción y ventana temporal de ±30 min
+        df["time_group"] = (df[time_col].dt.floor("30min")).astype(str)
+        grouped = df.groupby(["extraction_point_id", "time_group"])
+
+        st.markdown("### 📋 Registros agrupados por punto de extracción y hora aproximada")
+        for (point, tgrp), group in grouped:
+            with st.container(border=True):
+                sample_ids = group[pk].tolist()
+                n_samples = len(group)
+                time_str = group[time_col].min().strftime("%Y-%m-%d %H:%M") if pd.notna(group[time_col].min()) else "N/A"
+
+                cols_row = st.columns([5, 1])
+                with cols_row[0]:
+                    st.markdown(
+                        f"**📍 Punto:** {point} &nbsp;&nbsp;|&nbsp;&nbsp; 🕒 Hora aprox:** {time_str}** "
+                        f"&nbsp;&nbsp;|&nbsp;&nbsp; 🔢 Muestras: {n_samples}"
+                    )
+                with cols_row[1]:
+                    if st.button("🔍 Ver detalle", key=f"grp_{table}_{point}_{tgrp}"):
+                        # Pasamos a la vista de detalle de grupo
+                        st.query_params.clear()
+                        st.query_params.update(page="detail", table=table, group=str(point), time=tgrp)
+                        st.rerun()
+    else:
+        # Si no hay campos temporales o punto → vista clásica
+        st.markdown("### 📋 Registros")
+        for i, row in df.iterrows():
+            with st.container(border=True):
+                cols_row = st.columns([5, 1])
+                with cols_row[0]:
+                    preview = ", ".join(f"{k}: {row[k]}" for k in df.columns[:3])
+                    st.markdown(f"**{preview}**")
+                with cols_row[1]:
+                    if st.button("🔍 Ver detalle", key=f"view_{table}_{i}"):
+                        st.query_params.clear()
+                        st.query_params.update(page="detail", table=table, id=row[pk])
+                        st.rerun()
+
 
 
 # =====================
