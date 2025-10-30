@@ -243,7 +243,22 @@ if params.get("page") == "lab_image" and "id" in params:
     img_url = normalize_drive_url(str(row.get("image_url", "")))
     if img_url:
         proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
-        st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
+        # Mostrar imagen más pequeña y centrada
+        st.markdown(
+            """
+            <div style="display:flex; justify-content:center;">
+                <img src="{0}" alt="Imagen de laboratorio" style="
+                    max-width: 65%;
+                    height: auto;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                ">
+            </div>
+            <p style='text-align:center; color:#666;'>ID {1}</p>
+            """.format(proxy_url, record_id),
+            unsafe_allow_html=True
+        )
+
     else:
         st.info("⚠️ Imagen no disponible.")
     
