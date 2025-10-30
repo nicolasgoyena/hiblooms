@@ -223,7 +223,9 @@ all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "
 # SUBPÁGINAS DE DETALLE (todas las tablas)
 # =========================
 params = st.query_params
-if "page" in params and params.get("page") in ["lab_image", "detail"]:
+
+# ====== Detalle de un registro (genérico o lab_images) ======
+if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" in params:
     table = params.get("table", "lab_images") if params.get("page") == "detail" else "lab_images"
     record_id = params.get("id")
 
@@ -322,36 +324,43 @@ if "page" in params and params.get("page") in ["lab_image", "detail"]:
             st.query_params.clear()
             st.rerun()
 
-    # =============================
-    # Detalle de un grupo de muestras
-    # =============================
-    elif params.get("page") == "detail" and "group" in params and "time" in params:
-        point_id = params.get("group")
-        time_group = params.get("time")
-    
-        # Recuperar registros del grupo
-        time_start = pd.to_datetime(time_group)
-        time_end = time_start + pd.Timedelta(minutes=30)
-        sql = text(f"""
-            SELECT * FROM "{table}"
-            WHERE extraction_point_id = :pid
-              AND {time_col} BETWEEN :tstart AND :tend
-            ORDER BY {time_col} ASC
-        """)
-        with engine.connect() as con:
-            df_group = pd.read_sql(sql, con, params={"pid": point_id, "tstart": time_start, "tend": time_end})
-    
-        st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
-        st.dataframe(df_group, use_container_width=True, hide_index=True)
-    
-        st.markdown("---")
-        if st.button("⬅️ Volver al catálogo"):
-            st.query_params.clear()
-            st.rerun()
-    
+    st.stop()
+
+# ====== Detalle de un grupo de muestras ======
+if params.get("page") == "detail" and "group" in params and "time" in params:
+    table = params.get("table")
+    point_id = params.get("group")
+    time_group = params.get("time")
+
+    # Determinar columna temporal
+    table_cols = [c["name"] for c in get_cached_columns(engine, table)]
+    time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"] if c in table_cols), None)
+    if not time_col:
+        st.error("❌ No se encontró una columna temporal adecuada en la tabla.")
         st.stop()
 
+    # Recuperar registros del grupo (±30 min)
+    time_start = pd.to_datetime(time_group)
+    time_end = time_start + pd.Timedelta(minutes=30)
+    sql = text(f"""
+        SELECT * FROM "{table}"
+        WHERE extraction_point_id = :pid
+          AND {time_col} BETWEEN :tstart AND :tend
+        ORDER BY {time_col} ASC
+    """)
+    with engine.connect() as con:
+        df_group = pd.read_sql(sql, con, params={"pid": point_id, "tstart": time_start, "tend": time_end})
+
+    st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
+    st.dataframe(df_group, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    if st.button("⬅️ Volver al catálogo"):
+        st.query_params.clear()
+        st.rerun()
+
     st.stop()
+
 
 
 
