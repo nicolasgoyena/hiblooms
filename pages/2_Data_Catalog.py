@@ -236,40 +236,59 @@ if params.get("page") == "lab_image" and "id" in params:
     st.subheader(f"🧫 Detalle de imagen #{record_id}")
 
     # =============================
-    # Imagen principal + mapa lado a lado
+    # Imagen principal + mapa lado a lado (alineados arriba)
     # =============================
     col_img, col_map = st.columns([1, 1], gap="large")
-
+    
     # --- Imagen principal ---
     with col_img:
+        st.markdown(
+            """
+            <div style="display:flex; flex-direction:column; align-items:center; margin-top:-10px;">
+            """,
+            unsafe_allow_html=True
+        )
+    
         img_url = normalize_drive_url(str(row.get("image_url", "")))
         if img_url:
             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
             st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
         else:
             st.info("⚠️ Imagen no disponible.")
-
+    
+        st.markdown("</div>", unsafe_allow_html=True)
+    
     # --- Mapa ---
     with col_map:
+        st.markdown(
+            """
+            <div style="margin-top:-10px;">
+            """,
+            unsafe_allow_html=True
+        )
+    
         if "extraction_id" in row and pd.notna(row["extraction_id"]):
             coords = get_extraction_point_coords(engine, row["extraction_id"])
             if coords:
                 lat, lon = coords
                 st.markdown("### 🗺️ Punto de extracción asociado")
                 m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
-
+    
                 # ✅ Marcador visible con icono y color
                 folium.Marker(
                     [lat, lon],
                     tooltip=f"Extraction ID: {row['extraction_id']}",
                     icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
                 ).add_to(m)
-
+    
                 st_folium(m, width=600, height=400)
             else:
                 st.info("📍 No hay coordenadas disponibles para este extraction_id.")
         else:
             st.info("📍 Este registro no tiene extraction_id asociado.")
+    
+        st.markdown("</div>", unsafe_allow_html=True)
+
 
     # =============================
     # Información del registro
