@@ -315,8 +315,12 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     col1, col2 = st.columns(2)
     with col1:
         if st.button("⬅️ Volver al catálogo"):
+            current_table = st.query_params.get("table", "lab_images")
+            # Solo limpiar los parámetros de detalle
             st.query_params.clear()
+            st.query_params.update(table=current_table)
             st.rerun()
+
     with col2:
         if st.button("🗑️ Borrar registro"):
             delete_record(engine, table, pk, record_id)
@@ -355,9 +359,14 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     st.dataframe(df_group, use_container_width=True, hide_index=True)
 
     st.markdown("---")
-    if st.button("⬅️ Volver al catálogo"):
-        st.query_params.clear()
-        st.rerun()
+    with col1:
+        if st.button("⬅️ Volver al catálogo"):
+            current_table = st.query_params.get("table", "lab_images")
+            # Solo limpiar los parámetros de detalle
+            st.query_params.clear()
+            st.query_params.update(table=current_table)
+            st.rerun()
+
 
     st.stop()
 
