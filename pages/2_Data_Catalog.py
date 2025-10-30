@@ -543,13 +543,103 @@ if table in grouped_tables:
             st.caption(f"Mostrando {len(visible_groups)} grupos (Página {page} de {total_pages})")
 
 else:
-    # 🔹 Tablas normales (sin agrupación)
-    st.markdown(f"### 📘 Registros de `{table}` (paginación estándar)")
+    # ============================
+    # 🔹 Caso especial: embalses → mapa de polígonos
+    # ============================
+    if table == "reservoirs_spain":
+        st.markdown("### 🗺️ Mapa interactivo de embalses de España")
 
-    if df.empty:
-        st.info("No se han encontrado registros.")
+        if df.empty:
+            st.info("No hay registros de embalses para mostrar.")
+        else:
+            from shapely import wkb
+            import geopandas as gpd
+
+            df = df.copy()
+            try:
+                # Convertir geometría WKB a shapely
+                df["geometry"] = df["geometry"].apply(
+                    lambda x: wkb.loads(x, hex=True) if isinstance(x, str) else wkb.loads(bytes(x))
+                )
+            except Exception:
+                st.error("⚠️ Error al convertir geometrías WKB. Verifica el formato de la columna 'geometry'.")
+                st.stop()
+
+            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+
+            # Calcular el centro del mapa
+            centroid = gdf.geometry.unary_union.centroid
+            m = folium.Map(location=[centroid.y, centroid.x], zoom_start=6, tiles="Esri.WorldImagery")
+
+            # Estilos de polígonos
+            def style_function(feature):
+                return {
+                    "fillColor": "#2196F3",
+                    "color": "#0D47A1",
+                    "weight": 1.2,
+                    "fillOpacity": 0.45,
+                }
+
+            def highlight_function(feature):
+                return {
+                    "fillColor": "#FFC107",
+                    "color": "#FF9800",
+                    "weight": 2.5,
+                    "fillOpacity": 0.65,
+                }
+
+            # Tooltip con toda la info (excepto geometría)
+            for _, row in gdf.iterrows():
+                geom = row.geometry
+                if geom.is_empty:
+                    continue
+
+                tooltip_html = ""
+                for col in gdf.columns:
+                    if col != "geometry":
+                        val = row[col]
+                        val_str = str(val) if pd.notna(val) else "-"
+                        tooltip_html += f"<b>{col}:</b> {val_str}<br>"
+
+                folium.GeoJson(
+                    row.geometry.__geo_interface__,
+                    style_function=style_function,
+                    highlight_function=highlight_function,
+                    tooltip=folium.Tooltip(tooltip_html, sticky=True, direction="top", opacity=0.9)
+                ).add_to(m)
+
+            # Estilo y visualización del mapa
+            st.markdown(
+                """
+                <style>
+                .centered-map {
+                    display: flex;
+                    justify-content: center;
+                    margin: 0 auto;
+                    width: 95%;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
+            folium_static(m, width=1000, height=650)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # ============================
+    # 🔹 Tablas normales (por defecto)
+    # ============================
     else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.markdown(f"### 📘 Registros de `{table}` (paginación estándar)")
+        if df.empty:
+            st.info("No se han encontrado registros.")
+        else:
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
 
 # =====================
 # Paginación final (dinámica según tipo de tabla)
