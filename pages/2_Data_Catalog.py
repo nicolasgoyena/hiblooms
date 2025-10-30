@@ -552,84 +552,99 @@ else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
 # =====================
-# Paginación final (solo si la tabla lo requiere)
+# Paginación final (dinámica según tipo de tabla)
 # =====================
 
-# Tablas donde SÍ tiene sentido paginar
-tables_with_pagination = [
-    "lab_images", "samples", "sensor_data", "profiles_data",
-    "insitu_determinations", "insitu_sampling", "sediment_data"
-]
+grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling"]
 
-if table in tables_with_pagination:
+if table in grouped_tables:
+    # Calcular total de grupos únicos (no filas)
+    time_col = next(
+        (c for c in ["date", "datetime", "created_at", "timestamp"]
+         if c in [col["name"] for col in get_cached_columns(engine, table)]),
+        None
+    )
+    if time_col and not df.empty:
+        df["hour_group"] = pd.to_datetime(df[time_col]).dt.floor("H")
+        total_groups = len(df.groupby(["extraction_point_id", "hour_group"]))
+    else:
+        total_groups = 0
+
+    total_pages = max(1, (total_groups + page_size - 1) // page_size)
+    start_rec = (page - 1) * page_size + 1 if total_groups > 0 else 0
+    end_rec = min(page * page_size, total_groups)
+
+else:
+    # Modo normal: paginación por filas
     total_pages = max(1, (total + page_size - 1) // page_size)
     start_rec = offset + 1 if total > 0 else 0
     end_rec = min(offset + page_size, total)
 
-    col1, col2, col3 = st.columns([1, 5, 1])
+# =====================
+# Controles de navegación (comunes)
+# =====================
 
-    with col1:
-        if page > 1:
-            if st.button("⬅️ Anterior"):
-                st.session_state["page"] = page - 1
-                st.rerun()
+col1, col2, col3 = st.columns([1, 5, 1])
 
-    with col2:
-        st.markdown(
-            f"""
-            <div style='text-align:center; font-size:15px;'>
-                Página <b>{page}</b> de <b>{total_pages}</b> · 
-                Registros {start_rec}–{end_rec} de {total}
-            </div>
-            """,
-            unsafe_allow_html=True
+with col1:
+    if page > 1:
+        if st.button("⬅️ Anterior"):
+            st.session_state["page"] = page - 1
+            st.rerun()
+
+with col2:
+    st.markdown(
+        f"""
+        <div style='text-align:center; font-size:15px;'>
+            Página <b>{page}</b> de <b>{total_pages}</b> · 
+            Registros {start_rec}–{end_rec}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        """
+        <div style='height:6px;'></div>
+        <div style='display:flex; justify-content:center; align-items:center; gap:8px;'>
+            <span style='font-size:14px; color:#555;'>Ir a página:</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    center_col = st.columns([4, 1, 4])[1]
+    with center_col:
+        new_page = st.number_input(
+            "",
+            min_value=1,
+            max_value=total_pages,
+            value=page,
+            step=1,
+            label_visibility="collapsed",
+            key=f"go_to_page_{table}",
+            format="%d"
         )
+        if new_page != page:
+            st.session_state["page"] = new_page
+            st.rerun()
 
         st.markdown(
             """
-            <div style='height:6px;'></div>
-            <div style='display:flex; justify-content:center; align-items:center; gap:8px;'>
-                <span style='font-size:14px; color:#555;'>Ir a página:</span>
-            </div>
+            <style>
+            div[data-baseweb="input"] > div {
+                width: 70px !important;
+                text-align: center !important;
+                margin: 0 auto !important;
+            }
+            </style>
             """,
             unsafe_allow_html=True
         )
 
-        center_col = st.columns([4, 1, 4])[1]
-        with center_col:
-            new_page = st.number_input(
-                "",
-                min_value=1,
-                max_value=total_pages,
-                value=page,
-                step=1,
-                label_visibility="collapsed",
-                key="go_to_page",
-                format="%d"
-            )
-            if new_page != page:
-                st.session_state["page"] = new_page
-                st.rerun()
+with col3:
+    if page < total_pages:
+        if st.button("Siguiente ➡️"):
+            st.session_state["page"] = page + 1
+            st.rerun()
 
-            st.markdown(
-                """
-                <style>
-                div[data-baseweb="input"] > div {
-                    width: 70px !important;
-                    text-align: center !important;
-                    margin: 0 auto !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-
-    with col3:
-        if page < total_pages:
-            if st.button("Siguiente ➡️"):
-                st.session_state["page"] = page + 1
-                st.rerun()
-
-else:
-    st.markdown("---")
-    st.caption(f"Mostrando todos los registros de **{table}** (sin paginación).")
