@@ -126,16 +126,21 @@ def choose_order_column(cols: List[Dict[str, Any]], pk: Optional[str]) -> str:
 from streamlit_folium import st_folium
 import folium
 
-def get_extraction_point_coords(engine, extraction_point_id):
-    """Obtiene lat/lon del punto de extracción asociado."""
+def get_extraction_point_coords(engine, extraction_id):
+    """
+    Dado un extraction_id (de lab_images), obtiene las coordenadas (lat, lon)
+    del punto de extracción asociado, navegando a través de samples y extraction_points.
+    """
     try:
         sql = text("""
-            SELECT latitude, longitude
-            FROM extraction_points
-            WHERE id = :pid
+            SELECT ep.latitude, ep.longitude
+            FROM samples s
+            JOIN extraction_points ep ON s.extraction_point_id = ep.id
+            WHERE s.extraction_id = :eid
+            LIMIT 1
         """)
         with engine.connect() as con:
-            row = con.execute(sql, {"pid": extraction_point_id}).fetchone()
+            row = con.execute(sql, {"eid": extraction_id}).fetchone()
         if row and row[0] is not None and row[1] is not None:
             return float(row[0]), float(row[1])
     except Exception as e:
@@ -241,21 +246,21 @@ if params.get("page") == "lab_image" and "id" in params:
     st.dataframe(df_meta, hide_index=True, use_container_width=True)
 
     # 🔹 Mapa con ubicación del punto de extracción
-    if "extraction_point_id" in row and pd.notna(row["extraction_point_id"]):
-        coords = get_extraction_point_coords(engine, row["extraction_point_id"])
+    if "extraction_id" in row and pd.notna(row["extraction_id"]):
+        coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
             lat, lon = coords
             st.markdown("### 🗺️ Ubicación del punto de extracción")
             m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
             folium.Marker(
                 [lat, lon],
-                tooltip=f"Punto de extracción {row['extraction_point_id']}"
+                tooltip=f"Punto de extracción asociado a extraction_id {row['extraction_id']}"
             ).add_to(m)
             st_folium(m, width=650, height=350)
         else:
-            st.info("📍 No hay coordenadas disponibles para este punto de extracción.")
+            st.info("📍 No hay coordenadas disponibles para este extraction_id.")
     else:
-        st.info("📍 Este registro no tiene asociado un punto de extracción.")
+        st.info("📍 Este registro no tiene extraction_id asociado.")
 
     st.markdown("---")
     edit_mode = st.toggle("✏️ Editar registro", value=False)
