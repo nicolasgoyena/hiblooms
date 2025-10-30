@@ -270,14 +270,15 @@ if params.get("page") == "lab_image" and "id" in params:
         st.info("⚠️ Imagen no disponible.")
     
     
-    # ---- Mapa debajo (centrado y con estilo uniforme) ----
+    # ---- Mapa debajo ----
     if "extraction_id" in row and pd.notna(row["extraction_id"]):
         coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
             lat, lon = coords
+            # 🔹 Título alineado a la izquierda
             st.markdown(
                 """
-                <h3 style='text-align:center; margin-top:30px; margin-bottom:15px;'>
+                <h3 style='text-align:left; margin-top:30px; margin-bottom:10px;'>
                     🗺️ Punto de extracción asociado
                 </h3>
                 """,
@@ -294,7 +295,7 @@ if params.get("page") == "lab_image" and "id" in params:
                 icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
             ).add_to(m)
     
-            # ✅ Centrado real sin contenedores fantasmas
+            # ✅ Mapa centrado y con estilo
             st.markdown(
                 """
                 <style>
