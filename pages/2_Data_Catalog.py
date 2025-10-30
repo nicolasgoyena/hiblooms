@@ -550,6 +550,9 @@ else:
     # ============================
     # 🔹 Caso especial: embalses → mapa de polígonos estilo shapefile
     # ============================
+    # ============================
+    # 🔹 Caso especial: embalses → mapa de polígonos con selector de capas
+    # ============================
     if table == "reservoirs_spain":
         st.markdown("### 🗺️ Mapa interactivo de embalses de España")
     
@@ -582,20 +585,44 @@ else:
     
             gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
     
-            # --- Calcular extensión y crear mapa ---
+            # --- Calcular extensión y centro ---
             bounds = gdf.total_bounds  # (minx, miny, maxx, maxy)
             center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-            m = folium.Map(location=center, zoom_start=6, tiles="Stamen Terrain")
-
     
-            # --- Dibujar embalses uno a uno ---
+            # --- Crear mapa base sin tiles ---
+            m = folium.Map(location=center, zoom_start=6, tiles=None)
+    
+            # 🌍 Capa base: Satélite Esri
+            folium.TileLayer(
+                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                attr="Tiles © Esri &mdash; Source: Esri, Earthstar Geographics, and the GIS User Community",
+                name="Satélite Esri",
+            ).add_to(m)
+    
+            # 🗺️ Capa base: CartoDB Positron (claro)
+            folium.TileLayer(
+                tiles="https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
+                attr="© OpenStreetMap contributors, © CartoDB",
+                name="CartoDB Positron",
+            ).add_to(m)
+    
+            # 🌿 Capa base: Stamen Terrain
+            folium.TileLayer(
+                tiles="https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",
+                attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.",
+                name="Stamen Terrain",
+            ).add_to(m)
+    
+            # Añadir control para cambiar entre capas
+            folium.LayerControl(position="topright", collapsed=False).add_to(m)
+    
+            # --- Dibujar embalses ---
             nombre_columna = next((c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None)
             if not nombre_columna:
                 nombre_columna = gdf.columns[0]  # usar la primera columna disponible como fallback
     
             for _, row in gdf.iterrows():
                 nombre = str(row.get(nombre_columna, "Embalse desconocido"))
-    
                 geom = row.geometry
                 if geom.is_empty:
                     continue
@@ -645,6 +672,7 @@ else:
             st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
             folium_static(m, width=1000, height=650)
             st.markdown("</div>", unsafe_allow_html=True)
+
     
 
 
