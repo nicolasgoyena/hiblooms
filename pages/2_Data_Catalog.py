@@ -434,15 +434,13 @@ df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size
 
 # ===== Vista especial lab_images =====
 if table == "lab_images":
-    st.markdown("### 🖼️ Galería de imágenes (haz clic en una tarjeta para ver el detalle)")
+    st.markdown("### 🖼️ Galería de imágenes (clic para ver detalle)")
     st.markdown("<div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>", unsafe_allow_html=True)
 
     n_cols = 4
     rows_chunks = [df.iloc[i:i+n_cols] for i in range(0, len(df), n_cols)]
-
     for chunk in rows_chunks:
         cols_ui = st.columns(n_cols, gap="large")
-
         for (ridx, rrow), col_ui in zip(chunk.iterrows(), cols_ui):
             with col_ui:
                 img_url = normalize_drive_url(str(rrow.get("image_url", "")))
@@ -450,51 +448,33 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                # Formulario invisible con tarjeta clicable
-                with st.form(f"form_{record_id}", clear_on_submit=False):
-                    # Tarjeta HTML (solo visual)
-                    st.markdown(
-                        f"""
-                        <div style="
-                            cursor:pointer;
-                            text-align:center;
-                            border:1px solid #ddd;
-                            border-radius:10px;
-                            padding:10px;
-                            background:#fff;
-                            transition:all 0.2s ease-in-out;
-                            box-shadow:0 2px 6px rgba(0,0,0,0.08);
-                        "
-                        onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
-                        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';"
-                        onclick="document.getElementById('submit_{record_id}').click();"
-                        >
-                            {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
-                            <p style="font-weight:600; margin-top:6px;">🧪 <b>Extraction ID:</b></p>
-                            <p style="color:#1e88e5;">{extraction_id}</p>
-                            <p style="color:#666;">(ID {record_id})</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                    # Botón oculto (no visible)
-                    clicked = st.form_submit_button("", key=f"submit_{record_id}", help="", type="secondary", use_container_width=True)
-                    st.markdown(
-                        f"<style>#submit_{record_id} {{display:none !important;}}</style>",
-                        unsafe_allow_html=True
-                    )
-
-                    # Acción al hacer clic
-                    if clicked:
-                        st.query_params.clear()
-                        st.query_params.update(page="lab_image", id=record_id)
-                        st.rerun()
+                # Redirección interna (sin nueva pestaña)
+                st.markdown(
+                    f"""
+                    <div onclick="window.location.search='?page=lab_image&id={record_id}';" style="
+                        cursor:pointer;
+                        text-align:center;
+                        border:1px solid #ccc;
+                        border-radius:10px;
+                        padding:10px;
+                        background:#fff;
+                        transition:all 0.2s ease-in-out;
+                        box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                        text-decoration:none;
+                        color:inherit;
+                    "
+                    onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
+                    onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';">
+                        {"<img src='" + proxy_url + "' style='max-width:100%; height:auto; border-radius:8px;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                        <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID: <span style='color:#1e88e5;'>{extraction_id}</span></p>
+                        <p style="color:#666;">ID {record_id}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
-
-
 
 
 # ===== Tablas normales =====
