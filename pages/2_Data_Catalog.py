@@ -6,7 +6,8 @@ from sqlalchemy.engine import Engine
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
 
-from db_utils import get_engine, infer_pk
+from ..db_utils import get_engine, infer_pk
+
 
 # =========================
 # CACHÉ Y OPTIMIZACIÓN
