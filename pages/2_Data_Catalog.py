@@ -361,6 +361,8 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     st.dataframe(df_group, use_container_width=True, hide_index=True)
 
     st.markdown("---")
+
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("⬅️ Volver al catálogo"):
             current_table = st.query_params.get("table", table)
@@ -369,6 +371,11 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
             st.query_params.update(table=current_table)
             st.session_state["page"] = current_page
             st.rerun()
+    
+    with col2:
+        if st.button("🗑️ Borrar grupo"):
+            st.warning("⚠️ Eliminación de grupos completa aún no implementada.")
+
 
 
 
