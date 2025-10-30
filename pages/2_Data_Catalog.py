@@ -462,29 +462,37 @@ if table == "lab_images":
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
-    # Calcular índice global (no reiniciado por página)
+    # Asegurar columna índice global
     df.index = df.index + 1 + offset
 
-    # ===============================
-    # Agrupamiento visual (solo dentro de la página actual)
-    # ===============================
     if "extraction_point_id" in df.columns:
-        # Buscar una columna temporal razonable
-        time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"]
-                         if c in df.columns), None)
+        # Buscar columna temporal más probable
+        time_col = next(
+            (c for c in ["date", "datetime", "created_at", "timestamp"]
+             if c in df.columns),
+            None
+        )
 
         if time_col:
-            # Asegurarnos de que sea datetime
             df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
 
-            # Agrupar solo los registros visibles en esta página
-            df["time_group"] = df[time_col].dt.floor("30min").astype(str)
-            grouped = df.groupby(["extraction_point_id", "time_group"])
+            # Agrupar toda la tabla (no solo la página actual)
+            df_all = fetch_cached_records(engine, table, where, params_sql, order_col, 1000000, 0)
+            df_all[time_col] = pd.to_datetime(df_all[time_col], errors="coerce")
+            df_all["time_group"] = df_all[time_col].dt.floor("30min").astype(str)
+
+            grouped = list(df_all.groupby(["extraction_point_id", "time_group"]))
+
+            # Paginación a nivel de grupos
+            total_groups = len(grouped)
+            groups_per_page = page_size
+            start_idx = (page - 1) * groups_per_page
+            end_idx = start_idx + groups_per_page
+            grouped_subset = grouped[start_idx:end_idx]
 
             st.markdown("### 📋 Registros agrupados por punto de extracción y hora aproximada")
 
-            # Crear un container por grupo dentro de esta página
-            for (point, tgrp), group in grouped:
+            for (point, tgrp), group in grouped_subset:
                 with st.container(border=True):
                     time_str = (
                         group[time_col].min().strftime("%Y-%m-%d %H:%M")
@@ -504,19 +512,19 @@ else:
                             st.query_params.update(page="detail", table=table, group=str(point), time=tgrp)
                             st.rerun()
 
-                    # Mostrar parte del grupo (resumen)
-                    preview_cols = [c for c in group.columns if c not in ["time_group"]]
-                    st.dataframe(
-                        group[preview_cols],
-                        hide_index=True,
-                        use_container_width=True
-                    )
+                    # Mostrar el grupo completo (sin limitar número de filas)
+                    preview_cols = [c for c in group.columns if c != "time_group"]
+                    st.dataframe(group[preview_cols], hide_index=True, use_container_width=True)
+
+            # Actualizar paginación global
+            total_pages = max(1, (total_groups + groups_per_page - 1) // groups_per_page)
 
         else:
-            # Si no hay columna temporal, mostramos tabla normal
+            # Sin columna temporal → tabla normal
             st.dataframe(df, use_container_width=True)
+
     else:
-        # Si no hay columna de punto de extracción, mostramos tabla normal
+        # Sin columna de punto → tabla normal
         st.dataframe(df, use_container_width=True)
 
 
