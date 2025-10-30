@@ -450,32 +450,44 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                # Crear tarjeta clicable (sin enlace externo)
-                clicked = st.container()
-
-                with clicked:
-                    if st.button(
-                        f"🧪 Extraction ID: {extraction_id}\n(ID {record_id})",
-                        key=f"card_{record_id}",
+                # Crear tarjeta clicable (sin botón visible)
+                with st.form(f"form_{record_id}", clear_on_submit=False):
+                    clicked = st.form_submit_button(
+                        "",
                         use_container_width=True
-                    ):
-                        st.query_params.clear()
-                        st.query_params.update(page="lab_image", id=record_id)
-                        st.rerun()
-
+                    )
+                    # Tarjeta visual
                     st.markdown(
                         f"""
-                        <div style="text-align:center; border:1px solid #ddd; border-radius:10px;
-                                    padding:10px; background:#fff; transition:all 0.2s ease-in-out;
-                                    box-shadow:0 2px 6px rgba(0,0,0,0.08); cursor:pointer;">
+                        <div style="
+                            cursor:pointer;
+                            text-align:center;
+                            border:1px solid #ddd;
+                            border-radius:10px;
+                            padding:10px;
+                            background:#fff;
+                            transition:all 0.2s ease-in-out;
+                            box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                        "
+                        onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
+                        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';">
                             {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                            <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID:</p>
+                            <p style="color:#1e88e5;">{extraction_id}</p>
+                            <p style="color:#666;">(ID {record_id})</p>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
 
+                    if clicked:
+                        st.query_params.clear()
+                        st.query_params.update(page="lab_image", id=record_id)
+                        st.rerun()
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
+
 
 
 # ===== Tablas normales =====
