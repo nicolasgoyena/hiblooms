@@ -585,7 +585,8 @@ else:
             # --- Calcular extensión y crear mapa ---
             bounds = gdf.total_bounds  # (minx, miny, maxx, maxy)
             center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-            m = folium.Map(location=center, zoom_start=6, tiles="Esri.WorldImagery")
+            m = folium.Map(location=center, zoom_start=6, tiles="Stamen Terrain")
+
     
             # --- Dibujar embalses uno a uno ---
             nombre_columna = next((c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None)
