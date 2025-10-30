@@ -253,7 +253,8 @@ if params.get("page") == "lab_image" and "id" in params:
         if coords:
             lat, lon = coords
             st.markdown("### 🗺️ Punto de extracción asociado")
-            m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
+            m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
+
     
             # ✅ Marcador rojo visible
             folium.Marker(
