@@ -542,113 +542,115 @@ if table in grouped_tables:
             total_pages = max(1, (total_groups + page_size - 1) // page_size)
             st.caption(f"Mostrando {len(visible_groups)} grupos (Página {page} de {total_pages})")
 
-# ============================
-# 🔹 Caso especial: embalses → mapa de polígonos (MultiPolygon WKB Hex)
-# ============================
-if table == "reservoirs_spain":
-    st.markdown("### 🗺️ Mapa interactivo de embalses de España")
-
-    if df.empty:
-        st.info("No hay registros de embalses para mostrar.")
-    else:
-        from shapely import wkb
-        import geopandas as gpd
-        import json
-
-        df = df.copy()
-
-        # --- Conversión específica para geometría WKB hex (como la tuya) ---
-        def safe_load_wkb_hex(geom):
-            try:
-                if isinstance(geom, str):
-                    # Es WKB codificado en hexadecimal
-                    return wkb.loads(geom, hex=True)
-                elif isinstance(geom, (bytes, bytearray)):
-                    return wkb.loads(geom)
-            except Exception:
-                return None
-            return None
-
-        df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
-        df = df[df["geometry"].notnull() & df["geometry"].apply(lambda g: not g.is_empty)]
-
+else:
+    # ============================
+    # 🔹 Caso especial: embalses → mapa de polígonos
+    # ============================
+    # ============================
+    if table == "reservoirs_spain":
+        st.markdown("### 🗺️ Mapa interactivo de embalses de España")
+    
         if df.empty:
-            st.warning("⚠️ Ninguna geometría válida encontrada en la columna 'geometry'.")
-            st.stop()
-
-        # Crear GeoDataFrame
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-
-        # --- Calcular límites y centro del mapa ---
-        bounds = gdf.total_bounds  # [minx, miny, maxx, maxy]
-        center_lat = (bounds[1] + bounds[3]) / 2
-        center_lon = (bounds[0] + bounds[2]) / 2
-
-        # --- Crear mapa centrado y con fondo satélite ---
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=6, tiles="Esri.WorldImagery")
-
-        # --- Estilos de polígonos ---
-        def style_function(feature):
-            return {
-                "fillColor": "#1E88E5",
-                "color": "#0D47A1",
-                "weight": 1.0,
-                "fillOpacity": 0.5,
-            }
-
-        def highlight_function(feature):
-            return {
-                "fillColor": "#FFC107",
-                "color": "#FF9800",
-                "weight": 2,
-                "fillOpacity": 0.65,
-            }
-
-        # --- Tooltip con todas las columnas excepto geometry ---
-        tooltip_fields = [c for c in gdf.columns if c != "geometry"]
-        tooltip_aliases = [f"{c}:" for c in tooltip_fields]
-
-        geojson = json.loads(gdf.to_json())
-
-        folium.GeoJson(
-            geojson,
-            name="Embalses",
-            style_function=style_function,
-            highlight_function=highlight_function,
-            tooltip=folium.features.GeoJsonTooltip(
-                fields=tooltip_fields,
-                aliases=tooltip_aliases,
-                sticky=True,
-                direction="top",
-                opacity=0.9,
-                labels=True
-            ),
-        ).add_to(m)
-
-        # Ajustar la vista al bounding box (todos los embalses visibles)
-        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-
-        # --- Mostrar mapa en Streamlit ---
-        st.markdown(
-            """
-            <style>
-            .centered-map {
-                display: flex;
-                justify-content: center;
-                margin: 0 auto;
-                width: 95%;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
-        folium_static(m, width=1000, height=650)
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.info("No hay registros de embalses para mostrar.")
+        else:
+            from shapely import wkb
+            import geopandas as gpd
+            import json
+    
+            df = df.copy()
+    
+            # --- Conversión específica para geometría WKB hex (como la tuya) ---
+            def safe_load_wkb_hex(geom):
+                try:
+                    if isinstance(geom, str):
+                        # Es WKB codificado en hexadecimal
+                        return wkb.loads(geom, hex=True)
+                    elif isinstance(geom, (bytes, bytearray)):
+                        return wkb.loads(geom)
+                except Exception:
+                    return None
+                return None
+    
+            df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
+            df = df[df["geometry"].notnull() & df["geometry"].apply(lambda g: not g.is_empty)]
+    
+            if df.empty:
+                st.warning("⚠️ Ninguna geometría válida encontrada en la columna 'geometry'.")
+                st.stop()
+    
+            # Crear GeoDataFrame
+            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+    
+            # --- Calcular límites y centro del mapa ---
+            bounds = gdf.total_bounds  # [minx, miny, maxx, maxy]
+            center_lat = (bounds[1] + bounds[3]) / 2
+            center_lon = (bounds[0] + bounds[2]) / 2
+    
+            # --- Crear mapa centrado y con fondo satélite ---
+            m = folium.Map(location=[center_lat, center_lon], zoom_start=6, tiles="Esri.WorldImagery")
+    
+            # --- Estilos de polígonos ---
+            def style_function(feature):
+                return {
+                    "fillColor": "#1E88E5",
+                    "color": "#0D47A1",
+                    "weight": 1.0,
+                    "fillOpacity": 0.5,
+                }
+    
+            def highlight_function(feature):
+                return {
+                    "fillColor": "#FFC107",
+                    "color": "#FF9800",
+                    "weight": 2,
+                    "fillOpacity": 0.65,
+                }
+    
+            # --- Tooltip con todas las columnas excepto geometry ---
+            tooltip_fields = [c for c in gdf.columns if c != "geometry"]
+            tooltip_aliases = [f"{c}:" for c in tooltip_fields]
+    
+            geojson = json.loads(gdf.to_json())
+    
+            folium.GeoJson(
+                geojson,
+                name="Embalses",
+                style_function=style_function,
+                highlight_function=highlight_function,
+                tooltip=folium.features.GeoJsonTooltip(
+                    fields=tooltip_fields,
+                    aliases=tooltip_aliases,
+                    sticky=True,
+                    direction="top",
+                    opacity=0.9,
+                    labels=True
+                ),
+            ).add_to(m)
+    
+            # Ajustar la vista al bounding box (todos los embalses visibles)
+            m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+    
+            # --- Mostrar mapa en Streamlit ---
+            st.markdown(
+                """
+                <style>
+                .centered-map {
+                    display: flex;
+                    justify-content: center;
+                    margin: 0 auto;
+                    width: 95%;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+    
+            st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
+            folium_static(m, width=1000, height=650)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
     # ============================
@@ -758,4 +760,3 @@ with col3:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
-
