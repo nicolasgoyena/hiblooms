@@ -123,7 +123,7 @@ def choose_order_column(cols: List[Dict[str, Any]], pk: Optional[str]) -> str:
             return c
     return names[0] if names else "1"
 
-from streamlit_folium import st_folium
+from streamlit_folium import folium_static
 import folium
 
 def get_extraction_point_coords(engine, extraction_id):
@@ -315,7 +315,7 @@ if params.get("page") == "lab_image" and "id" in params:
             )
     
             st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
-            st_folium(m, width=700, height=400)
+            folium_static(m, width=700, height=400)
             st.markdown("</div>", unsafe_allow_html=True)
     
         else:
