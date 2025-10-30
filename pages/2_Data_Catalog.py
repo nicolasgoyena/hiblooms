@@ -252,7 +252,7 @@ if params.get("page") == "lab_image" and "id" in params:
         coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
             lat, lon = coords
-            st.markdown("### 🗺️ Punto de extracción asociado")
+            st.markdown("### 🗺️ Punto de extracción")
             m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
 
     
