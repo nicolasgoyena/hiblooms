@@ -316,10 +316,12 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     with col1:
         if st.button("⬅️ Volver al catálogo"):
             current_table = st.query_params.get("table", "lab_images")
-            # Solo limpiar los parámetros de detalle
+            current_page = st.session_state.get("page", 1)
             st.query_params.clear()
             st.query_params.update(table=current_table)
+            st.session_state["page"] = current_page
             st.rerun()
+
 
     with col2:
         if st.button("🗑️ Borrar registro"):
@@ -361,11 +363,13 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     st.markdown("---")
     with col1:
         if st.button("⬅️ Volver al catálogo"):
-            current_table = st.query_params.get("table", "lab_images")
-            # Solo limpiar los parámetros de detalle
+            current_table = st.query_params.get("table", table)
+            current_page = st.session_state.get("page", 1)
             st.query_params.clear()
             st.query_params.update(table=current_table)
+            st.session_state["page"] = current_page
             st.rerun()
+
 
 
     st.stop()
