@@ -434,11 +434,12 @@ df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size
 
 # ===== Vista especial lab_images =====
 if table == "lab_images":
-    st.markdown("### 🖼️ Galería de imágenes (clic para ver detalle)")
+    st.markdown("### 🖼️ Galería de imágenes (haz clic para ver detalle)")
     st.markdown("<div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>", unsafe_allow_html=True)
 
     n_cols = 4
     rows_chunks = [df.iloc[i:i+n_cols] for i in range(0, len(df), n_cols)]
+
     for chunk in rows_chunks:
         cols_ui = st.columns(n_cols, gap="large")
         for (ridx, rrow), col_ui in zip(chunk.iterrows(), cols_ui):
@@ -448,28 +449,23 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                # Enlace directo clicable en toda la tarjeta
-                detail_url = f"?page=lab_image&id={record_id}"
+                # ✅ Botón completo que redirige en la misma pestaña
+                if st.button(
+                    f"🧪 Extraction ID: {extraction_id}\n(ID {record_id})",
+                    key=f"btn_{record_id}",
+                    use_container_width=True
+                ):
+                    st.query_params.clear()
+                    st.query_params.update(page="lab_image", id=record_id)
+                    st.rerun()
 
+                # Imagen de previsualización
                 st.markdown(
                     f"""
-                    <a href="{detail_url}" style="text-decoration:none; color:inherit;">
-                        <div style="
-                            text-align:center;
-                            border:1px solid #ccc;
-                            border-radius:10px;
-                            padding:10px;
-                            background:#fff;
-                            transition:all 0.2s ease-in-out;
-                            box-shadow:0 2px 6px rgba(0,0,0,0.08);
-                        " 
-                        onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
-                        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';">
-                            {"<img src='" + proxy_url + "' style='max-width:100%; height:auto; border-radius:8px;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
-                            <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID: <span style="color:#1e88e5;">{extraction_id}</span></p>
-                            <p style="color:#666;">ID {record_id}</p>
-                        </div>
-                    </a>
+                    <div style="text-align:center; border:1px solid #ddd; border-radius:10px;
+                                padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                        {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                    </div>
                     """,
                     unsafe_allow_html=True
                 )
