@@ -270,14 +270,14 @@ if params.get("page") == "lab_image" and "id" in params:
         st.info("⚠️ Imagen no disponible.")
     
     
-    # ---- Mapa debajo (centrado de verdad) ----
+    # ---- Mapa debajo (centrado y con estilo uniforme) ----
     if "extraction_id" in row and pd.notna(row["extraction_id"]):
         coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
             lat, lon = coords
             st.markdown(
                 """
-                <h3 style='text-align:center; margin-top:30px; margin-bottom:10px;'>
+                <h3 style='text-align:center; margin-top:30px; margin-bottom:15px;'>
                     🗺️ Punto de extracción asociado
                 </h3>
                 """,
@@ -294,22 +294,34 @@ if params.get("page") == "lab_image" and "id" in params:
                 icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
             ).add_to(m)
     
-            # ✅ Contenedor centrado con ancho fijo
-            map_html = st_folium(m, width=700, height=400)
+            # ✅ Centrado real sin contenedores fantasmas
             st.markdown(
                 """
-                <div style="display: flex; justify-content: center; margin-top: -420px;">
-                    <div style="width: 700px; height: 400px; border-radius: 10px; overflow: hidden;
-                                box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-                    </div>
-                </div>
+                <style>
+                .centered-map {
+                    display: flex;
+                    justify-content: center;
+                    margin: 0 auto;
+                    width: 720px;
+                    max-width: 90%;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                }
+                </style>
                 """,
                 unsafe_allow_html=True
             )
+    
+            st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
+            st_folium(m, width=700, height=400)
+            st.markdown("</div>", unsafe_allow_html=True)
+    
         else:
             st.info("📍 No hay coordenadas disponibles para este extraction_id.")
     else:
         st.info("📍 Este registro no tiene extraction_id asociado.")
+
 
     
 
