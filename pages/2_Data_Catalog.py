@@ -236,33 +236,40 @@ if params.get("page") == "lab_image" and "id" in params:
     st.subheader(f"🧫 Detalle de imagen #{record_id}")
 
     # =============================
-    # Imagen principal + mapa lado a lado (alineados arriba)
+    # Imagen principal + mapa alineados (altura uniforme)
     # =============================
+    
     col_img, col_map = st.columns([1, 1], gap="large")
     
     # --- Imagen principal ---
     with col_img:
-        st.markdown(
-            """
-            <div style="display:flex; flex-direction:column; align-items:center; margin-top:-10px;">
-            """,
-            unsafe_allow_html=True
-        )
-    
         img_url = normalize_drive_url(str(row.get("image_url", "")))
         if img_url:
             proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
-            st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
+            st.markdown(
+                f"""
+                <div style="
+                    display:flex;
+                    flex-direction:column;
+                    align-items:center;
+                    justify-content:flex-start;
+                    height:420px;
+                    margin-top:0;
+                ">
+                    <img src="{proxy_url}" style="max-height:400px; width:auto; border-radius:8px; object-fit:contain;">
+                    <p style="font-size:13px; color:#777; margin-top:4px;">ID {record_id}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
             st.info("⚠️ Imagen no disponible.")
-    
-        st.markdown("</div>", unsafe_allow_html=True)
     
     # --- Mapa ---
     with col_map:
         st.markdown(
             """
-            <div style="margin-top:-10px;">
+            <div style="height:420px; margin-top:0;">
             """,
             unsafe_allow_html=True
         )
@@ -274,7 +281,7 @@ if params.get("page") == "lab_image" and "id" in params:
                 st.markdown("### 🗺️ Punto de extracción asociado")
                 m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
     
-                # ✅ Marcador visible con icono y color
+                # ✅ Marcador rojo visible
                 folium.Marker(
                     [lat, lon],
                     tooltip=f"Extraction ID: {row['extraction_id']}",
@@ -288,6 +295,7 @@ if params.get("page") == "lab_image" and "id" in params:
             st.info("📍 Este registro no tiene extraction_id asociado.")
     
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 
     # =============================
