@@ -129,13 +129,15 @@ import folium
 def get_extraction_point_coords(engine, extraction_id):
     """
     Dado un extraction_id (de lab_images), obtiene las coordenadas (lat, lon)
-    del punto de extracción asociado, navegando a través de samples y extraction_points.
+    del punto de extracción asociado, navegando:
+    lab_images → samples → extraction_points
     """
     try:
         sql = text("""
             SELECT ep.latitude, ep.longitude
             FROM samples s
-            JOIN extraction_points ep ON s.extraction_point_id = ep.id
+            JOIN extraction_points ep
+                ON s.extraction_point_id = ep.extraction_point_id
             WHERE s.extraction_id = :eid
             LIMIT 1
         """)
@@ -146,6 +148,7 @@ def get_extraction_point_coords(engine, extraction_id):
     except Exception as e:
         st.error(f"❌ Error obteniendo coordenadas: {e}")
     return None
+
 
 
 # =========================
