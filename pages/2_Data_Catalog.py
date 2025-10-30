@@ -201,6 +201,7 @@ if params.get("page") == "lab_image" and "id" in params:
 
     st.subheader(f"🖼️ Detalle de imagen #{record_id}")
 
+    # Imagen principal
     img_url = normalize_drive_url(str(row.get("image_url", "")))
     if img_url:
         proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
@@ -208,26 +209,28 @@ if params.get("page") == "lab_image" and "id" in params:
     else:
         st.info("⚠️ Imagen no disponible.")
 
-    # Mostrar mapa si existe extraction_point_id
-    if "extraction_point_id" in record and pd.notna(record["extraction_point_id"]):
-        coords = get_extraction_point_coords(engine, record["extraction_point_id"])
+    # Información del registro
+    st.markdown("### 📋 Información del registro")
+    df_meta = pd.DataFrame(row).reset_index()
+    df_meta.columns = ["Campo", "Valor"]
+    st.dataframe(df_meta, hide_index=True, use_container_width=True)
+
+    # 🔹 Mapa con ubicación del punto de extracción
+    if "extraction_point_id" in row and pd.notna(row["extraction_point_id"]):
+        coords = get_extraction_point_coords(engine, row["extraction_point_id"])
         if coords:
             lat, lon = coords
             st.markdown("### 🗺️ Ubicación del punto de extracción")
             m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
             folium.Marker(
                 [lat, lon],
-                tooltip=f"Punto de extracción {record['extraction_point_id']}"
+                tooltip=f"Punto de extracción {row['extraction_point_id']}"
             ).add_to(m)
-            st_folium(m, width=600, height=350)
+            st_folium(m, width=650, height=350)
         else:
             st.info("📍 No hay coordenadas disponibles para este punto de extracción.")
-
-
-    st.markdown("### 📋 Información del registro")
-    df_meta = pd.DataFrame(row).reset_index()
-    df_meta.columns = ["Campo", "Valor"]
-    st.dataframe(df_meta, hide_index=True, use_container_width=True)
+    else:
+        st.info("📍 Este registro no tiene asociado un punto de extracción.")
 
     st.markdown("---")
     edit_mode = st.toggle("✏️ Editar registro", value=False)
