@@ -219,12 +219,14 @@ insp = inspect(engine)
 all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "spatial_ref_sys"]
 
 
-# Detectar modo detalle
-# Detectar modo detalle
+# =========================
+# SUBPÁGINAS DE DETALLE (todas las tablas)
+# =========================
 params = st.query_params
-if params.get("page") == "lab_image" and "id" in params:
+if "page" in params and params.get("page") in ["lab_image", "detail"]:
+    table = params.get("table", "lab_images") if params.get("page") == "detail" else "lab_images"
     record_id = params.get("id")
-    table = "lab_images"
+
     cols = get_cached_columns(engine, table)
     pk = infer_pk(engine, table) or cols[0]["name"]
 
@@ -233,102 +235,51 @@ if params.get("page") == "lab_image" and "id" in params:
         st.error("❌ No se encontró el registro solicitado.")
         st.stop()
 
-    st.subheader(f"🧫 Detalle de imagen #{record_id}")
+    # Encabezado del detalle
+    st.subheader(f"📄 Detalle del registro (tabla: {table}, ID: {record_id})")
 
     # =============================
-    # Imagen principal + mapa satélite (centrados y compactos)
+    # CASO ESPECIAL: lab_images → imagen + mapa
     # =============================
-    
-    # ---- Imagen ----
-    st.markdown(
-        """
-        <h3 style='text-align:center; margin-bottom:12px;'>🧫 Imagen de laboratorio</h3>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    img_url = normalize_drive_url(str(row.get("image_url", "")))
-    if img_url:
-        proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
+    if table == "lab_images":
         st.markdown(
-            f"""
-            <div style="display:flex; justify-content:center; align-items:center;">
-                <img src="{proxy_url}" alt="Imagen de laboratorio" style="
-                    max-width: 55%;
-                    max-height: 350px;
-                    height: auto;
-                    object-fit: contain;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                ">
-            </div>
-            <p style='text-align:center; color:#666;'>ID {record_id}</p>
+            """
+            <h3 style='text-align:center; margin-bottom:12px;'>🧫 Imagen de laboratorio</h3>
             """,
             unsafe_allow_html=True
         )
-    else:
-        st.info("⚠️ Imagen no disponible.")
-    
-    
-    # ---- Mapa debajo ----
-    if "extraction_id" in row and pd.notna(row["extraction_id"]):
-        coords = get_extraction_point_coords(engine, row["extraction_id"])
-        if coords:
-            lat, lon = coords
-            # 🔹 Título alineado a la izquierda
+        img_url = normalize_drive_url(str(row.get("image_url", "")))
+        if img_url:
+            proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
             st.markdown(
-                """
-                <h3 style='text-align:left; margin-top:30px; margin-bottom:10px;'>
-                    🗺️ Punto de extracción asociado
-                </h3>
+                f"""
+                <div style="display:flex; justify-content:center; align-items:center;">
+                    <img src="{proxy_url}" alt="Imagen de laboratorio" style="
+                        max-width: 55%;
+                        max-height: 350px;
+                        height: auto;
+                        object-fit: contain;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                    ">
+                </div>
+                <p style='text-align:center; color:#666;'>ID {record_id}</p>
                 """,
                 unsafe_allow_html=True
             )
-    
-            # 🌍 Fondo satelital natural
-            m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
-    
-            # 📍 Marcador rojo visible
-            folium.Marker(
-                [lat, lon],
-                tooltip=f"Extraction ID: {row['extraction_id']}",
-                icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
-            ).add_to(m)
-    
-            # ✅ Mapa centrado y con estilo
-            st.markdown(
-                """
-                <style>
-                .centered-map {
-                    display: flex;
-                    justify-content: center;
-                    margin: 0 auto;
-                    width: 720px;
-                    max-width: 90%;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-    
-            st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
-            folium_static(m, width=700, height=400)
-            st.markdown("</div>", unsafe_allow_html=True)
-    
-        else:
-            st.info("📍 No hay coordenadas disponibles para este extraction_id.")
-    else:
-        st.info("📍 Este registro no tiene extraction_id asociado.")
 
-
-    
-
+        # Mapa si existe extraction_id
+        if "extraction_id" in row and pd.notna(row["extraction_id"]):
+            coords = get_extraction_point_coords(engine, row["extraction_id"])
+            if coords:
+                lat, lon = coords
+                st.markdown("<h3 style='text-align:left;'>🗺️ Punto de extracción asociado</h3>", unsafe_allow_html=True)
+                m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
+                folium.Marker([lat, lon], tooltip="Punto de extracción", icon=folium.Icon(color="red")).add_to(m)
+                folium_static(m, width=700, height=400)
 
     # =============================
-    # Información del registro
+    # Información general
     # =============================
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
@@ -341,28 +292,22 @@ if params.get("page") == "lab_image" and "id" in params:
     st.markdown("---")
     edit_mode = st.toggle("✏️ Editar registro", value=False)
     if edit_mode:
-        with st.form("form_edit_detail", clear_on_submit=False):
+        with st.form("form_edit_generic", clear_on_submit=False):
             new_values = {}
             for c in cols:
                 cname = c["name"]
                 if cname == pk:
                     st.text_input(cname, value=str(row.get(cname)), disabled=True)
-                elif cname == "image_url":
-                    st.text_input(cname, value="(no editable)", disabled=True)
                 else:
                     new_values[cname] = render_input_for_column(c, default=row.get(cname))
-            s = st.form_submit_button("Guardar cambios")
-            if s:
-                try:
-                    update_record(engine, table, pk, record_id, new_values)
-                    st.success("✅ Cambios guardados.")
-                    st.query_params.update(page="lab_image", id=record_id)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Error actualizando: {e}")
+            if st.form_submit_button("Guardar cambios"):
+                update_record(engine, table, pk, record_id, new_values)
+                st.success("✅ Cambios guardados.")
+                st.query_params.update(page="detail", table=table, id=record_id)
+                st.rerun()
 
     # =============================
-    # Botones de acción
+    # Botones inferiores
     # =============================
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -372,15 +317,13 @@ if params.get("page") == "lab_image" and "id" in params:
             st.rerun()
     with col2:
         if st.button("🗑️ Borrar registro"):
-            try:
-                delete_record(engine, table, pk, record_id)
-                st.success("✅ Registro eliminado.")
-                st.query_params.clear()
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Error borrando: {e}")
+            delete_record(engine, table, pk, record_id)
+            st.success("✅ Registro eliminado.")
+            st.query_params.clear()
+            st.rerun()
 
     st.stop()
+
 
 
 with st.sidebar:
@@ -477,15 +420,25 @@ if table == "lab_images":
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-
-
-# ===== Tablas normales =====
+# ===== Tablas normales con botones de detalle =====
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
-    # Calcular índice global (no reiniciado por página)
     df.index = df.index + 1 + offset
-    st.dataframe(df, use_container_width=True)
+
+    st.markdown("### 📋 Registros")
+    for i, row in df.iterrows():
+        with st.container(border=True):
+            cols_row = st.columns([5, 1])
+            with cols_row[0]:
+                preview = ", ".join(f"{k}: {row[k]}" for k in df.columns[:3])
+                st.markdown(f"**{preview}**")
+            with cols_row[1]:
+                if st.button("🔍 Ver detalle", key=f"view_{table}_{i}"):
+                    st.query_params.clear()
+                    st.query_params.update(page="detail", table=table, id=row[pk])
+                    st.rerun()
+
 
 # =====================
 # Paginación final (centrada, funcional y con texto "Ir a página:")
