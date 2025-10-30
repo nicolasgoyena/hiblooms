@@ -462,7 +462,7 @@ if table == "lab_images":
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
-    # Asegurar columna índice global
+    # Asegurar índice global
     df.index = df.index + 1 + offset
 
     if "extraction_point_id" in df.columns:
@@ -512,9 +512,13 @@ else:
                             st.query_params.update(page="detail", table=table, group=str(point), time=tgrp)
                             st.rerun()
 
-                    # Mostrar el grupo completo (sin limitar número de filas)
+                    # Mostrar solo una vista previa de 5 filas
                     preview_cols = [c for c in group.columns if c != "time_group"]
-                    st.dataframe(group[preview_cols], hide_index=True, use_container_width=True)
+                    st.dataframe(
+                        group[preview_cols].head(5),
+                        hide_index=True,
+                        use_container_width=True
+                    )
 
             # Actualizar paginación global
             total_pages = max(1, (total_groups + groups_per_page - 1) // groups_per_page)
@@ -526,6 +530,7 @@ else:
     else:
         # Sin columna de punto → tabla normal
         st.dataframe(df, use_container_width=True)
+
 
 
 
