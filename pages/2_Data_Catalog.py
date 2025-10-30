@@ -236,83 +236,92 @@ if params.get("page") == "lab_image" and "id" in params:
     st.subheader(f"🧫 Detalle de imagen #{record_id}")
 
     # =============================
-    # Imagen principal + mapa perfectamente alineados
+    # Imagen + mapa en un mismo contenedor
     # =============================
     
-    st.markdown(
-        """
+    # Obtener URL y coordenadas antes para tenerlo todo listo
+    img_url = normalize_drive_url(str(row.get("image_url", "")))
+    proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}" if img_url else None
+    
+    coords = None
+    if "extraction_id" in row and pd.notna(row["extraction_id"]):
+        coords = get_extraction_point_coords(engine, row["extraction_id"])
+    
+    # Inyectar CSS para layout flexible
+    st.markdown("""
         <style>
-        .aligned-container {
+        .image-map-container {
             display: flex;
-            justify-content: space-between;
+            flex-direction: row;
+            justify-content: center;
             align-items: flex-start;
             gap: 30px;
-            margin-top: 0px;
+            flex-wrap: wrap;
+            margin-top: 10px;
         }
-        .image-box, .map-box {
-            flex: 1;
-            height: 420px;
+        .image-card, .map-card {
+            flex: 1 1 45%;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+            height: auto;
+            min-width: 300px;
         }
-        .image-box img {
-            max-height: 400px;
-            width: auto;
-            border-radius: 8px;
+        .image-card img {
+            width: 100%;
+            height: 380px;
             object-fit: contain;
+            border-radius: 8px;
             display: block;
             margin: 0 auto;
         }
+        .image-card h3, .map-card h3 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
     
-    # Contenedor conjunto
-    st.markdown("<div class='aligned-container'>", unsafe_allow_html=True)
+    # Crear contenedor conjunto
+    st.markdown("<div class='image-map-container'>", unsafe_allow_html=True)
     
-    # --- Imagen ---
-    img_url = normalize_drive_url(str(row.get("image_url", "")))
-    if img_url:
-        proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
+    # ---- Imagen ----
+    if proxy_url:
         st.markdown(
             f"""
-            <div class="image-box">
-                <h3 style="text-align:center;">🧫 Imagen de laboratorio</h3>
-                <img src="{proxy_url}">
-                <p style="text-align:center; font-size:13px; color:#777;">ID {record_id}</p>
+            <div class='image-card'>
+                <h3>🧫 Imagen de laboratorio</h3>
+                <img src="{proxy_url}" alt="Imagen de laboratorio">
+                <p style="text-align:center; color:#666;">ID {record_id}</p>
             </div>
             """,
             unsafe_allow_html=True
         )
     else:
-        st.markdown("<div class='image-box'>⚠️ Imagen no disponible.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='image-card'><p>⚠️ Imagen no disponible</p></div>", unsafe_allow_html=True)
     
-    # --- Mapa ---
-    if "extraction_id" in row and pd.notna(row["extraction_id"]):
-        coords = get_extraction_point_coords(engine, row["extraction_id"])
-        if coords:
-            lat, lon = coords
-            m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
-            folium.Marker(
-                [lat, lon],
-                tooltip=f"Extraction ID: {row['extraction_id']}",
-                icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
-            ).add_to(m)
+    # ---- Mapa ----
+    st.markdown("<div class='map-card'>", unsafe_allow_html=True)
+    st.markdown("<h3>🗺️ Punto de extracción asociado</h3>", unsafe_allow_html=True)
     
-            map_html = st_folium(m, width=600, height=400)
-            st.markdown(
-                """
-                <div class="map-box">
-                    <h3 style="text-align:center;">🗺️ Punto de extracción asociado</h3>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown("<div class='map-box'>📍 No hay coordenadas disponibles.</div>", unsafe_allow_html=True)
+    if coords:
+        lat, lon = coords
+        m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
+        folium.Marker(
+            [lat, lon],
+            tooltip=f"Extraction ID: {row['extraction_id']}",
+            icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
+        ).add_to(m)
+        st_folium(m, width=600, height=380)
     else:
-        st.markdown("<div class='map-box'>📍 Sin extraction_id asociado.</div>", unsafe_allow_html=True)
+        st.info("📍 No hay coordenadas disponibles para este registro.")
     
     st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
     
 
 
