@@ -434,7 +434,7 @@ df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size
 
 # ===== Vista especial lab_images =====
 if table == "lab_images":
-    st.markdown("### 🖼️ Galería de imágenes (haz clic para ver detalle)")
+    st.markdown("### 🖼️ Galería de imágenes (haz clic en la tarjeta para ver el detalle)")
     st.markdown("<div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>", unsafe_allow_html=True)
 
     n_cols = 4
@@ -449,30 +449,61 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                # ✅ Botón completo que redirige en la misma pestaña
-                if st.button(
-                    f"🧪 Extraction ID: {extraction_id}\n(ID {record_id})",
-                    key=f"btn_{record_id}",
-                    use_container_width=True
-                ):
-                    st.query_params.clear()
-                    st.query_params.update(page="lab_image", id=record_id)
-                    st.rerun()
+                # HTML de la tarjeta clicable (sin abrir nueva pestaña)
+                card_html = f"""
+                    <div id="card_{record_id}" style="
+                        cursor: pointer;
+                        text-align:center;
+                        border:1px solid #ddd;
+                        border-radius:10px;
+                        padding:10px;
+                        background:#fff;
+                        transition:all 0.2s ease-in-out;
+                        box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                    "
+                    onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
+                    onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';"
+                    >
+                        {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                        <p style="font-weight:600; margin-top:6px;">🧪 Extraction ID: <span style="color:#1e88e5;">{extraction_id}</span></p>
+                        <p style="color:#666;">ID {record_id}</p>
+                    </div>
+                """
 
-                # Imagen de previsualización
+                # Mostrar tarjeta
+                st.markdown(card_html, unsafe_allow_html=True)
+
+                # Detectar clics con componentes JavaScript → Streamlit
                 st.markdown(
                     f"""
-                    <div style="text-align:center; border:1px solid #ddd; border-radius:10px;
-                                padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
-                        {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
-                    </div>
+                    <script>
+                    const card_{record_id} = window.parent.document.getElementById("card_{record_id}");
+                    if (card_{record_id}) {{
+                        card_{record_id}.addEventListener("click", () => {{
+                            const streamlitDoc = window.parent.document;
+                            streamlitDoc.dispatchEvent(new CustomEvent("streamlit_redirect_{record_id}"));
+                        }});
+                    }}
+                    </script>
                     """,
                     unsafe_allow_html=True
                 )
 
+                # Escuchar evento del navegador y hacer la redirección interna
+                if f"streamlit_redirect_{record_id}" not in st.session_state:
+                    st.session_state[f"streamlit_redirect_{record_id}"] = False
+
+                from streamlit_javascript import st_javascript
+
+                if st_javascript(f"""
+                    window.addEventListener("streamlit_redirect_{record_id}", () => true);
+                """):
+                    st.query_params.clear()
+                    st.query_params.update(page="lab_image", id=record_id)
+                    st.rerun()
+
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
-
 
 # ===== Tablas normales =====
 if df.empty:
