@@ -547,6 +547,9 @@ else:
     # 🔹 Caso especial: embalses → mapa de polígonos
     # ============================
     # ============================
+    # ============================
+    # 🔹 Caso especial: embalses → mapa de polígonos estilo shapefile
+    # ============================
     if table == "reservoirs_spain":
         st.markdown("### 🗺️ Mapa interactivo de embalses de España")
     
@@ -555,82 +558,72 @@ else:
         else:
             from shapely import wkb
             import geopandas as gpd
-            import json
     
-            df = df.copy()
-    
-            # --- Conversión específica para geometría WKB hex (como la tuya) ---
-            def safe_load_wkb_hex(geom):
+            # --- Conversión robusta de geometrías WKB hex ---
+            def safe_load_wkb(geom):
                 try:
                     if isinstance(geom, str):
-                        # Es WKB codificado en hexadecimal
                         return wkb.loads(geom, hex=True)
                     elif isinstance(geom, (bytes, bytearray)):
                         return wkb.loads(geom)
+                    elif isinstance(geom, memoryview):
+                        return wkb.loads(bytes(geom))
                 except Exception:
                     return None
                 return None
     
-            df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
+            df = df.copy()
+            df["geometry"] = df["geometry"].apply(safe_load_wkb)
             df = df[df["geometry"].notnull() & df["geometry"].apply(lambda g: not g.is_empty)]
     
             if df.empty:
                 st.warning("⚠️ Ninguna geometría válida encontrada en la columna 'geometry'.")
                 st.stop()
     
-            # Crear GeoDataFrame
             gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
     
-            # --- Calcular límites y centro del mapa ---
-            bounds = gdf.total_bounds  # [minx, miny, maxx, maxy]
-            center_lat = (bounds[1] + bounds[3]) / 2
-            center_lon = (bounds[0] + bounds[2]) / 2
+            # --- Calcular extensión y crear mapa ---
+            bounds = gdf.total_bounds  # (minx, miny, maxx, maxy)
+            center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
+            m = folium.Map(location=center, zoom_start=6, tiles="Esri.WorldImagery")
     
-            # --- Crear mapa centrado y con fondo satélite ---
-            m = folium.Map(location=[center_lat, center_lon], zoom_start=6, tiles="Esri.WorldImagery")
+            # --- Dibujar embalses uno a uno ---
+            nombre_columna = next((c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None)
+            if not nombre_columna:
+                nombre_columna = gdf.columns[0]  # usar la primera columna disponible como fallback
     
-            # --- Estilos de polígonos ---
-            def style_function(feature):
-                return {
-                    "fillColor": "#1E88E5",
-                    "color": "#0D47A1",
-                    "weight": 1.0,
-                    "fillOpacity": 0.5,
-                }
+            for _, row in gdf.iterrows():
+                nombre = str(row.get(nombre_columna, "Embalse desconocido"))
     
-            def highlight_function(feature):
-                return {
-                    "fillColor": "#FFC107",
-                    "color": "#FF9800",
-                    "weight": 2,
-                    "fillOpacity": 0.65,
-                }
+                geom = row.geometry
+                if geom.is_empty:
+                    continue
     
-            # --- Tooltip con todas las columnas excepto geometry ---
-            tooltip_fields = [c for c in gdf.columns if c != "geometry"]
-            tooltip_aliases = [f"{c}:" for c in tooltip_fields]
+                if geom.geom_type == "Point":
+                    folium.Marker(
+                        location=[geom.y, geom.x],
+                        popup=nombre,
+                        tooltip=nombre,
+                        icon=folium.Icon(color="blue", icon="tint"),
+                    ).add_to(m)
     
-            geojson = json.loads(gdf.to_json())
+                elif geom.geom_type in ["Polygon", "MultiPolygon"]:
+                    folium.GeoJson(
+                        geom.__geo_interface__,
+                        name=nombre,
+                        tooltip=folium.Tooltip(nombre),
+                        style_function=lambda x: {
+                            "fillColor": "blue",
+                            "color": "blue",
+                            "weight": 2,
+                            "fillOpacity": 0.4,
+                        },
+                    ).add_to(m)
     
-            folium.GeoJson(
-                geojson,
-                name="Embalses",
-                style_function=style_function,
-                highlight_function=highlight_function,
-                tooltip=folium.features.GeoJsonTooltip(
-                    fields=tooltip_fields,
-                    aliases=tooltip_aliases,
-                    sticky=True,
-                    direction="top",
-                    opacity=0.9,
-                    labels=True
-                ),
-            ).add_to(m)
-    
-            # Ajustar la vista al bounding box (todos los embalses visibles)
+            # --- Ajustar zoom a la extensión ---
             m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
     
-            # --- Mostrar mapa en Streamlit ---
+            # --- Mostrar mapa centrado en Streamlit ---
             st.markdown(
                 """
                 <style>
@@ -651,6 +644,7 @@ else:
             st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
             folium_static(m, width=1000, height=650)
             st.markdown("</div>", unsafe_allow_html=True)
+    
 
 
     # ============================
