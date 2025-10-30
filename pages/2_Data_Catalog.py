@@ -450,42 +450,46 @@ if table == "lab_images":
                 extraction_id = rrow.get("extraction_id", "(sin extraction_id)")
                 record_id = rrow.get(pk)
 
-                # ID único para la tarjeta
-                card_id = f"card_{record_id}"
+                # Formulario invisible con tarjeta clicable
+                with st.form(f"form_{record_id}", clear_on_submit=False):
+                    # Tarjeta HTML (solo visual)
+                    st.markdown(
+                        f"""
+                        <div style="
+                            cursor:pointer;
+                            text-align:center;
+                            border:1px solid #ddd;
+                            border-radius:10px;
+                            padding:10px;
+                            background:#fff;
+                            transition:all 0.2s ease-in-out;
+                            box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                        "
+                        onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
+                        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';"
+                        onclick="document.getElementById('submit_{record_id}').click();"
+                        >
+                            {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
+                            <p style="font-weight:600; margin-top:6px;">🧪 <b>Extraction ID:</b></p>
+                            <p style="color:#1e88e5;">{extraction_id}</p>
+                            <p style="color:#666;">(ID {record_id})</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
-                # HTML interactivo (sin botones de Streamlit)
-                st.markdown(
-                    f"""
-                    <div id="{card_id}" style="
-                        cursor:pointer;
-                        text-align:center;
-                        border:1px solid #ddd;
-                        border-radius:10px;
-                        padding:10px;
-                        background:#fff;
-                        transition:all 0.2s ease-in-out;
-                        box-shadow:0 2px 6px rgba(0,0,0,0.08);
-                    "
-                    onmouseover="this.style.boxShadow='0 4px 10px rgba(0,0,0,0.15)'; this.style.transform='scale(1.02)';"
-                    onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='scale(1)';"
-                    >
-                        {"<img src='" + proxy_url + "' style='max-width:100%; height:180px; border-radius:8px; object-fit:cover;'>" if proxy_url else "<p>⚠️ Sin imagen</p>"}
-                        <p style="font-weight:600; margin-top:6px;">🧪 <b>Extraction ID:</b></p>
-                        <p style="color:#1e88e5;">{extraction_id}</p>
-                        <p style="color:#666;">(ID {record_id})</p>
-                    </div>
+                    # Botón oculto (no visible)
+                    clicked = st.form_submit_button("", key=f"submit_{record_id}", help="", type="secondary", use_container_width=True)
+                    st.markdown(
+                        f"<style>#submit_{record_id} {{display:none !important;}}</style>",
+                        unsafe_allow_html=True
+                    )
 
-                    <script>
-                        const card = window.parent.document.getElementById("{card_id}");
-                        if (card) {{
-                            card.addEventListener("click", function() {{
-                                window.parent.location.search = "?page=lab_image&id={record_id}";
-                            }});
-                        }}
-                    </script>
-                    """,
-                    unsafe_allow_html=True
-                )
+                    # Acción al hacer clic
+                    if clicked:
+                        st.query_params.clear()
+                        st.query_params.update(page="lab_image", id=record_id)
+                        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
