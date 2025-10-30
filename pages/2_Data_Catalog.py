@@ -220,6 +220,7 @@ all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "
 
 
 # Detectar modo detalle
+# Detectar modo detalle
 params = st.query_params
 if params.get("page") == "lab_image" and "id" in params:
     record_id = params.get("id")
@@ -232,39 +233,55 @@ if params.get("page") == "lab_image" and "id" in params:
         st.error("❌ No se encontró el registro solicitado.")
         st.stop()
 
-    st.subheader(f"🖼️ Detalle de imagen #{record_id}")
+    st.subheader(f"🧫 Detalle de imagen #{record_id}")
 
-    # Imagen principal
-    img_url = normalize_drive_url(str(row.get("image_url", "")))
-    if img_url:
-        proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
-        st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
-    else:
-        st.info("⚠️ Imagen no disponible.")
+    # =============================
+    # Imagen principal + mapa lado a lado
+    # =============================
+    col_img, col_map = st.columns([1, 1], gap="large")
 
+    # --- Imagen principal ---
+    with col_img:
+        img_url = normalize_drive_url(str(row.get("image_url", "")))
+        if img_url:
+            proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
+            st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
+        else:
+            st.info("⚠️ Imagen no disponible.")
+
+    # --- Mapa ---
+    with col_map:
+        if "extraction_id" in row and pd.notna(row["extraction_id"]):
+            coords = get_extraction_point_coords(engine, row["extraction_id"])
+            if coords:
+                lat, lon = coords
+                st.markdown("### 🗺️ Punto de extracción asociado")
+                m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
+
+                # ✅ Marcador visible con icono y color
+                folium.Marker(
+                    [lat, lon],
+                    tooltip=f"Extraction ID: {row['extraction_id']}",
+                    icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
+                ).add_to(m)
+
+                st_folium(m, width=600, height=400)
+            else:
+                st.info("📍 No hay coordenadas disponibles para este extraction_id.")
+        else:
+            st.info("📍 Este registro no tiene extraction_id asociado.")
+
+    # =============================
     # Información del registro
+    # =============================
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
     st.dataframe(df_meta, hide_index=True, use_container_width=True)
 
-    # 🔹 Mapa con ubicación del punto de extracción
-    if "extraction_id" in row and pd.notna(row["extraction_id"]):
-        coords = get_extraction_point_coords(engine, row["extraction_id"])
-        if coords:
-            lat, lon = coords
-            st.markdown("### 🗺️ Ubicación del punto de extracción")
-            m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
-            folium.Marker(
-                [lat, lon],
-                tooltip=f"Punto de extracción asociado a extraction_id {row['extraction_id']}"
-            ).add_to(m)
-            st_folium(m, width=650, height=350)
-        else:
-            st.info("📍 No hay coordenadas disponibles para este extraction_id.")
-    else:
-        st.info("📍 Este registro no tiene extraction_id asociado.")
-
+    # =============================
+    # Edición del registro
+    # =============================
     st.markdown("---")
     edit_mode = st.toggle("✏️ Editar registro", value=False)
     if edit_mode:
@@ -288,6 +305,9 @@ if params.get("page") == "lab_image" and "id" in params:
                 except Exception as e:
                     st.error(f"❌ Error actualizando: {e}")
 
+    # =============================
+    # Botones de acción
+    # =============================
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
@@ -306,11 +326,6 @@ if params.get("page") == "lab_image" and "id" in params:
 
     st.stop()
 
-# ============ Vista general (catálogo normal) ============
-
-if not all_tables:
-    st.warning("No se han encontrado tablas en el esquema 'public'.")
-    st.stop()
 
 with st.sidebar:
     st.header("⚙️ Controles")
