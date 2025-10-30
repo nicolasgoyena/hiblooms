@@ -458,58 +458,63 @@ if table == "lab_images":
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# ===== Tablas normales agrupadas por punto y hora =====
+# ===== Tablas normales =====
 if df.empty:
     st.info("No se han encontrado registros.")
 else:
     # Calcular índice global (no reiniciado por página)
     df.index = df.index + 1 + offset
 
-    # Si la tabla tiene columnas 'extraction_point_id' y 'date' o 'datetime'
-    if "extraction_point_id" in df.columns and any(c in df.columns for c in ["date", "datetime", "created_at", "timestamp"]):
-        # Determinar la columna temporal más adecuada
-        time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"] if c in df.columns), None)
+    # ===============================
+    # Agrupar visualmente si hay columnas de punto y tiempo
+    # ===============================
+    if "extraction_point_id" in df.columns:
+        # Determinar columna temporal
+        time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"]
+                         if c in df.columns), None)
 
-        # Convertir a datetime si es necesario
-        df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
+        if time_col:
+            # Convertir a datetime (por seguridad)
+            df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
 
-        # Agrupar por punto de extracción y ventana temporal de ±30 min
-        df["time_group"] = (df[time_col].dt.floor("30min")).astype(str)
-        grouped = df.groupby(["extraction_point_id", "time_group"])
+            # Crear ventana de agrupamiento (30 min)
+            df["time_group"] = df[time_col].dt.floor("30min").astype(str)
 
-        st.markdown("### 📋 Registros agrupados por punto de extracción y hora aproximada")
-        for (point, tgrp), group in grouped:
-            with st.container(border=True):
-                sample_ids = group[pk].tolist()
-                n_samples = len(group)
-                time_str = group[time_col].min().strftime("%Y-%m-%d %H:%M") if pd.notna(group[time_col].min()) else "N/A"
+            # Agrupar por punto y hora
+            grouped = df.groupby(["extraction_point_id", "time_group"])
 
-                cols_row = st.columns([5, 1])
-                with cols_row[0]:
-                    st.markdown(
-                        f"**📍 Punto:** {point} &nbsp;&nbsp;|&nbsp;&nbsp; 🕒 Hora aprox:** {time_str}** "
-                        f"&nbsp;&nbsp;|&nbsp;&nbsp; 🔢 Muestras: {n_samples}"
-                    )
-                with cols_row[1]:
-                    if st.button("🔍 Ver detalle", key=f"grp_{table}_{point}_{tgrp}"):
-                        # Pasamos a la vista de detalle de grupo
-                        st.query_params.clear()
-                        st.query_params.update(page="detail", table=table, group=str(point), time=tgrp)
-                        st.rerun()
+            st.markdown("### 📋 Registros agrupados por punto de extracción y hora aproximada")
+
+            for (point, tgrp), group in grouped:
+                with st.container(border=True):
+                    sample_ids = group[pk].tolist()
+                    n_samples = len(group)
+                    time_str = group[time_col].min().strftime("%Y-%m-%d %H:%M") if pd.notna(group[time_col].min()) else "N/A"
+
+                    cols_row = st.columns([5, 1])
+                    with cols_row[0]:
+                        st.markdown(
+                            f"**📍 Punto:** {point} &nbsp;&nbsp;|&nbsp;&nbsp; 🕒 Hora aprox:** {time_str}** "
+                            f"&nbsp;&nbsp;|&nbsp;&nbsp; 🔢 Muestras: {n_samples}"
+                        )
+                    with cols_row[1]:
+                        if st.button("🔍 Ver detalle", key=f"grp_{table}_{point}_{tgrp}"):
+                            st.query_params.clear()
+                            st.query_params.update(page="detail", table=table, group=str(point), time=tgrp)
+                            st.rerun()
+
+                    # Mostrar mini tabla resumen del grupo
+                    subset = group.head(5)[[col for col in group.columns if col != "time_group"]]
+                    st.dataframe(subset, hide_index=True, use_container_width=True)
+
+        else:
+            # Sin columna temporal → mostrar tabla normal
+            st.dataframe(df, use_container_width=True)
+
     else:
-        # Si no hay campos temporales o punto → vista clásica
-        st.markdown("### 📋 Registros")
-        for i, row in df.iterrows():
-            with st.container(border=True):
-                cols_row = st.columns([5, 1])
-                with cols_row[0]:
-                    preview = ", ".join(f"{k}: {row[k]}" for k in df.columns[:3])
-                    st.markdown(f"**{preview}**")
-                with cols_row[1]:
-                    if st.button("🔍 Ver detalle", key=f"view_{table}_{i}"):
-                        st.query_params.clear()
-                        st.query_params.update(page="detail", table=table, id=row[pk])
-                        st.rerun()
+        # Sin columna de punto → mostrar tabla normal
+        st.dataframe(df, use_container_width=True)
+
 
 
 
