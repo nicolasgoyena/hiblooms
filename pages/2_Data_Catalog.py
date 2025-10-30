@@ -270,7 +270,7 @@ if params.get("page") == "lab_image" and "id" in params:
         st.info("⚠️ Imagen no disponible.")
     
     
-    # ---- Mapa debajo ----
+    # ---- Mapa debajo (centrado de verdad) ----
     if "extraction_id" in row and pd.notna(row["extraction_id"]):
         coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
@@ -287,21 +287,30 @@ if params.get("page") == "lab_image" and "id" in params:
             # 🌍 Fondo satelital natural
             m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
     
-            # Marcador rojo visible
+            # 📍 Marcador rojo visible
             folium.Marker(
                 [lat, lon],
                 tooltip=f"Extraction ID: {row['extraction_id']}",
                 icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
             ).add_to(m)
     
-            # Contenedor centrado del mapa
-            st.markdown("<div style='display:flex; justify-content:center;'>", unsafe_allow_html=True)
-            st_folium(m, width=700, height=400)
-            st.markdown("</div>", unsafe_allow_html=True)
+            # ✅ Contenedor centrado con ancho fijo
+            map_html = st_folium(m, width=700, height=400)
+            st.markdown(
+                """
+                <div style="display: flex; justify-content: center; margin-top: -420px;">
+                    <div style="width: 700px; height: 400px; border-radius: 10px; overflow: hidden;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
             st.info("📍 No hay coordenadas disponibles para este extraction_id.")
     else:
         st.info("📍 Este registro no tiene extraction_id asociado.")
+
     
 
 
