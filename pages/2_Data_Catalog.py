@@ -98,6 +98,26 @@ def choose_order_column(cols: List[Dict[str, Any]], pk: Optional[str]) -> str:
             return c
     return names[0] if names else "1"
 
+from streamlit_folium import st_folium
+import folium
+
+def get_extraction_point_coords(engine, extraction_point_id):
+    """Obtiene lat/lon del punto de extracción asociado."""
+    try:
+        sql = text("""
+            SELECT latitude, longitude
+            FROM extraction_points
+            WHERE id = :pid
+        """)
+        with engine.connect() as con:
+            row = con.execute(sql, {"pid": extraction_point_id}).fetchone()
+        if row and row[0] is not None and row[1] is not None:
+            return float(row[0]), float(row[1])
+    except Exception as e:
+        st.error(f"❌ Error obteniendo coordenadas: {e}")
+    return None
+
+
 # =========================
 # CRUD helpers
 # =========================
@@ -187,6 +207,22 @@ if params.get("page") == "lab_image" and "id" in params:
         st.image(proxy_url, use_container_width=True, caption=f"ID {record_id}")
     else:
         st.info("⚠️ Imagen no disponible.")
+
+    # Mostrar mapa si existe extraction_point_id
+    if "extraction_point_id" in record and pd.notna(record["extraction_point_id"]):
+        coords = get_extraction_point_coords(engine, record["extraction_point_id"])
+        if coords:
+            lat, lon = coords
+            st.markdown("### 🗺️ Ubicación del punto de extracción")
+            m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
+            folium.Marker(
+                [lat, lon],
+                tooltip=f"Punto de extracción {record['extraction_point_id']}"
+            ).add_to(m)
+            st_folium(m, width=600, height=350)
+        else:
+            st.info("📍 No hay coordenadas disponibles para este punto de extracción.")
+
 
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
