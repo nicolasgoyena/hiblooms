@@ -6,14 +6,17 @@ from sqlalchemy.engine import Engine
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
 
+import traceback
 import sys, os
-import streamlit as st
-import pandas as pd
 
-# Asegurar que el directorio raíz del proyecto esté en el path de búsqueda
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from db_utils import get_engine, infer_pk
+try:
+    from db_utils import get_engine, infer_pk
+except Exception as e:
+    st.error(f"❌ Error cargando db_utils: {e}")
+    st.text(traceback.format_exc())
+    st.stop()
 
 
 
