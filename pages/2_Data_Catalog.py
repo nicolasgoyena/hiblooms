@@ -236,53 +236,73 @@ if params.get("page") == "lab_image" and "id" in params:
     st.subheader(f"🧫 Detalle de imagen #{record_id}")
 
     # =============================
-    # Imagen principal seguida del mapa
+    # Imagen principal + mapa satélite (centrados y compactos)
     # =============================
     
+    # ---- Imagen ----
+    st.markdown(
+        """
+        <h3 style='text-align:center; margin-bottom:12px;'>🧫 Imagen de laboratorio</h3>
+        """,
+        unsafe_allow_html=True
+    )
     
     img_url = normalize_drive_url(str(row.get("image_url", "")))
     if img_url:
         proxy_url = f"https://images.weserv.nl/?url={img_url.replace('https://', '')}"
-        # Mostrar imagen más pequeña y centrada
         st.markdown(
-            """
-            <div style="display:flex; justify-content:center;">
-                <img src="{0}" alt="Imagen de laboratorio" style="
-                    max-width: 65%;
+            f"""
+            <div style="display:flex; justify-content:center; align-items:center;">
+                <img src="{proxy_url}" alt="Imagen de laboratorio" style="
+                    max-width: 55%;
+                    max-height: 350px;
                     height: auto;
+                    object-fit: contain;
                     border-radius: 10px;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
                 ">
             </div>
-            <p style='text-align:center; color:#666;'>ID {1}</p>
-            """.format(proxy_url, record_id),
+            <p style='text-align:center; color:#666;'>ID {record_id}</p>
+            """,
             unsafe_allow_html=True
         )
-
     else:
         st.info("⚠️ Imagen no disponible.")
     
-    # --- Mapa justo debajo ---
+    
+    # ---- Mapa debajo ----
     if "extraction_id" in row and pd.notna(row["extraction_id"]):
         coords = get_extraction_point_coords(engine, row["extraction_id"])
         if coords:
             lat, lon = coords
-            st.markdown("### 🗺️ Punto de extracción")
-            m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
-
+            st.markdown(
+                """
+                <h3 style='text-align:center; margin-top:30px; margin-bottom:10px;'>
+                    🗺️ Punto de extracción asociado
+                </h3>
+                """,
+                unsafe_allow_html=True
+            )
     
-            # ✅ Marcador rojo visible
+            # 🌍 Fondo satelital natural
+            m = folium.Map(location=[lat, lon], zoom_start=15, tiles="Esri.WorldImagery")
+    
+            # Marcador rojo visible
             folium.Marker(
                 [lat, lon],
                 tooltip=f"Extraction ID: {row['extraction_id']}",
                 icon=folium.Icon(color="red", icon="map-marker", prefix="fa")
             ).add_to(m)
     
-            st_folium(m, width=700, height=450)
+            # Contenedor centrado del mapa
+            st.markdown("<div style='display:flex; justify-content:center;'>", unsafe_allow_html=True)
+            st_folium(m, width=700, height=400)
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.info("📍 No hay coordenadas disponibles para este extraction_id.")
     else:
         st.info("📍 Este registro no tiene extraction_id asociado.")
+    
 
 
     # =============================
