@@ -483,15 +483,24 @@ else:
 
             grouped = list(df_all.groupby(["extraction_point_id", "time_group"]))
 
-            # Paginación a nivel de grupos
+            # ✅ Calcular total de grupos (para paginación real)
             total_groups = len(grouped)
             groups_per_page = page_size
+            total_pages = max(1, (total_groups + groups_per_page - 1) // groups_per_page)
+
+            # Ajustar si el usuario navega más allá de las páginas válidas
+            if page > total_pages:
+                st.session_state["page"] = total_pages
+                st.rerun()
+
+            # Subconjunto de grupos de esta página
             start_idx = (page - 1) * groups_per_page
             end_idx = start_idx + groups_per_page
             grouped_subset = grouped[start_idx:end_idx]
 
             st.markdown("### 📋 Registros agrupados por punto de extracción y hora aproximada")
 
+            # Renderizar containers de los grupos visibles
             for (point, tgrp), group in grouped_subset:
                 with st.container(border=True):
                     time_str = (
@@ -520,8 +529,9 @@ else:
                         use_container_width=True
                     )
 
-            # Actualizar paginación global
-            total_pages = max(1, (total_groups + groups_per_page - 1) // groups_per_page)
+            # ⚙️ Guardar total_pages en session_state para usarlo en la barra de paginación
+            st.session_state["total_pages"] = total_pages
+            st.session_state["total_groups"] = total_groups
 
         else:
             # Sin columna temporal → tabla normal
