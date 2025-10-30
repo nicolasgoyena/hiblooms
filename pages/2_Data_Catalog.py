@@ -239,7 +239,6 @@ if params.get("page") == "lab_image" and "id" in params:
     # Imagen principal seguida del mapa
     # =============================
     
-    st.markdown("### 🧫 Imagen de laboratorio")
     
     img_url = normalize_drive_url(str(row.get("image_url", "")))
     if img_url:
