@@ -1,21 +1,34 @@
 # encoding: utf-8
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct 30 10:28:58 2025
+@author: ngoyenaserv
+"""
+
 import streamlit as st
 import pandas as pd
 from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
+import sys, os, importlib.util, traceback
 
-import traceback
-import sys, os
+# ========================================
+# Import robusto de db_utils desde raíz
+# ========================================
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Calcular ruta absoluta del proyecto (un nivel arriba de /pages)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+db_utils_path = os.path.join(project_root, "db_utils.py")
 
-try:
-    from db_utils import get_engine, infer_pk
-except Exception as e:
-    st.error(f"❌ Error cargando db_utils: {e}")
-    st.text(traceback.format_exc())
+if os.path.exists(db_utils_path):
+    spec = importlib.util.spec_from_file_location("db_utils", db_utils_path)
+    db_utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(db_utils)
+    get_engine = db_utils.get_engine
+    infer_pk = db_utils.infer_pk
+else:
+    st.error(f"❌ No se encontró db_utils.py en {project_root}")
     st.stop()
 
 
