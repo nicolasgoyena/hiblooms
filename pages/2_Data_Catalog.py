@@ -547,12 +547,14 @@ else:
 
 
 # =====================
-# Paginación final (centrada, funcional y con texto "Ir a página:")
+# Paginación final (centrada, funcional y sincronizada con grupos)
 # =====================
 
-total_pages = max(1, (total + page_size - 1) // page_size)
-start_rec = offset + 1 if total > 0 else 0
-end_rec = min(offset + page_size, total)
+# Usar los valores reales si existen
+total_pages = st.session_state.get("total_pages", max(1, (total + page_size - 1) // page_size))
+total_groups = st.session_state.get("total_groups", total)
+start_rec = (page - 1) * page_size + 1
+end_rec = min(page * page_size, total_groups)
 
 col1, col2, col3 = st.columns([1, 5, 1])
 
@@ -568,7 +570,7 @@ with col2:
         f"""
         <div style='text-align:center; font-size:15px;'>
             Página <b>{page}</b> de <b>{total_pages}</b> · 
-            Registros {start_rec}–{end_rec} de {total}
+            Grupos {start_rec}–{end_rec} de {total_groups}
         </div>
         """,
         unsafe_allow_html=True
@@ -621,6 +623,7 @@ with col3:
         if st.button("Siguiente ➡️"):
             st.session_state["page"] = page + 1
             st.rerun()
+
 
 
 
