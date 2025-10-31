@@ -142,7 +142,7 @@ def get_extraction_point_coords(engine, extraction_id):
             LIMIT 1
         """)
         
-            row = con.execute(sql, {"eid": extraction_id}).fetchone()
+        row = con.execute(sql, {"eid": extraction_id}).fetchone()
         if row and row[0] is not None and row[1] is not None:
             return float(row[0]), float(row[1])
     except Exception as e:
