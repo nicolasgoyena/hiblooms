@@ -544,7 +544,7 @@ if table in grouped_tables:
 
 else:
     if table == "reservoirs_spain":
-        st.markdown("### 🗺️ Mapa de embalses por cuenca hidrográfica")
+        st.markdown("### 🗺️ Mapa de embalses por cuenca hidrográfica y selección individual")
     
         import geopandas as gpd
         from shapely import wkb
@@ -553,17 +553,11 @@ else:
         import folium
         from sqlalchemy import text
     
-        # --- Leer todos los embalses directamente desde la BD (sin límite) ---
-        try:
-            with engine.connect() as con:
-                df_full = pd.read_sql(text('SELECT * FROM "reservoirs_spain"'), con)
-        except Exception as e:
-            st.error(f"❌ Error al cargar datos completos: {e}")
-            st.stop()
+        # --- Leer todos los embalses directamente desde la BD ---
+        with engine.connect() as con:
+            df_full = pd.read_sql(text('SELECT * FROM "reservoirs_spain"'), con)
     
-        st.write(f"📦 Registros cargados: {len(df_full)}")
-    
-        # --- Conversión WKB hex a geometría shapely ---
+        # --- Función para convertir geometrías WKB hex a shapely ---
         def safe_load_wkb_hex(geom):
             try:
                 if geom is None:
@@ -585,55 +579,62 @@ else:
             st.warning("⚠️ No se pudo leer ninguna geometría válida.")
             st.stop()
     
-        # --- Seleccionar cuenca hidrográfica ---
+        # --- Selección de cuenca hidrográfica ---
         cuencas = sorted(df_full["river_basin_district"].dropna().unique().tolist())
-        selected_cuenca = st.selectbox("Selecciona una cuenca hidrográfica:", cuencas)
+        selected_cuenca = st.selectbox("🌊 Selecciona una cuenca hidrográfica:", cuencas)
     
-        df_cuenca = df_full[df_full["river_basin_district"] == selected_cuenca]
+        df_cuenca = df_full[df_full["river_basin_district"] == selected_cuenca].copy()
+        if df_cuenca.empty:
+            st.warning("No hay embalses en esta cuenca.")
+            st.stop()
     
-        st.info(f"Mostrando {len(df_cuenca)} embalses pertenecientes a la cuenca **{selected_cuenca}**")
+        # --- Selector predictivo de embalse dentro de la cuenca ---
+        embalses = sorted(df_cuenca["reservoir_name"].dropna().unique().tolist())
+        selected_embalse = st.selectbox("🏞️ Selecciona un embalse:", embalses, index=None, placeholder="Escribe un nombre...")
     
-        # --- Crear GeoDataFrame y reproyectar ---
-        gdf = gpd.GeoDataFrame(df_cuenca, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
+        if selected_embalse:
+            df_sel = df_cuenca[df_cuenca["reservoir_name"] == selected_embalse]
     
-        st.write(f"✅ Geometrías válidas: {len(gdf)} — Tipo: {gdf.geometry.iloc[0].geom_type if len(gdf)>0 else 'N/A'}")
-        st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
+            st.success(f"Mostrando información y mapa del embalse **{selected_embalse}** (cuenca {selected_cuenca})")
     
-        # --- Crear mapa ---
-        bounds = gdf.total_bounds
-        center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-        m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+            # --- Crear GeoDataFrame y reproyectar ---
+            gdf = gpd.GeoDataFrame(df_sel, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
     
-        # --- Dibujar polígonos ---
-        nombre_columna = next(
-            (c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), "reservoir_id"
-        )
+            # --- Extraer geometría y centro ---
+            geom = gdf.geometry.iloc[0]
+            bounds = geom.bounds  # minx, miny, maxx, maxy
+            center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
     
-        for _, row in gdf.iterrows():
-            geom = row.geometry
-            nombre = str(row.get(nombre_columna, "Embalse"))
-            area = row.get("area_m2", None)
-            tooltip_text = f"{nombre}<br>Área: {area:,.0f} m²<br>Cuenca: {selected_cuenca}" if area else nombre
+            # --- Crear mapa centrado ---
+            m = folium.Map(location=[center[0], center[1]], zoom_start=11, tiles="CartoDB positron")
     
             folium.GeoJson(
                 data=geom.__geo_interface__,
-                name=nombre,
-                tooltip=folium.Tooltip(tooltip_text),
+                name=selected_embalse,
+                tooltip=folium.Tooltip(selected_embalse),
                 style_function=lambda x: {
                     "fillColor": "#2b8cbe",
                     "color": "#045a8d",
-                    "weight": 1,
-                    "fillOpacity": 0.5,
+                    "weight": 2,
+                    "fillOpacity": 0.6,
                 },
             ).add_to(m)
     
-        folium.LayerControl(position="topright", collapsed=False).add_to(m)
-        folium_static(m, width=1000, height=650)
+            folium.LayerControl(position="topright", collapsed=False).add_to(m)
+            folium_static(m, width=1000, height=600)
     
-        # --- Mostrar tabla resumen ---
-        st.markdown("### 📊 Embalses mostrados")
-        cols_to_show = ["reservoir_name", "river_basin_district", "area_m2", "province", "reservoir_type"]
-        st.dataframe(gdf[cols_to_show], hide_index=True, use_container_width=True)
+            # --- Mostrar información del embalse ---
+            st.markdown("### 📋 Información del embalse seleccionado")
+            exclude_cols = ["geometry", "report_url"]
+            cols = [c for c in gdf.columns if c not in exclude_cols]
+    
+            # Mostrar la info en formato limpio
+            info_df = gdf[cols].T.reset_index()
+            info_df.columns = ["Campo", "Valor"]
+            st.dataframe(info_df, hide_index=True, use_container_width=True)
+    
+        else:
+            st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
 
 
 
