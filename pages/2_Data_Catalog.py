@@ -544,142 +544,42 @@ if table in grouped_tables:
 
 else:
     if table == "reservoirs_spain":
-        st.markdown("### 🗺️ Mapa interactivo de embalses de España")
+        st.markdown("### 🧪 Prueba básica de lectura de geometrías")
     
-        if df.empty:
-            st.info("No hay registros de embalses para mostrar.")
-        else:
-            import geopandas as gpd
-            from shapely import wkb
-            import binascii
+        import geopandas as gpd
+        from shapely import wkb
+        import binascii
     
-            # --- Conversión robusta de geometrías WKB (hexadecimal) ---
-            def safe_load_wkb_hex(geom):
-                try:
-                    if geom is None:
-                        return None
-                    # Si viene como string hexadecimal (lo más probable)
-                    if isinstance(geom, str):
-                        geom = geom.strip()
-                        if geom.startswith("01") and all(c in "0123456789ABCDEFabcdef" for c in geom[:50]):
-                            return wkb.loads(binascii.unhexlify(geom))
-                    # Si ya viene como bytes
-                    elif isinstance(geom, (bytes, bytearray, memoryview)):
-                        return wkb.loads(bytes(geom))
-                except Exception:
+        def safe_load_wkb_hex(geom):
+            try:
+                if geom is None:
                     return None
+                if isinstance(geom, str):
+                    geom = geom.strip()
+                    if geom.startswith("01"):
+                        return wkb.loads(binascii.unhexlify(geom))
+                elif isinstance(geom, (bytes, bytearray, memoryview)):
+                    return wkb.loads(bytes(geom))
+            except Exception as e:
                 return None
+            return None
     
-            df = df.copy()
-            df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
-            df = df[df["geometry"].notnull() & df["geometry"].apply(lambda g: not g.is_empty)]
+        df = df.copy()
+        df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
     
-            if df.empty:
-                st.warning("⚠️ Ninguna geometría válida encontrada en la columna 'geometry'.")
-                st.stop()
+        # Mostrar cuántas geometrías son válidas
+        n_valid = df["geometry"].notnull().sum()
+        st.write(f"✅ Geometrías válidas: {n_valid} de {len(df)} registros")
     
-            # Crear GeoDataFrame
-            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-    
-            # --- Calcular extensión y centro ---
-            bounds = gdf.total_bounds  # (minx, miny, maxx, maxy)
-            center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-    
-            # --- Crear mapa base ---
-            import folium
-            from streamlit_folium import folium_static
-    
-            m = folium.Map(location=center, zoom_start=6, tiles=None)
-    
-            # Capas base
-            folium.TileLayer(
-                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                attr="Tiles © Esri &mdash; Source: Esri, Earthstar Geographics, and the GIS User Community",
-                name="Satélite Esri",
-            ).add_to(m)
-            folium.TileLayer(
-                tiles="https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
-                attr="© OpenStreetMap contributors, © CartoDB",
-                name="CartoDB Positron",
-            ).add_to(m)
-            folium.TileLayer(
-                tiles="https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",
-                attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.",
-                name="Stamen Terrain",
-            ).add_to(m)
-    
-            folium.LayerControl(position="topright", collapsed=False).add_to(m)
-    
-            # --- Dibujar embalses ---
-            nombre_columna = next(
-                (c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None
-            )
-            if not nombre_columna:
-                nombre_columna = gdf.columns[0]
-    
-            for _, row in gdf.iterrows():
-                nombre = str(row.get(nombre_columna, "Embalse desconocido"))
-                geom = row.geometry
-                if geom.is_empty:
-                    continue
-    
-                if geom.geom_type == "Point":
-                    folium.Marker(
-                        location=[geom.y, geom.x],
-                        popup=nombre,
-                        tooltip=nombre,
-                        icon=folium.Icon(color="blue", icon="tint"),
-                    ).add_to(m)
-                elif geom.geom_type in ["Polygon", "MultiPolygon"]:
-                    folium.GeoJson(
-                        geom.__geo_interface__,
-                        name=nombre,
-                        tooltip=folium.Tooltip(nombre),
-                        style_function=lambda x: {
-                            "fillColor": "#3186cc",
-                            "color": "#0055aa",
-                            "weight": 1,
-                            "fillOpacity": 0.5,
-                        },
-                    ).add_to(m)
-    
-            # --- Ajustar vista ---
-            m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-    
-            # --- Mostrar mapa centrado ---
-            st.markdown(
-                """
-                <style>
-                .centered-map {
-                    display: flex;
-                    justify-content: center;
-                    margin: 0 auto;
-                    width: 95%;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-            st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
-            folium_static(m, width=1000, height=650)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-
-    
-
-
-    # ============================
-    # 🔹 Tablas normales (por defecto)
-    # ============================
-    else:
-        st.markdown(f"### 📘 Registros de `{table}` (paginación estándar)")
-        if df.empty:
-            st.info("No se han encontrado registros.")
+        # Si hay alguna, mostramos info básica
+        if n_valid > 0:
+            gdf = gpd.GeoDataFrame(df[df["geometry"].notnull()], geometry="geometry", crs="EPSG:4326")
+            st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
+            st.write("🗺️ Primer tipo geométrico:", gdf.geometry.iloc[0].geom_type)
+            st.map(gdf)  # mapa sencillo nativo de Streamlit
         else:
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.warning("⚠️ No se pudo interpretar ninguna geometría como válida.")
+
 
 
 # =====================
