@@ -543,83 +543,79 @@ if table in grouped_tables:
             st.caption(f"Mostrando {len(visible_groups)} grupos (Página {page} de {total_pages})")
 
 else:
-    # ============================
-    # 🔹 Caso especial: embalses → mapa de polígonos
-    # ============================
-    # ============================
-    # ============================
-    # 🔹 Caso especial: embalses → mapa de polígonos estilo shapefile
-    # ============================
-    # ============================
-    # 🔹 Caso especial: embalses → mapa de polígonos con selector de capas
-    # ============================
     if table == "reservoirs_spain":
         st.markdown("### 🗺️ Mapa interactivo de embalses de España")
     
         if df.empty:
             st.info("No hay registros de embalses para mostrar.")
         else:
-            from shapely import wkb
             import geopandas as gpd
+            from shapely import wkb
+            import binascii
     
-            # --- Conversión robusta de geometrías WKB hex ---
-            def safe_load_wkb(geom):
+            # --- Conversión robusta de geometrías WKB (hexadecimal) ---
+            def safe_load_wkb_hex(geom):
                 try:
+                    if geom is None:
+                        return None
+                    # Si viene como string hexadecimal (lo más probable)
                     if isinstance(geom, str):
-                        return wkb.loads(geom, hex=True)
-                    elif isinstance(geom, (bytes, bytearray)):
-                        return wkb.loads(geom)
-                    elif isinstance(geom, memoryview):
+                        geom = geom.strip()
+                        if geom.startswith("01") and all(c in "0123456789ABCDEFabcdef" for c in geom[:50]):
+                            return wkb.loads(binascii.unhexlify(geom))
+                    # Si ya viene como bytes
+                    elif isinstance(geom, (bytes, bytearray, memoryview)):
                         return wkb.loads(bytes(geom))
                 except Exception:
                     return None
                 return None
     
             df = df.copy()
-            df["geometry"] = df["geometry"].apply(safe_load_wkb)
+            df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
             df = df[df["geometry"].notnull() & df["geometry"].apply(lambda g: not g.is_empty)]
     
             if df.empty:
                 st.warning("⚠️ Ninguna geometría válida encontrada en la columna 'geometry'.")
                 st.stop()
     
+            # Crear GeoDataFrame
             gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
     
             # --- Calcular extensión y centro ---
             bounds = gdf.total_bounds  # (minx, miny, maxx, maxy)
             center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
     
-            # --- Crear mapa base sin tiles ---
+            # --- Crear mapa base ---
+            import folium
+            from streamlit_folium import folium_static
+    
             m = folium.Map(location=center, zoom_start=6, tiles=None)
     
-            # 🌍 Capa base: Satélite Esri
+            # Capas base
             folium.TileLayer(
                 tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                 attr="Tiles © Esri &mdash; Source: Esri, Earthstar Geographics, and the GIS User Community",
                 name="Satélite Esri",
             ).add_to(m)
-    
-            # 🗺️ Capa base: CartoDB Positron (claro)
             folium.TileLayer(
                 tiles="https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
                 attr="© OpenStreetMap contributors, © CartoDB",
                 name="CartoDB Positron",
             ).add_to(m)
-    
-            # 🌿 Capa base: Stamen Terrain
             folium.TileLayer(
                 tiles="https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",
                 attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.",
                 name="Stamen Terrain",
             ).add_to(m)
     
-            # Añadir control para cambiar entre capas
             folium.LayerControl(position="topright", collapsed=False).add_to(m)
     
             # --- Dibujar embalses ---
-            nombre_columna = next((c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None)
+            nombre_columna = next(
+                (c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), None
+            )
             if not nombre_columna:
-                nombre_columna = gdf.columns[0]  # usar la primera columna disponible como fallback
+                nombre_columna = gdf.columns[0]
     
             for _, row in gdf.iterrows():
                 nombre = str(row.get(nombre_columna, "Embalse desconocido"))
@@ -634,24 +630,23 @@ else:
                         tooltip=nombre,
                         icon=folium.Icon(color="blue", icon="tint"),
                     ).add_to(m)
-    
                 elif geom.geom_type in ["Polygon", "MultiPolygon"]:
                     folium.GeoJson(
                         geom.__geo_interface__,
                         name=nombre,
                         tooltip=folium.Tooltip(nombre),
                         style_function=lambda x: {
-                            "fillColor": "blue",
-                            "color": "blue",
-                            "weight": 2,
-                            "fillOpacity": 0.4,
+                            "fillColor": "#3186cc",
+                            "color": "#0055aa",
+                            "weight": 1,
+                            "fillOpacity": 0.5,
                         },
                     ).add_to(m)
     
-            # --- Ajustar zoom a la extensión ---
+            # --- Ajustar vista ---
             m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
     
-            # --- Mostrar mapa centrado en Streamlit ---
+            # --- Mostrar mapa centrado ---
             st.markdown(
                 """
                 <style>
@@ -668,10 +663,10 @@ else:
                 """,
                 unsafe_allow_html=True
             )
-    
             st.markdown("<div class='centered-map'>", unsafe_allow_html=True)
             folium_static(m, width=1000, height=650)
             st.markdown("</div>", unsafe_allow_html=True)
+
 
     
 
