@@ -585,6 +585,8 @@ else:
     
         st.write(f"✅ Geometrías válidas: {len(gdf)} — Tipo: {gdf.geometry.iloc[0].geom_type}")
         st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
+        st.write(f"🧭 Embalses visibles en el mapa: {len(gdf)}")
+
     
         # --- Crear mapa ---
         bounds = gdf.total_bounds  # minx, miny, maxx, maxy
