@@ -551,8 +551,19 @@ else:
         import binascii
         from streamlit_folium import folium_static
         import folium
+        from sqlalchemy import text
     
-        # --- Función para convertir hex WKB a geometría shapely ---
+        # --- Leer todos los embalses directamente desde la BD (sin límite) ---
+        try:
+            with engine.connect() as con:
+                df_full = pd.read_sql(text('SELECT * FROM "reservoirs_spain"'), con)
+        except Exception as e:
+            st.error(f"❌ Error al cargar datos completos: {e}")
+            st.stop()
+    
+        st.write(f"📦 Registros cargados: {len(df_full)}")
+    
+        # --- Conversión WKB hex a geometría shapely ---
         def safe_load_wkb_hex(geom):
             try:
                 if geom is None:
@@ -567,34 +578,33 @@ else:
                 return None
             return None
     
-        # --- Cargar y convertir geometrías ---
-        df = df.copy()
-        df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
-        df = df[df["geometry"].notnull()]
+        df_full["geometry"] = df_full["geometry"].apply(safe_load_wkb_hex)
+        df_full = df_full[df_full["geometry"].notnull()]
     
-        if df.empty:
+        if df_full.empty:
             st.warning("⚠️ No se pudo leer ninguna geometría válida.")
             st.stop()
     
-        # --- Filtrar los 20 embalses más grandes ---
-        if "area_m2" in df.columns:
-            df = df.sort_values("area_m2", ascending=False).head(20)
-            st.info(f"Mostrando los 20 embalses más grandes (por área_m2)")
+        # --- Filtrar los 20 de mayor área ---
+        if "area_m2" in df_full.columns:
+            df_top20 = df_full.sort_values("area_m2", ascending=False).head(20)
+            st.info(f"Mostrando los 20 embalses más grandes por 'area_m2'")
         else:
-            st.warning("⚠️ No se encontró la columna 'area_m2'; se muestran todos los embalses disponibles.")
+            st.warning("⚠️ Columna 'area_m2' no encontrada; mostrando todos.")
+            df_top20 = df_full
     
-        # --- Crear GeoDataFrame con CRS correcto ---
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
+        # --- Crear GeoDataFrame y reproyectar ---
+        gdf = gpd.GeoDataFrame(df_top20, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
     
         st.write(f"✅ Geometrías válidas: {len(gdf)} — Tipo: {gdf.geometry.iloc[0].geom_type}")
         st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
     
-        # --- Crear mapa base ---
-        bounds = gdf.total_bounds  # minx, miny, maxx, maxy
+        # --- Crear mapa ---
+        bounds = gdf.total_bounds
         center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
         m = folium.Map(location=center, zoom_start=6, tiles="CartoDB positron")
     
-        # --- Añadir polígonos ---
+        # --- Dibujar polígonos ---
         nombre_columna = next(
             (c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), "reservoir_id"
         )
@@ -619,6 +629,7 @@ else:
     
         folium.LayerControl(position="topright", collapsed=False).add_to(m)
         folium_static(m, width=1000, height=650)
+
 
 
 
