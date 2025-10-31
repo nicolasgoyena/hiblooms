@@ -544,7 +544,7 @@ if table in grouped_tables:
 
 else:
     if table == "reservoirs_spain":
-        st.markdown("### 🗺️ Mapa de embalses de España (geometrías reales)")
+        st.markdown("### 🗺️ Mapa de los 20 embalses más grandes de España")
     
         import geopandas as gpd
         from shapely import wkb
@@ -567,7 +567,7 @@ else:
                 return None
             return None
     
-        # --- Cargar geometrías ---
+        # --- Cargar y convertir geometrías ---
         df = df.copy()
         df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
         df = df[df["geometry"].notnull()]
@@ -576,19 +576,20 @@ else:
             st.warning("⚠️ No se pudo leer ninguna geometría válida.")
             st.stop()
     
-        # --- Crear GeoDataFrame con CRS correcto ---
-        # Las coordenadas están en metros → EPSG:25830 (ETRS89 / UTM zone 30N)
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:25830")
+        # --- Filtrar los 20 embalses más grandes ---
+        if "area_m2" in df.columns:
+            df = df.sort_values("area_m2", ascending=False).head(20)
+            st.info(f"Mostrando los 20 embalses más grandes (por área_m2)")
+        else:
+            st.warning("⚠️ No se encontró la columna 'area_m2'; se muestran todos los embalses disponibles.")
     
-        # Convertir a lat/lon para Folium
-        gdf = gdf.to_crs(epsg=4326)
+        # --- Crear GeoDataFrame con CRS correcto ---
+        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
     
         st.write(f"✅ Geometrías válidas: {len(gdf)} — Tipo: {gdf.geometry.iloc[0].geom_type}")
         st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
-        st.write(f"🧭 Embalses visibles en el mapa: {len(gdf)}")
-
     
-        # --- Crear mapa ---
+        # --- Crear mapa base ---
         bounds = gdf.total_bounds  # minx, miny, maxx, maxy
         center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
         m = folium.Map(location=center, zoom_start=6, tiles="CartoDB positron")
@@ -601,21 +602,22 @@ else:
         for _, row in gdf.iterrows():
             geom = row.geometry
             nombre = str(row.get(nombre_columna, "Embalse"))
+            area = row.get("area_m2", None)
+            tooltip_text = f"{nombre}<br>Área: {area:,.0f} m²" if area else nombre
+    
             folium.GeoJson(
                 data=geom.__geo_interface__,
                 name=nombre,
-                tooltip=folium.Tooltip(nombre),
+                tooltip=folium.Tooltip(tooltip_text),
                 style_function=lambda x: {
-                    "fillColor": "#3186cc",
-                    "color": "#004488",
+                    "fillColor": "#1f78b4",
+                    "color": "#08306b",
                     "weight": 1,
                     "fillOpacity": 0.5,
                 },
             ).add_to(m)
     
         folium.LayerControl(position="topright", collapsed=False).add_to(m)
-    
-        # --- Mostrar mapa ---
         folium_static(m, width=1000, height=650)
 
 
