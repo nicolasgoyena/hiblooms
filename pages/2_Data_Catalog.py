@@ -141,7 +141,7 @@ def get_extraction_point_coords(engine, extraction_id):
             WHERE s.extraction_id = :eid
             LIMIT 1
         """)
-        with engine.connect() as con:
+        
             row = con.execute(sql, {"eid": extraction_id}).fetchone()
         if row and row[0] is not None and row[1] is not None:
             return float(row[0]), float(row[1])
@@ -556,6 +556,10 @@ else:
         # --- Leer todos los embalses directamente desde la BD ---
         with engine.connect() as con:
             df_full = pd.read_sql(text('SELECT * FROM "reservoirs_spain"'), con)
+        st.write("📂 Tabla cargada:", "reservoirs_spain")
+        st.write("Registros leídos:", len(df_full))
+        st.write("Área mínima:", df_full["area_m2"].min())
+
     
         # --- Función para convertir geometrías WKB hex a shapely ---
         def safe_load_wkb_hex(geom):
