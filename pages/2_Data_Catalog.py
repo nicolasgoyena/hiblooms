@@ -544,7 +544,7 @@ if table in grouped_tables:
 
 else:
     if table == "reservoirs_spain":
-        st.markdown("### 🗺️ Visualización básica de embalses (versión folium)")
+        st.markdown("### 🗺️ Mapa de embalses de España (geometrías reales)")
     
         import geopandas as gpd
         from shapely import wkb
@@ -552,13 +552,14 @@ else:
         from streamlit_folium import folium_static
         import folium
     
+        # --- Función para convertir hex WKB a geometría shapely ---
         def safe_load_wkb_hex(geom):
             try:
                 if geom is None:
                     return None
                 if isinstance(geom, str):
                     geom = geom.strip()
-                    if geom[:2] == "01" and all(c in "0123456789ABCDEFabcdef" for c in geom[:40]):
+                    if geom.startswith("01") and all(c in "0123456789ABCDEFabcdef" for c in geom[:50]):
                         return wkb.loads(binascii.unhexlify(geom))
                 elif isinstance(geom, (bytes, bytearray, memoryview)):
                     return wkb.loads(bytes(geom))
@@ -566,43 +567,55 @@ else:
                 return None
             return None
     
+        # --- Cargar geometrías ---
         df = df.copy()
         df["geometry"] = df["geometry"].apply(safe_load_wkb_hex)
         df = df[df["geometry"].notnull()]
     
         if df.empty:
-            st.warning("⚠️ No se pudo interpretar ninguna geometría válida.")
+            st.warning("⚠️ No se pudo leer ninguna geometría válida.")
             st.stop()
     
-        # CRS correcto: tus coordenadas parecen EPSG:25830 → reproyectamos a EPSG:4326
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
+        # --- Crear GeoDataFrame con CRS correcto ---
+        # Las coordenadas están en metros → EPSG:25830 (ETRS89 / UTM zone 30N)
+        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:25830")
+    
+        # Convertir a lat/lon para Folium
+        gdf = gdf.to_crs(epsg=4326)
     
         st.write(f"✅ Geometrías válidas: {len(gdf)} — Tipo: {gdf.geometry.iloc[0].geom_type}")
         st.write("📏 Extensión (total_bounds):", gdf.total_bounds.tolist())
     
-        # Calcular centro del mapa
+        # --- Crear mapa ---
         bounds = gdf.total_bounds  # minx, miny, maxx, maxy
         center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-    
-        # Crear mapa folium
         m = folium.Map(location=center, zoom_start=6, tiles="CartoDB positron")
     
-        # Añadir polígonos
+        # --- Añadir polígonos ---
+        nombre_columna = next(
+            (c for c in gdf.columns if "name" in c.lower() or "nombre" in c.lower()), "reservoir_id"
+        )
+    
         for _, row in gdf.iterrows():
             geom = row.geometry
-            nombre = str(row.get("reservoir_name", "Embalse"))
+            nombre = str(row.get(nombre_columna, "Embalse"))
             folium.GeoJson(
                 data=geom.__geo_interface__,
+                name=nombre,
                 tooltip=folium.Tooltip(nombre),
                 style_function=lambda x: {
                     "fillColor": "#3186cc",
-                    "color": "#0055aa",
+                    "color": "#004488",
                     "weight": 1,
                     "fillOpacity": 0.5,
                 },
             ).add_to(m)
     
-        folium_static(m, width=900, height=600)
+        folium.LayerControl(position="topright", collapsed=False).add_to(m)
+    
+        # --- Mostrar mapa ---
+        folium_static(m, width=1000, height=650)
+
 
 
 
