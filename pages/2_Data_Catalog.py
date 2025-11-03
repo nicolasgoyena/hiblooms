@@ -519,60 +519,69 @@ df.index = df.index + 1 + offset
 grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling"]
 
 if table in grouped_tables:
-    st.markdown(f"### 🧩 Registros agrupados de `{table}` por punto y hora")
-    
+    st.markdown(f"### 🧩 Registros agrupados de `{table}` por punto y hora/fecha")
+
     if df.empty:
         st.info("No se han encontrado registros.")
     else:
-        # Determinar columna temporal
+        # Detección automática de columna temporal
+        table_cols = [col["name"] for col in get_cached_columns(engine, table)]
         time_col = next(
-            (c for c in ["date", "datetime", "created_at", "timestamp"]
-             if c in [col["name"] for col in get_cached_columns(engine, table)]),
+            (c for c in ["datetime", "date_time", "date", "created_at", "timestamp", "sample_date"]
+             if c in table_cols),
             None
         )
-        if not time_col:
-            st.warning("No se encontró columna temporal para agrupar.")
+
+        # Caso especial para insitu_sampling: agrupar solo por fecha y punto
+        if table == "insitu_sampling":
+            grouped = df.groupby(["extraction_point_id", "sample_date"])
         else:
+            if not time_col:
+                st.warning("No se encontró columna temporal para agrupar.")
+                st.stop()
             # Agrupar por punto y hora redondeada
             df["hour_group"] = pd.to_datetime(df[time_col]).dt.floor("H")
             grouped = df.groupby(["extraction_point_id", "hour_group"])
 
-            start_idx = offset
-            end_idx = offset + page_size
-            visible_groups = list(grouped)[start_idx:end_idx]
+        # Paginación por grupos (no por filas)
+        start_idx = offset
+        end_idx = offset + page_size
+        visible_groups = list(grouped)[start_idx:end_idx]
 
-            for (point_id, hour), group in visible_groups:
-                with st.container(border=True):
-                    st.markdown(
-                        f"#### 📍 Punto {point_id} — {hour.strftime('%Y-%m-%d %H:%M')}"
-                    )
+        for (point_id, group_time), group in visible_groups:
+            with st.container(border=True):
+                if table == "insitu_sampling":
+                    st.markdown(f"#### 📍 Punto {point_id} — Fecha {group_time}")
+                    detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time}"
+                else:
+                    st.markdown(f"#### 📍 Punto {point_id} — {group_time.strftime('%Y-%m-%d %H:%M')}")
+                    detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time.isoformat()}"
 
-                    # Mostrar las 5 primeras filas del grupo
-                    st.dataframe(group.head(5), hide_index=True, use_container_width=True)
+                # Mostrar las 5 primeras filas del grupo
+                st.dataframe(group.head(5), hide_index=True, use_container_width=True)
 
-                    detail_url = f"?page=detail&table={table}&group={point_id}&time={hour.isoformat()}"
-                    st.markdown(
-                        f"""
-                        <a href="{detail_url}" target="_self" style="text-decoration:none;">
-                            <button style="
-                                background-color:#1e88e5;
-                                color:white;
-                                border:none;
-                                padding:6px 12px;
-                                border-radius:6px;
-                                cursor:pointer;
-                                margin-top:8px;">
-                                🔎 Ver detalles
-                            </button>
-                        </a>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                st.markdown(
+                    f"""
+                    <a href="{detail_url}" target="_self" style="text-decoration:none;">
+                        <button style="
+                            background-color:#1e88e5;
+                            color:white;
+                            border:none;
+                            padding:6px 12px;
+                            border-radius:6px;
+                            cursor:pointer;
+                            margin-top:8px;">
+                            🔎 Ver detalles
+                        </button>
+                    </a>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            # Calcular número de páginas reales (por grupos, no por filas)
-            total_groups = len(grouped)
-            total_pages = max(1, (total_groups + page_size - 1) // page_size)
-            st.caption(f"Mostrando {len(visible_groups)} grupos (Página {page} de {total_pages})")
+        # Calcular número de grupos y páginas
+        total_groups = len(grouped)
+        total_pages = max(1, (total_groups + page_size - 1) // page_size)
+        st.caption(f"Mostrando {len(visible_groups)} grupos (Página {page} de {total_pages})")
 
 else:
     if table == "reservoirs_spain":
