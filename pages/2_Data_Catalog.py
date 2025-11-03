@@ -400,7 +400,11 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
-    st.dataframe(traducir_columnas(df_meta), hide_index=True, use_container_width=True)
+    df_meta["Campo"] = df_meta["Campo"].apply(
+        lambda x: COLUMN_TRANSLATIONS.get(x, x.replace("_", " ").capitalize())
+    )
+    st.dataframe(df_meta, hide_index=True, use_container_width=True)
+
 
     # =============================
     # Edición del registro
@@ -747,9 +751,15 @@ else:
             cols = [c for c in gdf.columns if c not in exclude_cols]
     
             # Mostrar la info en formato limpio
+            # Traducir solo los nombres de campo (filas) y mantener limpio
             info_df = gdf[cols].T.reset_index()
             info_df.columns = ["Campo", "Valor"]
-            st.dataframe(traducir_columnas(info_df), hide_index=True, use_container_width=True)
+            
+            info_df["Campo"] = info_df["Campo"].apply(
+                lambda x: COLUMN_TRANSLATIONS.get(x, x.replace("_", " ").capitalize())
+            )
+            st.dataframe(info_df, hide_index=True, use_container_width=True)
+
     
         else:
             st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
