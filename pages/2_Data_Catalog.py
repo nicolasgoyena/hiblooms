@@ -338,7 +338,7 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     point_id = params.get("group")
     time_group = params.get("time")
 
-    # Detectar columna temporal (más completa)
+    # Detectar columna temporal más completa
     table_cols = [c["name"] for c in get_cached_columns(engine, table)]
     time_candidates = ["datetime", "date_time", "date_sampling", "sample_date", "timestamp", "created_at", "date"]
     time_col = next((c for c in time_candidates if c in table_cols), None)
@@ -354,9 +354,10 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         st.error(f"⚠️ Error interpretando el parámetro de tiempo: {e}")
         st.stop()
 
-    time_end = time_start + pd.Timedelta(minutes=30)
+    # Usar un rango temporal más amplio (±2 horas)
+    time_start_range = time_start - pd.Timedelta(hours=2)
+    time_end_range = time_start + pd.Timedelta(hours=2)
 
-    # Ejecutar consulta SQL segura
     sql = text(f"""
         SELECT * FROM "{table}"
         WHERE extraction_point_id = :pid
@@ -367,13 +368,31 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     with engine.connect() as con:
         df_group = pd.read_sql(sql, con, params={
             "pid": point_id,
-            "tstart": time_start,
-            "tend": time_end
+            "tstart": time_start_range,
+            "tend": time_end_range
         })
 
-    st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
+    st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')} (±2 h)")
+
     if df_group.empty:
-        st.warning("⚠️ No se encontraron registros en el rango temporal especificado (±30 min).")
+        st.warning("⚠️ No se encontraron registros en el rango temporal especificado (±2 h).")
+
+        # 🔍 Debug temporal: mostrar registros reales de ese punto
+        st.markdown("### 🔍 Depuración de registros disponibles")
+        with engine.connect() as con:
+            df_check = pd.read_sql(text(f"""
+                SELECT "{time_col}", extraction_point_id
+                FROM "{table}"
+                WHERE extraction_point_id = :pid
+                ORDER BY "{time_col}" ASC
+                LIMIT 15
+            """), con, params={"pid": point_id})
+        if df_check.empty:
+            st.info("No hay registros para este punto de extracción.")
+        else:
+            st.dataframe(df_check, use_container_width=True, hide_index=True)
+            st.caption(f"Mostrando las 15 primeras fechas del punto {point_id} (columna '{time_col}').")
+
     else:
         st.dataframe(df_group, use_container_width=True, hide_index=True)
 
@@ -394,6 +413,7 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
             st.warning("⚠️ Eliminación de grupos completa aún no implementada.")
 
     st.stop()
+
 
 
 with st.sidebar:
