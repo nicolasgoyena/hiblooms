@@ -338,27 +338,44 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     point_id = params.get("group")
     time_group = params.get("time")
 
-    # Determinar columna temporal
+    # Detectar columna temporal (más completa)
     table_cols = [c["name"] for c in get_cached_columns(engine, table)]
-    time_col = next((c for c in ["date", "datetime", "created_at", "timestamp"] if c in table_cols), None)
+    time_candidates = ["datetime", "date_time", "date_sampling", "sample_date", "timestamp", "created_at", "date"]
+    time_col = next((c for c in time_candidates if c in table_cols), None)
+
     if not time_col:
-        st.error("❌ No se encontró una columna temporal adecuada en la tabla.")
+        st.error(f"❌ No se encontró una columna temporal adecuada en la tabla '{table}'. Columnas disponibles: {table_cols}")
         st.stop()
 
-    # Recuperar registros del grupo (±30 min)
-    time_start = pd.to_datetime(time_group)
+    # Parsear el valor de hora recibido
+    try:
+        time_start = pd.to_datetime(time_group)
+    except Exception as e:
+        st.error(f"⚠️ Error interpretando el parámetro de tiempo: {e}")
+        st.stop()
+
     time_end = time_start + pd.Timedelta(minutes=30)
+
+    # Ejecutar consulta SQL segura
     sql = text(f"""
         SELECT * FROM "{table}"
         WHERE extraction_point_id = :pid
-          AND {time_col} BETWEEN :tstart AND :tend
-        ORDER BY {time_col} ASC
+          AND "{time_col}" BETWEEN :tstart AND :tend
+        ORDER BY "{time_col}" ASC
     """)
+
     with engine.connect() as con:
-        df_group = pd.read_sql(sql, con, params={"pid": point_id, "tstart": time_start, "tend": time_end})
+        df_group = pd.read_sql(sql, con, params={
+            "pid": point_id,
+            "tstart": time_start,
+            "tend": time_end
+        })
 
     st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
-    st.dataframe(df_group, use_container_width=True, hide_index=True)
+    if df_group.empty:
+        st.warning("⚠️ No se encontraron registros en el rango temporal especificado (±30 min).")
+    else:
+        st.dataframe(df_group, use_container_width=True, hide_index=True)
 
     st.markdown("---")
 
@@ -376,12 +393,7 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         if st.button("🗑️ Borrar grupo"):
             st.warning("⚠️ Eliminación de grupos completa aún no implementada.")
 
-
-
-
     st.stop()
-
-
 
 
 with st.sidebar:
