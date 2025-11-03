@@ -13,6 +13,120 @@ from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
 import sys, os, importlib.util, traceback
 
+# ======================================================
+# 🗺️ Traducciones automáticas de nombres de columnas
+# ======================================================
+
+COLUMN_TRANSLATIONS = {
+    "reservoir_id": "ID del embalse",
+    "reservoir_name": "Nombre del embalse",
+    "report_url": "URL del informe",
+    "capacity_nmn": "Capacidad normal (hm³)",
+    "elevation_nmn": "Cota normal (m)",
+    "owner": "Propietario",
+    "managing_authority": "Autoridad gestora",
+    "river_basin_district": "Cuenca hidrográfica",
+    "province": "Provincia",
+    "basin_area_km2": "Área de cuenca (km²)",
+    "annual_precip_mm": "Precipitación anual (mm)",
+    "reservoir_type": "Tipo de embalse",
+    "responsible_operator": "Operador responsable",
+    "ownership_type": "Tipo de propiedad",
+    "use_purpose": "Uso o finalidad",
+    "area_m2": "Superficie (m²)",
+    "geometry": "Geometría",
+    "river_id": "ID del río",
+    "river_name": "Nombre del río",
+    "length": "Longitud (km)",
+    "extraction_point_id": "ID del punto de extracción",
+    "water_body_name": "Nombre del cuerpo de agua",
+    "location_code": "Código de localización",
+    "sampling_instance_per_location": "Número de muestreos por localización",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "depth_m": "Profundidad (m)",
+    "date_sampling": "Fecha de muestreo",
+    "time_sampling": "Hora de muestreo",
+    "probe": "Sonda",
+    "lote_medida": "Lote de medida",
+    "ph": "pH",
+    "do_percent": "Oxígeno disuelto (%)",
+    "do_ppm": "Oxígeno disuelto (ppm)",
+    "conduc_uscm_1": "Conductividad (µS/cm) medición 1",
+    "conduc_uscm_2": "Conductividad (µS/cm) medición 2",
+    "temp": "Temperatura (°C)",
+    "sample_date": "Fecha de muestreo",
+    "sampling_hour": "Hora de muestreo",
+    "climate_description": "Descripción del clima",
+    "water_temperature_celsius": "Temperatura del agua (°C)",
+    "water_ph": "pH del agua",
+    "water_depth_meters": "Profundidad del agua (m)",
+    "secchi_depth_meters": "Profundidad Secchi (m)",
+    "water_transparency_percent": "Transparencia del agua (%)",
+    "electrical_conductivity_us_cm": "Conductividad eléctrica (µS/cm)",
+    "dissolved_oxygen_percent_1": "Oxígeno disuelto 1 (%)",
+    "dissolved_oxygen_percent_2": "Oxígeno disuelto 2 (%)",
+    "chlorophyll_volume_estimation": "Estimación de volumen de clorofila",
+    "chlorophyll_a_mg_m3": "Clorofila a (mg/m³)",
+    "chlorophyll_b_mg_m3": "Clorofila b (mg/m³)",
+    "chlorophyll_c_mg_m3": "Clorofila c (mg/m³)",
+    "alkalinity_meq_l": "Alcalinidad (meq/L)",
+    "chloride_ion_mg_l": "Ion cloruro (mg/L)",
+    "nitrite_no2_mg_l": "Nitrito NO₂ (mg/L)",
+    "nitrate_no3_mg_l": "Nitrato NO₃ (mg/L)",
+    "sulfate_so4_mg_l": "Sulfato SO₄ (mg/L)",
+    "ammonium_nh4_mg_l": "Amonio NH₄⁺ (mg/L)",
+    "npoc_mg_l": "NPOC (mg/L)",
+    "total_nitrogen_wstn_mg_l": "Nitrógeno total (mg/L)",
+    "elisa_cylindrospermopsin_ng_ml": "ELISA – cilindrospermopsina (ng/mL)",
+    "elisa_microcystin_nodularin_ng_ml": "ELISA – microcistina/nodularina (ng/mL)",
+    "image_id": "ID de imagen",
+    "image_name": "Nombre de la imagen",
+    "image_url": "URL de la imagen",
+    "description": "Descripción",
+    "date_captured": "Fecha de captura",
+    "uploaded_at": "Fecha de carga",
+    "photographer": "Fotógrafo/a",
+    "notes": "Notas",
+    "datetime": "Fecha y hora",
+    "green_algae_ug_l": "Algas verdes (µg/L)",
+    "bluegreen_ug_l": "Cianobacterias (µg/L)",
+    "diatoms_ug_l": "Diatomeas (µg/L)",
+    "cryptophyta_ug_l": "Criptófitas (µg/L)",
+    "yellow_substances_ru": "Sustancias amarillas (RU)",
+    "total_concentration_ug_l": "Concentración total (µg/L)",
+    "transmission_percent": "Transmitancia (%)",
+    "sample_temperature_celsius": "Temperatura de muestra (°C)",
+    "sampling_date": "Fecha de muestreo",
+    "treatment_date": "Fecha de tratamiento",
+    "plate_code": "Código de placa",
+    "drying_temperature": "Temperatura de secado (°C)",
+    "crisol_code": "Código de crisol",
+    "crucible_tare": "Tara del crisol",
+    "humidity": "Humedad (%)",
+    "ppi": "Pérdida por ignición (PPI)",
+    "co": "Contenido orgánico",
+    "observations": "Observaciones",
+    "sample_time": "Hora de muestreo",
+    "date_time": "Fecha y hora",
+    "chlorophyll": "Clorofila",
+    "phycocyanin": "Ficocianina",
+    "water_temp": "Temperatura del agua (°C)",
+    "turbidity": "Turbidez",
+    "depth": "Profundidad (m)",
+    "sample_type": "Tipo de muestra",
+    "time": "Hora",
+    "date": "Fecha",
+}
+
+def traducir_columnas(df: pd.DataFrame) -> pd.DataFrame:
+    """Devuelve una copia del DataFrame con los nombres de columnas traducidos al español."""
+    df_es = df.copy()
+    df_es.columns = [
+        COLUMN_TRANSLATIONS.get(c, c.replace("_", " ").capitalize()) for c in df.columns
+    ]
+    return df_es
+
 # ========================================
 # Import robusto de db_utils desde raíz
 # ========================================
@@ -286,7 +400,7 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
-    st.dataframe(df_meta, hide_index=True, use_container_width=True)
+    st.dataframe(traducir_columnas(df_meta), hide_index=True, use_container_width=True)
 
     # =============================
     # Edición del registro
@@ -358,7 +472,7 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         df_group = pd.read_sql(sql, con, params={"pid": point_id, "tstart": time_start, "tend": time_end})
 
     st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')}")
-    st.dataframe(df_group, use_container_width=True, hide_index=True)
+    st.dataframe(traducir_columnas(df_group), use_container_width=True, hide_index=True)
 
     st.markdown("---")
 
@@ -635,7 +749,7 @@ else:
             # Mostrar la info en formato limpio
             info_df = gdf[cols].T.reset_index()
             info_df.columns = ["Campo", "Valor"]
-            st.dataframe(info_df, hide_index=True, use_container_width=True)
+            st.dataframe(traducir_columnas(info_df), hide_index=True, use_container_width=True)
     
         else:
             st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
