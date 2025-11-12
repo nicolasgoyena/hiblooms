@@ -739,7 +739,13 @@ else:
             st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
     elif table == "rivers_spain":
         st.markdown("### 🌊 Mapa interactivo de ríos de España")
-    
+
+        import geopandas as gpd
+        from shapely import wkb 
+        from streamlit_folium import folium_static
+        import folium
+        from sqlalchemy import text
+        
         # --- Leer todos los ríos desde la BD convirtiendo la geometría a WKB binario ---
         with engine.connect() as con:
             df_rivers = pd.read_sql(
