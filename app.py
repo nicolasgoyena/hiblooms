@@ -1887,8 +1887,11 @@ with tab2:
                                     if df_list:
                                         df_fico = pd.concat(df_list).sort_values('Fecha-hora')
                                         start_dt = pd.to_datetime(start_date)
-                                        end_dt = pd.to_datetime(end_date)
-                                        df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] <= end_dt)]
+                                        end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)
+                                        
+                                        df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], errors='coerce')
+                                        df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] < end_dt)]
+
                         
                                         if df_filtrado.empty:
                                             st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
@@ -2252,6 +2255,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
