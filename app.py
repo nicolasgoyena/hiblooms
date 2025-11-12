@@ -643,6 +643,8 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             .filterDate(selected_date_ee, end_date_ee)
 
         num_images = sentinel2.size().getInfo()
+        cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
+
         if num_images == 0:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
@@ -2250,6 +2252,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
