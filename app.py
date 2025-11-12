@@ -1954,56 +1954,31 @@ with tab2:
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
-                                    try:
-                                        # === Parámetros para SAICA ===
-                                        estacion = 945  # El Val
-                                        fecha_ini = pd.to_datetime(start_date).strftime("%d-%m-%Y")
-                                        fecha_fin = pd.to_datetime(end_date).strftime("%d-%m-%Y")
+                                    estacion = 945  # El Val
                             
-                                        # === Llamada a la función ===
-                                        df_fico = cargar_ficocianina_saica(estacion, fecha_ini, fecha_fin)
+                                    # Convertir las fechas seleccionadas al formato que usa SAICA
+                                    fecha_ini = pd.to_datetime(start_date).strftime("%d-%m-%Y")
+                                    fecha_fin = pd.to_datetime(end_date).strftime("%d-%m-%Y")
                             
-                                        if df_fico.empty:
-                                            st.warning("⚠️ No hay datos de ficocianina disponibles en el rango de fechas seleccionado.")
-                                        else:
-                                            # Filtrado por rango (por si SAICA devuelve algo fuera de las fechas exactas)
-                                            start_dt = pd.to_datetime(start_date)
-                                            end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)
-                                            df_fico_filtrado = df_fico[
-                                                (df_fico["Fecha-hora"] >= start_dt) & (df_fico["Fecha-hora"] < end_dt)
-                                            ]
+                                    # Construir la URL de la tabla de datos en SAICA
+                                    url_saica = (
+                                        f"https://saica.chebro.es/fichaDataTabla.php?"
+                                        f"estacion={estacion}&fini={fecha_ini}&ffin={fecha_fin}"
+                                    )
                             
-                                            if df_fico_filtrado.empty:
-                                                st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
-                                            else:
-                                                # Submuestreo si hay demasiados puntos
-                                                max_puntos_grafico = 500
-                                                step = max(1, len(df_fico_filtrado) // max_puntos_grafico)
-                                                df_subsample = df_fico_filtrado.iloc[::step].copy()
-                                                df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
+                                    st.markdown(
+                                        f"""
+                                        🔗 Puedes consultar los datos reales de **ficocianina** directamente en la web de SAICA (Confederación Hidrográfica del Ebro):
                             
-                                                # === Gráfico con Altair ===
-                                                chart_fico = alt.Chart(df_subsample).mark_line(color="#1f77b4").encode(
-                                                    x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
-                                                    y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
-                                                    tooltip=[
-                                                        alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
-                                                        alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
-                                                    ]
-                                                ).properties(
-                                                    title="Evolución de la concentración de ficocianina (µg/L)"
-                                                )
+                                        👉 [Abrir tabla de datos en SAICA]({url_saica})
+                                        """,
+                                        unsafe_allow_html=True,
+                                    )
                             
-                                                st.altair_chart(chart_fico, use_container_width=True)
-                            
-                                                # === Mostrar rango temporal ===
-                                                st.caption(
-                                                    f"Datos SAICA disponibles desde {df_fico_filtrado['Fecha-hora'].min().strftime('%d-%m-%Y %H:%M')} "
-                                                    f"hasta {df_fico_filtrado['Fecha-hora'].max().strftime('%d-%m-%Y %H:%M')}."
-                                                )
-                            
-                                    except Exception as e:
-                                        st.error(f"⚠️ Error al cargar los datos de SAICA: {e}")           
+                                    st.caption(
+                                        f"(El enlace abrirá los datos entre {fecha_ini} y {fecha_fin} para la estación de El Val – SAICA.)"
+                                    )
+                                       
 
                             if reservoir_name.lower() == "val" and hay_clorofila:
                                 with st.expander("📈 Valores reales de clorofila-a (valores de sonda Aquadam en 41.8761,-1.7883)", expanded=False):
@@ -2344,6 +2319,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
