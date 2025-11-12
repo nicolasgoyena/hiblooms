@@ -463,7 +463,14 @@ order_col = choose_order_column(cols, pk)
 where, params_sql = "", {}
 offset = (page - 1) * page_size
 total = count_cached_records(engine, table, where, params_sql)
-df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size, offset)
+if table in ["sensor_data", "sediment_data", "insitu_determinations", "insitu_sampling", "samples", "profiles_data"]:
+    # 🔁 Leer todos los registros para agrupar correctamente
+    with engine.connect() as con:
+        df = pd.read_sql(text(f'SELECT * FROM "{table}"'), con)
+else:
+    # 🔁 Mantener la carga paginada para tablas grandes
+    df = fetch_cached_records(engine, table, where, params_sql, order_col, page_size, offset)
+
 
 # ===== Vista especial lab_images =====
 if table == "lab_images":
