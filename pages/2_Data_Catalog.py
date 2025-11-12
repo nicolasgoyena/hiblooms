@@ -599,6 +599,8 @@ if table in grouped_tables:
                 elif table == "sensor_data":
                     st.markdown(f"#### {titulo}")
                     detail_url = f"?page=detail&table={table}&group={reservoir_name}&time={sensor_type}"
+                    if "sensor_type" in group.columns:
+                        group = group.drop(columns=["sensor_type"])
                 else:
                     st.markdown(f"#### {titulo} — {group_time.strftime('%Y-%m-%d %H:%M')}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time.isoformat()}"
