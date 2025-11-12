@@ -516,7 +516,7 @@ if table == "lab_images":
 df.index = df.index + 1 + offset
 
 # Tablas que deben mostrarse agrupadas
-grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling"]
+grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling", "sediment_data"]
 
 if table in grouped_tables:
     st.markdown(f"### 🧩 Registros agrupados de `{table}` por punto y hora/fecha")
@@ -535,6 +535,8 @@ if table in grouped_tables:
         # Caso especial para insitu_sampling: agrupar solo por fecha y punto
         if table == "insitu_sampling":
             grouped = df.groupby(["extraction_point_id", "sample_date"])
+        elif table == "sediment_data":
+            grouped = df.groupby(["extraction_point_id", "sampling_date"])
         else:
             if not time_col:
                 st.warning("No se encontró columna temporal para agrupar.")
