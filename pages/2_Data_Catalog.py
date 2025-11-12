@@ -562,7 +562,7 @@ if table in grouped_tables:
         end_idx = offset + page_size
         visible_groups = list(grouped)[start_idx:end_idx]
 
-        for keys, group in visible_groups:
+       for keys, group in visible_groups:
             with st.container(border=True):
                 # Desempaquetar claves del grupo según el número de columnas agrupadas
                 if table == "insitu_determinations":
@@ -571,20 +571,23 @@ if table in grouped_tables:
                     point_id, group_time = keys
                 elif table == "insitu_sampling":
                     point_id, group_time = keys
+                elif table == "sensor_data":
+                    reservoir_name, sensor_type = keys
                 else:
                     point_id, group_time = keys
         
                 # Obtener nombre del embalse si existe
-                reservoir_name = None
-                if "reservoir_name" in group.columns:
-                    val = group["reservoir_name"].dropna().unique()
-                    if len(val) > 0:
-                        reservoir_name = str(val[0])
+                if table == "sensor_data":
+                    titulo = f"📈 {reservoir_name} — {sensor_type}"
+                else:
+                    reservoir_name_val = None
+                    if "reservoir_name" in group.columns:
+                        val = group["reservoir_name"].dropna().unique()
+                        if len(val) > 0:
+                            reservoir_name_val = str(val[0])
+                    titulo = f"📍 {reservoir_name_val} – Punto {point_id}" if reservoir_name_val else f"📍 Punto {point_id}"
         
-                # Construir título con embalse
-                titulo = f"📍 {reservoir_name} – Punto {point_id}" if reservoir_name else f"📍 Punto {point_id}"
-        
-                # Mostrar título según tipo de tabla
+                # Mostrar encabezado según tipo de tabla
                 if table == "insitu_determinations":
                     fecha_str = str(date_sampling) if pd.notna(date_sampling) else "(sin fecha)"
                     hora_str = str(time_sampling) if pd.notna(time_sampling) else "(sin hora)"
@@ -593,10 +596,13 @@ if table in grouped_tables:
                 elif table in ["insitu_sampling", "sediment_data"]:
                     st.markdown(f"#### {titulo} — Fecha {group_time}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time}"
+                elif table == "sensor_data":
+                    st.markdown(f"#### {titulo}")
+                    detail_url = f"?page=detail&table={table}&group={reservoir_name}&time={sensor_type}"
                 else:
                     st.markdown(f"#### {titulo} — {group_time.strftime('%Y-%m-%d %H:%M')}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time.isoformat()}"
-        
+
 
 
                 # Mostrar las 5 primeras filas del grupo
