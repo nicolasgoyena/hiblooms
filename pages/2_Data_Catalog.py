@@ -737,6 +737,79 @@ else:
     
         else:
             st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
+    elif table == "rivers_spain":
+        st.markdown("### 🌊 Mapa interactivo de ríos de España") 
+    
+        # --- Leer todos los ríos directamente desde la BD ---
+        with engine.connect() as con:
+            df_rivers = pd.read_sql(text('SELECT * FROM "rivers_spain"'), con)
+        st.write("📂 Tabla cargada:", "rivers_spain")
+        st.write("Registros leídos:", len(df_rivers))
+    
+        # --- Convertir geometrías WKB a Shapely ---
+        def safe_load_wkb_hex(geom):
+            try:
+                if geom is None:
+                    return None
+                if isinstance(geom, str):
+                    geom = geom.strip()
+                    if geom.startswith("01") and all(c in "0123456789ABCDEFabcdef" for c in geom[:50]):
+                        return wkb.loads(binascii.unhexlify(geom))
+                elif isinstance(geom, (bytes, bytearray, memoryview)):
+                    return wkb.loads(bytes(geom))
+            except Exception:
+                return None
+            return None
+    
+        df_rivers["geometry"] = df_rivers["geometry"].apply(safe_load_wkb_hex)
+        df_rivers = df_rivers[df_rivers["geometry"].notnull()]
+    
+        if df_rivers.empty:
+            st.warning("⚠️ No se pudo leer ninguna geometría válida.")
+            st.stop()
+    
+        # --- Selector predictivo de río ---
+        river_names = sorted(df_rivers["river_name"].dropna().unique().tolist())
+        selected_river = st.selectbox("🏞️ Selecciona un río:", river_names, index=None, placeholder="Escribe un nombre...")
+    
+        if selected_river:
+            df_sel = df_rivers[df_rivers["river_name"] == selected_river]
+    
+            st.success(f"Mostrando información y trazado del río **{selected_river}**")
+    
+            # --- Crear GeoDataFrame y reproyectar ---
+            gdf = gpd.GeoDataFrame(df_sel, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
+    
+            # --- Extraer geometría y centro ---
+            geom = gdf.geometry.iloc[0]
+            bounds = geom.bounds  # minx, miny, maxx, maxy
+            center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
+    
+            # --- Crear mapa centrado ---
+            m = folium.Map(location=[center[0], center[1]], zoom_start=8, tiles="CartoDB positron")
+    
+            folium.GeoJson(
+                data=geom.__geo_interface__,
+                name=selected_river,
+                tooltip=folium.Tooltip(f"{selected_river} — {gdf['length'].iloc[0]:,.0f} m"),
+                style_function=lambda x: {
+                    "color": "#1e88e5",
+                    "weight": 3,
+                },
+            ).add_to(m)
+    
+            folium.LayerControl(position="topright", collapsed=False).add_to(m)
+            folium_static(m, width=1000, height=600)
+    
+            # --- Mostrar información del río seleccionado ---
+            st.markdown("### 📋 Información del río seleccionado")
+            info_df = gdf[["river_id", "river_name", "length"]].T.reset_index()
+            info_df.columns = ["Campo", "Valor"]
+            st.dataframe(info_df, hide_index=True, use_container_width=True)
+    
+        else:
+            st.info("Selecciona un río para visualizarlo en el mapa y ver su información.")
+
 
 
 
