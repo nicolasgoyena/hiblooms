@@ -909,27 +909,18 @@ import requests
 from io import StringIO
 import streamlit as st
 
+import pandas as pd
+import requests
+from io import StringIO
+import streamlit as st
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 @st.cache_data(show_spinner=False)
 def cargar_ficocianina_saica(estacion: int, fecha_ini: str, fecha_fin: str) -> pd.DataFrame:
     """
-    Descarga los datos de ficocianina y temperatura desde la web de SAICA (CHE Ebro)
-    para una estación y rango de fechas dados.
-    
-    Parámetros:
-    -----------
-    estacion : int
-        Código de la estación SAICA (por ejemplo, 945 para El Val).
-    fecha_ini : str
-        Fecha de inicio en formato DD-MM-YYYY.
-    fecha_fin : str
-        Fecha de fin en formato DD-MM-YYYY.
-    
-    Devuelve:
-    ----------
-    pd.DataFrame con las columnas:
-        - Fecha-hora
-        - Ficocianina (µg/L)
-        - Temperatura (°C)
+    Descarga los datos de ficocianina desde SAICA (CHE Ebro)
+    con sistema de reintentos y tolerancia a fallos de conexión.
     """
 
     headers = {
@@ -941,40 +932,55 @@ def cargar_ficocianina_saica(estacion: int, fecha_ini: str, fecha_fin: str) -> p
         "Referer": f"https://saica.chebro.es/ficha.php?estacion={estacion}"
     }
 
-    url = f"https://saica.chebro.es/fichaDataTabla.php?estacion={estacion}&fini={fecha_ini}&ffin={fecha_fin}"
+    base_urls = [
+        f"https://saica.chebro.es/fichaDataTabla.php?estacion={estacion}&fini={fecha_ini}&ffin={fecha_fin}",
+        f"http://saica.chebro.es/fichaDataTabla.php?estacion={estacion}&fini={fecha_ini}&ffin={fecha_fin}"
+    ]
 
-    with st.spinner(f"📡 Descargando datos de ficocianina desde SAICA ({fecha_ini} → {fecha_fin})..."):
+    # Configurar reintentos
+    session = requests.Session()
+    retries = Retry(total=3, backoff_factor=3, status_forcelist=[429, 500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    session.mount("http://", HTTPAdapter(max_retries=retries))
+
+    for url in base_urls:
         try:
-            resp = requests.get(url, headers=headers, timeout=25)
-            resp.raise_for_status()
+            with st.spinner(f"📡 Descargando datos de SAICA ({fecha_ini} → {fecha_fin})..."):
+                resp = session.get(url, headers=headers, timeout=60)
+                resp.raise_for_status()
 
-            # Leer la tabla HTML directamente
-            tablas = pd.read_html(StringIO(resp.text), header=None, flavor='lxml')
+                # Si no devuelve HTML válido
+                if "<html" not in resp.text.lower():
+                    st.warning("⚠️ Respuesta inesperada del servidor SAICA.")
+                    continue
 
-            if not tablas or len(tablas[0]) == 0:
-                st.warning("⚠️ No se encontró ninguna tabla con datos en la página de SAICA.")
-                return pd.DataFrame()
+                tablas = pd.read_html(StringIO(resp.text), header=None, flavor='lxml')
+                if not tablas or len(tablas[0]) == 0:
+                    st.warning("⚠️ No se encontró ninguna tabla con datos en la página de SAICA.")
+                    continue
 
-            # Tomar solo las tres primeras columnas
-            df = tablas[0].iloc[:, :3]
-            df.columns = ["Fecha-hora", "Ficocianina (µg/L)", "Temperatura (°C)"]
+                df = tablas[0].iloc[:, :3]
+                df.columns = ["Fecha-hora", "Ficocianina (µg/L)", "Temperatura (°C)"]
 
-            # Limpieza y formateo
-            df = df.dropna(subset=["Fecha-hora"])
-            df["Fecha-hora"] = pd.to_datetime(df["Fecha-hora"], format="%d-%m-%Y %H:%M:%S", errors="coerce")
+                df = df.dropna(subset=["Fecha-hora"])
+                df["Fecha-hora"] = pd.to_datetime(df["Fecha-hora"], format="%d-%m-%Y %H:%M:%S", errors="coerce")
+                df["Ficocianina (µg/L)"] = pd.to_numeric(df["Ficocianina (µg/L)"].astype(str).str.replace(",", "."), errors="coerce")
+                df["Temperatura (°C)"] = pd.to_numeric(df["Temperatura (°C)"].astype(str).str.replace(",", "."), errors="coerce")
 
-            # Sustituir coma decimal por punto
-            df["Ficocianina (µg/L)"] = pd.to_numeric(df["Ficocianina (µg/L)"].astype(str).str.replace(",", "."), errors="coerce")
-            df["Temperatura (°C)"] = pd.to_numeric(df["Temperatura (°C)"].astype(str).str.replace(",", "."), errors="coerce")
+                df = df.dropna(subset=["Fecha-hora"])
+                df = df.sort_values("Fecha-hora")
 
-            df = df.dropna(subset=["Fecha-hora"])
-            df = df.sort_values("Fecha-hora")
+                if not df.empty:
+                    return df
 
-            return df
-
+        except requests.exceptions.Timeout:
+            st.warning(f"⚠️ Tiempo de espera agotado al conectar con SAICA ({url}). Reintentando...")
         except Exception as e:
-            st.error(f"❌ Error al cargar datos desde SAICA: {e}")
-            return pd.DataFrame()
+            st.warning(f"⚠️ Error durante la conexión a SAICA ({url}): {e}")
+
+    st.error("❌ No se pudo obtener datos de SAICA tras varios intentos.")
+    return pd.DataFrame()
+
 
 # INTERFAZ DE STREAMLIT
 
@@ -2338,6 +2344,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
