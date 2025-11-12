@@ -552,12 +552,27 @@ if table in grouped_tables:
 
         for (point_id, group_time), group in visible_groups:
             with st.container(border=True):
-                if table == "insitu_sampling":
-                    st.markdown(f"#### 📍 Punto {point_id} — Fecha {group_time}")
+                # Intentar obtener el nombre del embalse (campo reservoir_name)
+                reservoir_name = None
+                if "reservoir_name" in group.columns:
+                    val = group["reservoir_name"].dropna().unique()
+                    if len(val) > 0:
+                        reservoir_name = str(val[0])
+        
+                # Construir título
+                if reservoir_name:
+                    titulo = f"📍 {reservoir_name} – Punto {point_id}"
+                else:
+                    titulo = f"📍 Punto {point_id}"
+        
+                # Mostrar encabezado según tipo de tabla
+                if table in ["insitu_sampling", "sediment_data"]:
+                    st.markdown(f"#### {titulo} — Fecha {group_time}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time}"
                 else:
-                    st.markdown(f"#### 📍 Punto {point_id} — {group_time.strftime('%Y-%m-%d %H:%M')}")
+                    st.markdown(f"#### {titulo} — {group_time.strftime('%Y-%m-%d %H:%M')}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time.isoformat()}"
+
 
                 # Mostrar las 5 primeras filas del grupo
                 st.dataframe(group.head(5), hide_index=True, use_container_width=True)
