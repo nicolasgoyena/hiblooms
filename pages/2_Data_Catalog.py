@@ -537,6 +537,8 @@ if table in grouped_tables:
             grouped = df.groupby(["extraction_point_id", "sample_date"])
         elif table == "sediment_data":
             grouped = df.groupby(["extraction_point_id", "sampling_date"])
+        elif table == "insitu_determinations":
+            grouped = df.groupby(["extraction_point_id", "date_sampling", "time_sampling"])
         else:
             if not time_col:
                 st.warning("No se encontró columna temporal para agrupar.")
@@ -550,28 +552,41 @@ if table in grouped_tables:
         end_idx = offset + page_size
         visible_groups = list(grouped)[start_idx:end_idx]
 
-        for (point_id, group_time), group in visible_groups:
+        for keys, group in visible_groups:
             with st.container(border=True):
-                # Intentar obtener el nombre del embalse (campo reservoir_name)
+                # Desempaquetar claves del grupo según el número de columnas agrupadas
+                if table == "insitu_determinations":
+                    point_id, date_sampling, time_sampling = keys
+                elif table == "sediment_data":
+                    point_id, group_time = keys
+                elif table == "insitu_sampling":
+                    point_id, group_time = keys
+                else:
+                    point_id, group_time = keys
+        
+                # Obtener nombre del embalse si existe
                 reservoir_name = None
                 if "reservoir_name" in group.columns:
                     val = group["reservoir_name"].dropna().unique()
                     if len(val) > 0:
                         reservoir_name = str(val[0])
         
-                # Construir título
-                if reservoir_name:
-                    titulo = f"📍 {reservoir_name} – Punto {point_id}"
-                else:
-                    titulo = f"📍 Punto {point_id}"
+                # Construir título con embalse
+                titulo = f"📍 {reservoir_name} – Punto {point_id}" if reservoir_name else f"📍 Punto {point_id}"
         
-                # Mostrar encabezado según tipo de tabla
-                if table in ["insitu_sampling", "sediment_data"]:
+                # Mostrar título según tipo de tabla
+                if table == "insitu_determinations":
+                    fecha_str = str(date_sampling) if pd.notna(date_sampling) else "(sin fecha)"
+                    hora_str = str(time_sampling) if pd.notna(time_sampling) else "(sin hora)"
+                    st.markdown(f"#### {titulo} — {fecha_str} {hora_str}")
+                    detail_url = f"?page=detail&table={table}&group={point_id}&time={fecha_str}T{hora_str}"
+                elif table in ["insitu_sampling", "sediment_data"]:
                     st.markdown(f"#### {titulo} — Fecha {group_time}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time}"
                 else:
                     st.markdown(f"#### {titulo} — {group_time.strftime('%Y-%m-%d %H:%M')}")
                     detail_url = f"?page=detail&table={table}&group={point_id}&time={group_time.isoformat()}"
+        
 
 
                 # Mostrar las 5 primeras filas del grupo
