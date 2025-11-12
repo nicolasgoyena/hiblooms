@@ -516,7 +516,7 @@ if table == "lab_images":
 df.index = df.index + 1 + offset
 
 # Tablas que deben mostrarse agrupadas
-grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling", "sediment_data"]
+grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling", "sediment_data", "sensor_data"]
 
 if table in grouped_tables:
     st.markdown(f"### 🧩 Registros agrupados de `{table}` por punto y hora/fecha")
@@ -539,6 +539,16 @@ if table in grouped_tables:
             grouped = df.groupby(["extraction_point_id", "sampling_date"])
         elif table == "insitu_determinations":
             grouped = df.groupby(["extraction_point_id", "date_sampling", "time_sampling"])
+        elif table == "sensor_data":
+            # Clasificar tipo de sensor según las columnas activas
+            df["sensor_type"] = df.apply(
+                lambda r: "Clorofila" if pd.notna(r.get("chlorophyll")) else (
+                    "Ficocianina" if pd.notna(r.get("phycocyanin")) else "Sin datos"
+                ),
+                axis=1
+            )
+            grouped = df.groupby(["reservoir_name", "sensor_type"])
+
         else:
             if not time_col:
                 st.warning("No se encontró columna temporal para agrupar.")
