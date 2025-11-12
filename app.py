@@ -904,6 +904,77 @@ def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scal
     except Exception as e:
         return None
 
+import pandas as pd
+import requests
+from io import StringIO
+import streamlit as st
+
+@st.cache_data(show_spinner=False)
+def cargar_ficocianina_saica(estacion: int, fecha_ini: str, fecha_fin: str) -> pd.DataFrame:
+    """
+    Descarga los datos de ficocianina y temperatura desde la web de SAICA (CHE Ebro)
+    para una estación y rango de fechas dados.
+    
+    Parámetros:
+    -----------
+    estacion : int
+        Código de la estación SAICA (por ejemplo, 945 para El Val).
+    fecha_ini : str
+        Fecha de inicio en formato DD-MM-YYYY.
+    fecha_fin : str
+        Fecha de fin en formato DD-MM-YYYY.
+    
+    Devuelve:
+    ----------
+    pd.DataFrame con las columnas:
+        - Fecha-hora
+        - Ficocianina (µg/L)
+        - Temperatura (°C)
+    """
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/121.0 Safari/537.36"
+        ),
+        "Referer": f"https://saica.chebro.es/ficha.php?estacion={estacion}"
+    }
+
+    url = f"https://saica.chebro.es/fichaDataTabla.php?estacion={estacion}&fini={fecha_ini}&ffin={fecha_fin}"
+
+    with st.spinner(f"📡 Descargando datos de ficocianina desde SAICA ({fecha_ini} → {fecha_fin})..."):
+        try:
+            resp = requests.get(url, headers=headers, timeout=25)
+            resp.raise_for_status()
+
+            # Leer la tabla HTML directamente
+            tablas = pd.read_html(StringIO(resp.text), header=None, flavor='lxml')
+
+            if not tablas or len(tablas[0]) == 0:
+                st.warning("⚠️ No se encontró ninguna tabla con datos en la página de SAICA.")
+                return pd.DataFrame()
+
+            # Tomar solo las tres primeras columnas
+            df = tablas[0].iloc[:, :3]
+            df.columns = ["Fecha-hora", "Ficocianina (µg/L)", "Temperatura (°C)"]
+
+            # Limpieza y formateo
+            df = df.dropna(subset=["Fecha-hora"])
+            df["Fecha-hora"] = pd.to_datetime(df["Fecha-hora"], format="%d-%m-%Y %H:%M:%S", errors="coerce")
+
+            # Sustituir coma decimal por punto
+            df["Ficocianina (µg/L)"] = pd.to_numeric(df["Ficocianina (µg/L)"].astype(str).str.replace(",", "."), errors="coerce")
+            df["Temperatura (°C)"] = pd.to_numeric(df["Temperatura (°C)"].astype(str).str.replace(",", "."), errors="coerce")
+
+            df = df.dropna(subset=["Fecha-hora"])
+            df = df.sort_values("Fecha-hora")
+
+            return df
+
+        except Exception as e:
+            st.error(f"❌ Error al cargar datos desde SAICA: {e}")
+            return pd.DataFrame()
 
 # INTERFAZ DE STREAMLIT
 
@@ -1877,44 +1948,56 @@ with tab2:
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
                                 with st.expander("📈 Serie temporal real de ficocianina (sonda SAICA)", expanded=False):
-                                    urls_csv = [
-                                        "https://drive.google.com/uc?id=1-FpLJpudQd69r9JxTbT1EhHG2swASEn-&export=download",
-                                        "https://drive.google.com/uc?id=1w5vvpt1TnKf_FN8HaM9ZVi3WSf0ibxlV&export=download"
-                                    ]
-                                    df_list = [cargar_csv_desde_url(url) for url in urls_csv]
-                                    df_list = [df for df in df_list if not df.empty]
-                        
-                                    if df_list:
-                                        df_fico = pd.concat(df_list).sort_values('Fecha-hora')
-                                        start_dt = pd.to_datetime(start_date)
-                                        end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)
-                                        
-                                        df_fico['Fecha-hora'] = pd.to_datetime(df_fico['Fecha-hora'], errors='coerce')
-                                        df_filtrado = df_fico[(df_fico['Fecha-hora'] >= start_dt) & (df_fico['Fecha-hora'] < end_dt)]
-
-                        
-                                        if df_filtrado.empty:
-                                            st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                    try:
+                                        # === Parámetros para SAICA ===
+                                        estacion = 945  # El Val
+                                        fecha_ini = pd.to_datetime(start_date).strftime("%d-%m-%Y")
+                                        fecha_fin = pd.to_datetime(end_date).strftime("%d-%m-%Y")
+                            
+                                        # === Llamada a la función ===
+                                        df_fico = cargar_ficocianina_saica(estacion, fecha_ini, fecha_fin)
+                            
+                                        if df_fico.empty:
+                                            st.warning("⚠️ No hay datos de ficocianina disponibles en el rango de fechas seleccionado.")
                                         else:
-                                            max_puntos_grafico = 500
-                                            step = max(1, len(df_filtrado) // max_puntos_grafico)
-                                            df_subsample = df_filtrado.iloc[::step]
-                                            df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
-                        
-                                            chart_fico = alt.Chart(df_subsample).mark_line().encode(
-                                                x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
-                                                y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
-                                                tooltip=[
-                                                    alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
-                                                    alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
-                                                ]
-                                            ).properties(
-                                                title="Evolución de la concentración de ficocianina (µg/L)"
-                                            )
-                        
-                                            st.altair_chart(chart_fico, use_container_width=True)
-                                    else:
-                                        st.warning("⚠️ No se pudo cargar ningún archivo de ficocianina.")                       
+                                            # Filtrado por rango (por si SAICA devuelve algo fuera de las fechas exactas)
+                                            start_dt = pd.to_datetime(start_date)
+                                            end_dt = pd.to_datetime(end_date) + pd.Timedelta(days=1)
+                                            df_fico_filtrado = df_fico[
+                                                (df_fico["Fecha-hora"] >= start_dt) & (df_fico["Fecha-hora"] < end_dt)
+                                            ]
+                            
+                                            if df_fico_filtrado.empty:
+                                                st.warning("⚠️ No hay datos de ficocianina en el rango de fechas seleccionado.")
+                                            else:
+                                                # Submuestreo si hay demasiados puntos
+                                                max_puntos_grafico = 500
+                                                step = max(1, len(df_fico_filtrado) // max_puntos_grafico)
+                                                df_subsample = df_fico_filtrado.iloc[::step].copy()
+                                                df_subsample["Fecha_formateada"] = df_subsample["Fecha-hora"].dt.strftime("%d-%m-%Y %H:%M")
+                            
+                                                # === Gráfico con Altair ===
+                                                chart_fico = alt.Chart(df_subsample).mark_line(color="#1f77b4").encode(
+                                                    x=alt.X('Fecha_formateada:N', title='Fecha y hora', axis=alt.Axis(labelAngle=45)),
+                                                    y=alt.Y('Ficocianina (µg/L):Q', title='Concentración (µg/L)'),
+                                                    tooltip=[
+                                                        alt.Tooltip('Fecha_formateada:N', title='Fecha y hora'),
+                                                        alt.Tooltip('Ficocianina (µg/L):Q', title='Ficocianina (µg/L)', format=".2f")
+                                                    ]
+                                                ).properties(
+                                                    title="Evolución de la concentración de ficocianina (µg/L)"
+                                                )
+                            
+                                                st.altair_chart(chart_fico, use_container_width=True)
+                            
+                                                # === Mostrar rango temporal ===
+                                                st.caption(
+                                                    f"Datos SAICA disponibles desde {df_fico_filtrado['Fecha-hora'].min().strftime('%d-%m-%Y %H:%M')} "
+                                                    f"hasta {df_fico_filtrado['Fecha-hora'].max().strftime('%d-%m-%Y %H:%M')}."
+                                                )
+                            
+                                    except Exception as e:
+                                        st.error(f"⚠️ Error al cargar los datos de SAICA: {e}")           
 
                             if reservoir_name.lower() == "val" and hay_clorofila:
                                 with st.expander("📈 Valores reales de clorofila-a (valores de sonda Aquadam en 41.8761,-1.7883)", expanded=False):
@@ -2255,6 +2338,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
