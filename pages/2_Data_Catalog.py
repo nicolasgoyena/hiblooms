@@ -562,7 +562,7 @@ if table in grouped_tables:
         end_idx = offset + page_size
         visible_groups = list(grouped)[start_idx:end_idx]
 
-       for keys, group in visible_groups:
+        for keys, group in visible_groups:
             with st.container(border=True):
                 # Desempaquetar claves del grupo según el número de columnas agrupadas
                 if table == "insitu_determinations":
