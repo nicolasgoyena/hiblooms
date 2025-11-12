@@ -741,21 +741,43 @@ else:
 # Paginación final (dinámica según tipo de tabla)
 # =====================
 
-grouped_tables = ["samples", "profiles_data", "insitu_determinations", "insitu_sampling"]
+grouped_tables = [
+    "samples",
+    "profiles_data",
+    "insitu_determinations",
+    "insitu_sampling",
+    "sediment_data",
+    "sensor_data"
+]
 
 if table in grouped_tables:
-    # Calcular total de grupos únicos (no filas)
-    time_col = next(
-        (c for c in ["date", "datetime", "created_at", "timestamp"]
-         if c in [col["name"] for col in get_cached_columns(engine, table)]),
-        None
-    )
-    if time_col and not df.empty:
-        df["hour_group"] = pd.to_datetime(df[time_col]).dt.floor("H")
-        total_groups = len(df.groupby(["extraction_point_id", "hour_group"]))
+    # Calcular número de grupos únicos (depende del tipo de tabla)
+    if not df.empty:
+        if table == "insitu_sampling":
+            total_groups = len(df.groupby(["extraction_point_id", "sample_date"]))
+        elif table == "sediment_data":
+            total_groups = len(df.groupby(["extraction_point_id", "sampling_date"]))
+        elif table == "insitu_determinations":
+            total_groups = len(df.groupby(["extraction_point_id", "date_sampling", "time_sampling"]))
+        elif table == "sensor_data":
+            # Agrupado por embalse y tipo de sensor
+            total_groups = len(df.groupby(["reservoir_name", "sensor_type"]))
+        else:
+            # Caso genérico: agrupado por punto y hora redondeada
+            time_col = next(
+                (c for c in ["date", "datetime", "created_at", "timestamp"]
+                 if c in [col["name"] for col in get_cached_columns(engine, table)]),
+                None
+            )
+            if time_col:
+                df["hour_group"] = pd.to_datetime(df[time_col]).dt.floor("H")
+                total_groups = len(df.groupby(["extraction_point_id", "hour_group"]))
+            else:
+                total_groups = 0
     else:
         total_groups = 0
 
+    # --- Paginación dinámica ---
     total_pages = max(1, (total_groups + page_size - 1) // page_size)
     start_rec = (page - 1) * page_size + 1 if total_groups > 0 else 0
     end_rec = min(page * page_size, total_groups)
