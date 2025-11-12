@@ -647,34 +647,37 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
 
-        images = sentinel2.toList(num_images)
+        # Obtener lista de metadatos sin descargar imágenes
+        metadata_list = sentinel2.aggregate_array('system:time_start').getInfo()
+        
         best_image = None
-
-        # Construir un diccionario con los datos precalculados de nubosidad y cobertura
-        cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
-
-        for i in range(num_images):
-            image = ee.Image(images.get(i))
-            image_time_millis = image.get('system:time_start').getInfo()
-            formatted_date = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%Y-%m-%d')
-            hora = datetime.utcfromtimestamp(image_time_millis / 1000).strftime('%H:%M')
-
+        
+        for timestamp in metadata_list:
+            formatted_date = datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d')
+            hora = datetime.utcfromtimestamp(timestamp / 1000).strftime('%H:%M')
+        
             if formatted_date not in cloud_results_dict:
-                continue  # Solo procesar imágenes útiles
-
+                continue
+        
             cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
             coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
-
+        
             if coverage < 50 or cloud_score > max_cloud_percentage:
                 continue
-
-            best_image = image
+        
+            # Busca la imagen server-side con esa fecha
+            best_image = sentinel2.filterDate(
+                ee.Date(formatted_date),
+                ee.Date(formatted_date).advance(1, 'day')
+            ).first()
+        
             st.session_state.setdefault("used_cloud_results", []).append({
                 "Fecha": formatted_date,
                 "Hora": hora,
                 "Nubosidad aproximada (%)": round(cloud_score, 2)
             })
-            break  # Usamos la mejor disponible y salimos
+            break
+
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
@@ -2247,6 +2250,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
