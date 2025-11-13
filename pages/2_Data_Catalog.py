@@ -422,7 +422,7 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
             WHERE reservoir_name = :res AND 
                   ((:stype = 'Clorofila' AND phycocyanin IS NULL AND chlorophyll IS NOT NULL)
                    OR (:stype = 'Ficocianina' AND chlorophyll IS NULL AND phycocyanin IS NOT NULL))
-            ORDER BY datetime ASC
+            ORDER BY date_time ASC
         """)
         with engine.connect() as con:
             df_group = pd.read_sql(sql, con, params={"res": point_id, "stype": time_group})
