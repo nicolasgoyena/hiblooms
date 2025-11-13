@@ -126,28 +126,26 @@ def choose_order_column(cols: List[Dict[str, Any]], pk: Optional[str]) -> str:
 from streamlit_folium import folium_static
 import folium
 
-def get_extraction_point_coords(engine, extraction_id):
+def get_extraction_point_coords(engine, extraction_point_id):
     """
-    Dado un extraction_id (de lab_images), obtiene las coordenadas (lat, lon)
-    del punto de extracción asociado, navegando:
-    lab_images → samples → extraction_points
+    Dado un extraction_point_id, devuelve las coordenadas (lat, lon)
+    del punto de extracción desde la tabla extraction_points.
     """
     try:
         sql = text("""
-            SELECT ep.latitude, ep.longitude
-            FROM samples s
-            JOIN extraction_points ep
-                ON s.extraction_point_id = ep.extraction_point_id
-            WHERE s.extraction_id = :eid
+            SELECT latitude, longitude
+            FROM extraction_points
+            WHERE extraction_point_id = :eid
             LIMIT 1
         """)
-        
-        row = con.execute(sql, {"eid": extraction_id}).fetchone()
+        with engine.connect() as con:
+            row = con.execute(sql, {"eid": extraction_point_id}).fetchone()
         if row and row[0] is not None and row[1] is not None:
             return float(row[0]), float(row[1])
     except Exception as e:
         st.error(f"❌ Error obteniendo coordenadas: {e}")
     return None
+
 
 
 
@@ -348,6 +346,23 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
     st.dataframe(df_meta, hide_index=True, use_container_width=True)
+
+    # =============================
+    # Mostrar mapa si existe extraction_point_id
+    # =============================
+    if "extraction_point_id" in row and pd.notna(row["extraction_point_id"]):
+        coords = get_extraction_point_coords(engine, row["extraction_point_id"])
+        if coords:
+            lat, lon = coords
+            st.markdown("<h3 style='text-align:center;'>🗺️ Ubicación del punto de extracción</h3>", unsafe_allow_html=True)
+            m = folium.Map(location=[lat, lon], zoom_start=13, tiles="Esri.WorldImagery")
+            folium.Marker(
+                [lat, lon],
+                tooltip=f"Punto de extracción {row['extraction_point_id']}",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            folium_static(m, width=700, height=400)
+
 
     # =============================
     # Edición del registro
