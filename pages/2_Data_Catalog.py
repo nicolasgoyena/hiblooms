@@ -204,8 +204,50 @@ def render_input_for_column(colmeta: Dict[str, Any], default=None):
 # UI principal
 # =========================
 
+# ======================
+# Controles principales (arriba, derecha)
+# ======================
+
 st.set_page_config(page_title="Catálogo HIBLOOMS", layout="wide")
 st.title("📖 Catálogo HIBLOOMS")
+
+# Dividimos en dos columnas: izquierda (vacía o título secundario) y derecha (controles)
+col_left, col_right = st.columns([3, 2])
+
+with col_right:
+    st.markdown("### ⚙️ Controles")
+
+    # Diccionario de nombres amigables
+    TABLE_LABELS = {
+        "reservoirs_spain": "🏞️ Embalses de España",
+        "extraction_points": "📍 Puntos de extracción",
+        "lab_images": "🧫 Imágenes de laboratorio",
+        "insitu_sampling": "🧪 Muestreos in situ",
+        "profiles_data": "🌡️ Perfiles de datos",
+        "sediment_data": "🪨 Datos de sedimentos",
+        "insitu_determinations": "🔬 Determinaciones in situ",
+        "rivers_spain": "🌊 Ríos de España",
+        "sensor_data": "📈 Datos de sensores",
+        "samples": "🧫 Muestras de laboratorio",
+    }
+
+    # Crear lista traducida
+    table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
+    selected_label = st.selectbox("Selecciona una tabla", table_options, index=0)
+
+    # Convertir de etiqueta visible al nombre real
+    table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
+
+    # Control de número de registros por página
+    page_size = st.select_slider(
+        "Registros por página",
+        options=[20, 50, 100, 200, 500],
+        value=50,
+        help="Número de registros (o grupos) mostrados en cada página"
+    )
+
+# Espaciado visual
+st.markdown("---")
 
 # Conexión
 try:
