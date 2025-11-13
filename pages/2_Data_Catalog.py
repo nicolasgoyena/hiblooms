@@ -201,13 +201,49 @@ def render_input_for_column(colmeta: Dict[str, Any], default=None):
         return st.text_input(label, value=str(default or ""))
 
 # ======================
-# Cabecera principal + Controles (arriba, derecha)
+# Cabecera compacta con controles arriba a la derecha
 # ======================
 
 st.set_page_config(page_title="Catálogo HIBLOOMS", layout="wide")
-st.title("📖 Catálogo HIBLOOMS")
 
-# === Conexión a la base de datos y lectura de tablas ===
+# CSS para compactar el área superior
+st.markdown(
+    """
+    <style>
+    /* Reducir márgenes superiores e inferiores del título */
+    h1 {
+        margin-top: 0rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Compactar los elementos de control */
+    div[data-testid="stHorizontalBlock"] {
+        margin-top: -1.2rem !important;
+        margin-bottom: -0.5rem !important;
+    }
+
+    /* Ajustar separación entre selectbox y slider */
+    div[data-baseweb="select"] {
+        margin-bottom: -0.4rem !important;
+    }
+
+    /* Reducir padding interno del bloque derecho */
+    section[data-testid="stVerticalBlock"] > div {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
+
+    /* Compactar el slider */
+    div[data-testid="stSlider"] {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Conexión y tablas
 try:
     engine = get_cached_engine()
     insp = inspect(engine)
@@ -216,46 +252,45 @@ except Exception as e:
     st.error(f"❌ Error obteniendo conexión o lista de tablas: {e}")
     st.stop()
 
-# === Controles arriba a la derecha ===
-col_left, col_right = st.columns([3, 2])
+# Diccionario de nombres amigables
+TABLE_LABELS = {
+    "reservoirs_spain": "🏞️ Embalses de España",
+    "extraction_points": "📍 Puntos de extracción",
+    "lab_images": "🧫 Imágenes de laboratorio",
+    "insitu_sampling": "🧪 Muestreos in situ",
+    "profiles_data": "🌡️ Perfiles de datos",
+    "sediment_data": "🪨 Datos de sedimentos",
+    "insitu_determinations": "🔬 Determinaciones in situ",
+    "rivers_spain": "🌊 Ríos de España",
+    "sensor_data": "📈 Datos de sensores",
+    "samples": "🧫 Muestras de laboratorio",
+}
 
-with col_right:
-    # Diccionario de nombres amigables
-    TABLE_LABELS = {
-        "reservoirs_spain": "🏞️ Embalses de España",
-        "extraction_points": "📍 Puntos de extracción",
-        "lab_images": "🧫 Imágenes de laboratorio",
-        "insitu_sampling": "🧪 Muestreos in situ",
-        "profiles_data": "🌡️ Perfiles de datos",
-        "sediment_data": "🪨 Datos de sedimentos",
-        "insitu_determinations": "🔬 Determinaciones in situ",
-        "rivers_spain": "🌊 Ríos de España",
-        "sensor_data": "📈 Datos de sensores",
-        "samples": "🧫 Muestras de laboratorio",
-    }
+# Layout compacto: título a la izquierda, controles a la derecha
+col_title, col_controls = st.columns([3, 2])
 
-    st.markdown("### ⚙️ Controles")
+with col_title:
+    st.markdown("## 📘 Catálogo HIBLOOMS")
 
-    # Crear lista traducida
+with col_controls:
+    st.markdown("#### ⚙️ Controles")
     table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
-    selected_label = st.selectbox("Selecciona una tabla", table_options, index=0)
-
-    # Convertir etiqueta visible al nombre real
+    selected_label = st.selectbox("Selecciona una tabla", table_options, index=0, label_visibility="collapsed")
     table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
 
-    # Control del número de registros por página
     page_size = st.select_slider(
         "Registros por página",
         options=[20, 50, 100, 200, 500],
         value=50,
-        help="Número de registros (o grupos) mostrados en cada página"
+        label_visibility="collapsed"
     )
-    # Página actual (mantener entre recargas)
-    page = st.session_state.get("page", 1)
 
+# Mantener la página actual
+page = st.session_state.get("page", 1)
 
-# Espaciado visual
-st.markdown("---")
+# Línea divisoria
+st.markdown("<hr style='margin-top:-0.2rem; margin-bottom:0.8rem;'>", unsafe_allow_html=True)
+
 
 
 
