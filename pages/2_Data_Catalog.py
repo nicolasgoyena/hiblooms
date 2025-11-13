@@ -414,7 +414,41 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
     point_id = params.get("group")
     time_group = params.get("time")
 
-    # Detectar columna temporal más completa
+    # Caso especial: sensor_data (usa sensor_type en lugar de fecha)
+    if table == "sensor_data":
+        st.subheader(f"📊 Detalle de grupo — {point_id} · {time_group}")
+        sql = text("""
+            SELECT * FROM sensor_data
+            WHERE reservoir_name = :res AND 
+                  ((:stype = 'Clorofila' AND phycocyanin IS NULL AND chlorophyll IS NOT NULL)
+                   OR (:stype = 'Ficocianina' AND chlorophyll IS NULL AND phycocyanin IS NOT NULL))
+            ORDER BY datetime ASC
+        """)
+        with engine.connect() as con:
+            df_group = pd.read_sql(sql, con, params={"res": point_id, "stype": time_group})
+
+        # Mostrar mapa del embalse si existe
+        st.markdown("### 🗺️ Ubicación del embalse (si aplica)")
+        coords = get_extraction_point_coords(engine, None)  # opcional, podrías enlazar a otra tabla
+        st.dataframe(df_group, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅️ Volver al catálogo"):
+                current_table = st.query_params.get("table", table)
+                current_page = st.session_state.get("page", 1)
+                st.query_params.clear()
+                st.query_params.update(table=current_table)
+                st.session_state["page"] = current_page
+                st.rerun()
+
+        with col2:
+            st.info("🧩 Eliminación de grupos de sensores aún no implementada.")
+
+        st.stop()
+
+    # === Resto de tablas ===
     table_cols = [c["name"] for c in get_cached_columns(engine, table)]
     time_candidates = ["datetime", "date_time", "date_sampling", "sample_date", "timestamp", "created_at", "date"]
     time_col = next((c for c in time_candidates if c in table_cols), None)
@@ -423,12 +457,13 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         st.error(f"❌ No se encontró una columna temporal adecuada en la tabla '{table}'. Columnas disponibles: {table_cols}")
         st.stop()
 
-    # Parsear el valor de hora recibido
+    # Parsear el valor de hora recibido (solo para tablas con fecha real)
     try:
         time_start = pd.to_datetime(time_group)
     except Exception as e:
         st.error(f"⚠️ Error interpretando el parámetro de tiempo: {e}")
         st.stop()
+
 
     # Usar un rango temporal más amplio (±2 horas)
     time_start_range = time_start - pd.Timedelta(hours=2)
