@@ -210,31 +210,15 @@ st.set_page_config(page_title="Catálogo HIBLOOMS", layout="wide")
 st.markdown(
     """
     <style>
-    /* Reducir márgenes superiores e inferiores del título */
-    h1 {
+    h1, h2, h3 {
         margin-top: 0rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0.3rem !important;
     }
-
-    /* Compactar los elementos de control */
     div[data-testid="stHorizontalBlock"] {
-        margin-top: -1.2rem !important;
+        margin-top: -1rem !important;
         margin-bottom: -0.5rem !important;
     }
-
-    /* Ajustar separación entre selectbox y slider */
-    div[data-baseweb="select"] {
-        margin-bottom: -0.4rem !important;
-    }
-
-    /* Reducir padding interno del bloque derecho */
     section[data-testid="stVerticalBlock"] > div {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-    }
-
-    /* Compactar el slider */
-    div[data-testid="stSlider"] {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
     }
@@ -243,7 +227,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Conexión y tablas
+# Conexión y carga de tablas
 try:
     engine = get_cached_engine()
     insp = inspect(engine)
@@ -266,30 +250,25 @@ TABLE_LABELS = {
     "samples": "🧫 Muestras de laboratorio",
 }
 
-# Layout compacto: título a la izquierda, controles a la derecha
+# Layout compacto: título a la izquierda, selector a la derecha
 col_title, col_controls = st.columns([3, 2])
 
 with col_title:
     st.markdown("## 📘 Catálogo HIBLOOMS")
 
 with col_controls:
-    st.markdown("#### ⚙️ Controles")
+    st.markdown("#### ⚙️ Consultar registros sobre:")
     table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
     selected_label = st.selectbox("Selecciona una tabla", table_options, index=0, label_visibility="collapsed")
     table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
 
-    page_size = st.select_slider(
-        "Registros por página",
-        options=[20, 50, 100, 200, 500],
-        value=50,
-        label_visibility="collapsed"
-    )
-
-# Mantener la página actual
+# Parámetros por defecto
+page_size = 100
 page = st.session_state.get("page", 1)
 
-# Línea divisoria
+# Línea divisoria sutil
 st.markdown("<hr style='margin-top:-0.2rem; margin-bottom:0.8rem;'>", unsafe_allow_html=True)
+
 
 
 
