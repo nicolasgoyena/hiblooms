@@ -453,38 +453,6 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
 
 
 
-with st.sidebar:
-    st.header("⚙️ Controles")
-
-    # Diccionario de nombres amigables
-    TABLE_LABELS = {
-        "reservoirs_spain": "🏞️ Embalses de España",
-        "extraction_points": "📍 Puntos de extracción",
-        "lab_images": "🧫 Imágenes de laboratorio",
-        "insitu_sampling": "🧪 Muestreos in situ",
-        "profiles_data": "🌡️ Perfiles de datos",
-        "sediment_data": "🪨 Datos de sedimentos",
-        "insitu_determinations": "🔬 Determinaciones in situ",
-        "rivers_spain": "🌊 Ríos de España",
-        "sensor_data": "📈 Datos de sensores",
-        "samples": "🧫 Muestras de laboratorio",
-    }
-
-    # Ocultar tablas del sistema
-    exclude_tables = ["spatial_ref_sys"]
-    all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() not in exclude_tables]
-
-    # Crear lista traducida
-    table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
-    selected_label = st.selectbox("Selecciona una tabla", table_options)
-
-    # Convertir de la etiqueta visible al nombre real de la tabla
-    table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
-
-    st.markdown("---")
-    page_size = st.select_slider("Registros por página", options=[20, 50, 100], value=20)
-    page = st.session_state.get("page", 1)
-
 
 # Cachear columnas y metadatos
 if "cols_cache" not in st.session_state:
