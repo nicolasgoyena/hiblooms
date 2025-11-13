@@ -770,11 +770,11 @@ else:
         st.markdown("### 🌊 Mapa interactivo de ríos de España")
 
         import geopandas as gpd
-        from shapely import wkb 
+        from shapely import wkb
         from streamlit_folium import folium_static
         import folium
         from sqlalchemy import text
-        
+    
         # --- Leer todos los ríos desde la BD convirtiendo la geometría a WKB binario ---
         with engine.connect() as con:
             df_rivers = pd.read_sql(
@@ -789,15 +789,15 @@ else:
                 con
             )
     
-        st.write("📂 Tabla cargada:", "rivers_spain")
-        st.write("Registros leídos:", len(df_rivers))
+        # Mostrar recuento total de ríos (de forma discreta)
+        total_rivers = len(df_rivers)
+        st.caption(f"💧 Total de ríos registrados: **{total_rivers}**")
     
         # --- Convertir geometrías WKB a objetos shapely ---
         def safe_load_wkb(geom):
             try:
                 if geom is None:
                     return None
-                # Aseguramos que sea bytes o memoryview (formato WKB)
                 if isinstance(geom, (bytes, bytearray, memoryview)):
                     return wkb.loads(bytes(geom))
             except Exception as e:
@@ -812,14 +812,23 @@ else:
             st.warning("⚠️ No se pudo leer ninguna geometría válida (revisa que la tabla tenga geometrías no nulas).")
             st.stop()
     
+        # --- Ordenar ríos por longitud (mayor a menor) ---
+        df_rivers = df_rivers.sort_values(by="length", ascending=False)
+    
         # --- Selector de río ---
-        river_names = sorted(df_rivers["river_name"].dropna().unique().tolist())
-        selected_river = st.selectbox("🏞️ Selecciona un río:", river_names, index=None, placeholder="Escribe un nombre...")
+        river_names = df_rivers["river_name"].dropna().unique().tolist()
+        selected_river = st.selectbox(
+            "🏞️ Selecciona un río:",
+            river_names,
+            index=None,
+            placeholder="Escribe o selecciona un río..."
+        )
     
         if selected_river:
             df_sel = df_rivers[df_rivers["river_name"] == selected_river]
     
-            st.success(f"Mostrando trazado del río **{selected_river}**")
+            river_length = df_sel["length"].iloc[0]
+            st.success(f"Mostrando trazado del río **{selected_river}** — Longitud: **{river_length:,.0f} m**")
     
             # Crear GeoDataFrame y reproyectar a WGS84
             gdf = gpd.GeoDataFrame(df_sel, geometry="geometry", crs="EPSG:25830").to_crs("EPSG:4326")
@@ -833,7 +842,7 @@ else:
             folium.GeoJson(
                 data=geom.__geo_interface__,
                 name=selected_river,
-                tooltip=folium.Tooltip(f"{selected_river} — {gdf['length'].iloc[0]:,.0f} m"),
+                tooltip=folium.Tooltip(f"{selected_river} — {river_length:,.0f} m"),
                 style_function=lambda x: {"color": "#1e88e5", "weight": 3},
             ).add_to(m)
     
@@ -848,7 +857,6 @@ else:
     
         else:
             st.info("Selecciona un río para visualizarlo en el mapa y ver su información.")
-
 
 
 
