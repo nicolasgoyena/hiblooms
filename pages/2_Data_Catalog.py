@@ -449,6 +449,21 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         })
 
     st.subheader(f"📊 Detalle de grupo — Punto {point_id}, {time_start.strftime('%Y-%m-%d %H:%M')} (±2 h)")
+    # =============================
+    # Mapa del punto de extracción (vista de grupo)
+    # =============================
+    if point_id:
+        coords = get_extraction_point_coords(engine, point_id)
+        if coords:
+            lat, lon = coords
+            st.markdown("### 🗺️ Ubicación del punto de extracción")
+            m = folium.Map(location=[lat, lon], zoom_start=13, tiles="Esri.WorldImagery")
+            folium.Marker(
+                [lat, lon],
+                tooltip=f"Punto de extracción {point_id}",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            folium_static(m, width=700, height=400)
 
     if df_group.empty:
         st.warning("⚠️ No se encontraron registros en el rango temporal especificado (±2 h).")
