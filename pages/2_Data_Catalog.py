@@ -206,7 +206,7 @@ def render_input_for_column(colmeta: Dict[str, Any], default=None):
 
 st.set_page_config(page_title="Catálogo HIBLOOMS", layout="wide")
 
-# CSS para compactar el área superior
+# CSS para compactar el área superior y bloquear escritura en el selectbox
 st.markdown(
     """
     <style>
@@ -222,10 +222,17 @@ st.markdown(
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
     }
+
+    /* 🔒 Bloquear escritura en el selectbox */
+    div[data-baseweb="select"] input {
+        pointer-events: none !important;
+        caret-color: transparent !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # Conexión y carga de tablas
 try:
