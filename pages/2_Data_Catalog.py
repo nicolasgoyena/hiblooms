@@ -200,23 +200,60 @@ def render_input_for_column(colmeta: Dict[str, Any], default=None):
             return st.text_area(label, value=str(default or ""))
         return st.text_input(label, value=str(default or ""))
 
-# =========================
-# UI principal
-# =========================
+# ======================
+# Cabecera principal + Controles (arriba, derecha)
+# ======================
 
 st.set_page_config(page_title="Catálogo HIBLOOMS", layout="wide")
 st.title("📖 Catálogo HIBLOOMS")
 
-# Conexión
+# === Conexión a la base de datos y lectura de tablas ===
 try:
     engine = get_cached_engine()
+    insp = inspect(engine)
+    all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "spatial_ref_sys"]
 except Exception as e:
-    st.error(f"❌ Error obteniendo conexión: {e}")
+    st.error(f"❌ Error obteniendo conexión o lista de tablas: {e}")
     st.stop()
 
-insp = inspect(engine)
-# Obtener todas las tablas del esquema público y filtrar las internas
-all_tables = [t for t in insp.get_table_names(schema="public") if t.lower() != "spatial_ref_sys"]
+# === Controles arriba a la derecha ===
+col_left, col_right = st.columns([3, 2])
+
+with col_right:
+    # Diccionario de nombres amigables
+    TABLE_LABELS = {
+        "reservoirs_spain": "🏞️ Embalses de España",
+        "extraction_points": "📍 Puntos de extracción",
+        "lab_images": "🧫 Imágenes de laboratorio",
+        "insitu_sampling": "🧪 Muestreos in situ",
+        "profiles_data": "🌡️ Perfiles de datos",
+        "sediment_data": "🪨 Datos de sedimentos",
+        "insitu_determinations": "🔬 Determinaciones in situ",
+        "rivers_spain": "🌊 Ríos de España",
+        "sensor_data": "📈 Datos de sensores",
+        "samples": "🧫 Muestras de laboratorio",
+    }
+
+    st.markdown("### ⚙️ Controles")
+
+    # Crear lista traducida
+    table_options = [TABLE_LABELS.get(t, t) for t in all_tables]
+    selected_label = st.selectbox("Selecciona una tabla", table_options, index=0)
+
+    # Convertir etiqueta visible al nombre real
+    table = next(k for k, v in TABLE_LABELS.items() if v == selected_label)
+
+    # Control del número de registros por página
+    page_size = st.select_slider(
+        "Registros por página",
+        options=[20, 50, 100, 200, 500],
+        value=50,
+        help="Número de registros (o grupos) mostrados en cada página"
+    )
+
+# Espaciado visual
+st.markdown("---")
+
 
 
 # =========================
