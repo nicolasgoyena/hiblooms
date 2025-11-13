@@ -148,14 +148,16 @@ def descargar_ultimo_dia_y_insertar(engine):
 
     print(f"❌ No se encontró la tabla deseada para {fecha}")
 
-# Conexión a la base de datos
-DB_USER = 'postgres'
-DB_PASS = 'postgresql'
-DB_HOST = 'postgresql.cbm26yauyeg2.eu-south-2.rds.amazonaws.com'
-DB_PORT = '5432'
-DB_NAME = 'hiblooms'
+# Conexión a la base de datos NEON
+DB_USER = "neondb_owner"
+DB_PASS = "npg_ER4ilp6oScZP"
+DB_HOST = "ep-green-mud-abr4cbl7-pooler.eu-west-2.aws.neon.tech"
+DB_NAME = "neondb"
 
-engine = create_engine(f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
+engine = create_engine(
+    f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?sslmode=require"
+)
 
 # Ejecutar función
 descargar_ultimo_dia_y_insertar(engine)
+
