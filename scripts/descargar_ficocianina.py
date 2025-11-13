@@ -110,14 +110,17 @@ def descargar_y_subir_tramo(desde, hasta, engine):
     return False
 
 def iterar_periodos_y_guardar():
-    DB_USER = 'postgres'
-    DB_PASS = 'postgresql'
-    DB_HOST = 'postgresql.cbm26yauyeg2.eu-south-2.rds.amazonaws.com'
-    DB_PORT = '5432'
-    DB_NAME = 'hiblooms'
+    # === Configuración de la base de datos Neon ===
+    DB_USER = "neondb_owner"
+    DB_PASS = "npg_ER4ilp6oScZP"
+    DB_HOST = "ep-green-mud-abr4cbl7-pooler.eu-west-2.aws.neon.tech"
+    DB_NAME = "neondb"
 
-    engine = create_engine(f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
+    engine = create_engine(
+        f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?sslmode=require"
+    )
 
+    # === Resto del código igual ===
     fecha_inicio = datetime(2024, 3, 13)
     fecha_hoy = datetime.now()
 
@@ -171,3 +174,4 @@ def iterar_periodos_y_guardar():
 
 # Ejecutar
 iterar_periodos_y_guardar()
+
