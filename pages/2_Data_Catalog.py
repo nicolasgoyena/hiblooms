@@ -250,6 +250,9 @@ with col_right:
         value=50,
         help="Número de registros (o grupos) mostrados en cada página"
     )
+    # Página actual (mantener entre recargas)
+    page = st.session_state.get("page", 1)
+
 
 # Espaciado visual
 st.markdown("---")
