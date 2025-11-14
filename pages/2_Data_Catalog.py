@@ -438,9 +438,9 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
-    # Aplicar traducción de nombres de columnas
-    df_display = df.rename(columns=COLUMN_LABELS)
+    df_display = df_meta.rename(columns=COLUMN_LABELS)
     st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
 
     # =============================
