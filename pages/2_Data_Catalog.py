@@ -527,8 +527,9 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         st.markdown("### 🗺️ Ubicación del embalse (si aplica)")
         coords = get_extraction_point_coords(engine, None)  # opcional, podrías enlazar a otra tabla
         # Aplicar traducción de nombres de columnas
-        df_display = df.rename(columns=COLUMN_LABELS)
+        df_display = df_group.rename(columns=COLUMN_LABELS)
         st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
 
         st.markdown("---")
@@ -616,8 +617,11 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
             st.info("No hay registros para este punto de extracción.")
         else:
             # Aplicar traducción de nombres de columnas
-            df_display = df.rename(columns=COLUMN_LABELS)
+            df_display = df_check.rename(columns=COLUMN_LABELS)
             st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+
+
 
             st.caption(f"Mostrando las 15 primeras fechas del punto {point_id} (columna '{time_col}').")
 
@@ -814,7 +818,9 @@ if table in grouped_tables:
 
 
                 # Mostrar las 5 primeras filas del grupo
-                st.dataframe(group.head(5), hide_index=True, use_container_width=True)
+                df_display = group.head(5).rename(columns=COLUMN_LABELS)
+                st.dataframe(df_display, hide_index=True, use_container_width=True)
+
 
                 st.markdown(
                     f"""
@@ -932,7 +938,9 @@ else:
             # Mostrar la info en formato limpio
             info_df = gdf[cols].T.reset_index()
             info_df.columns = ["Campo", "Valor"]
-            st.dataframe(info_df, hide_index=True, use_container_width=True)
+            df_display = info_df.rename(columns=COLUMN_LABELS)
+            st.dataframe(df_display, hide_index=True, use_container_width=True)
+
     
         else:
             st.info("Selecciona un embalse para visualizarlo en el mapa y ver su información.")
@@ -1023,7 +1031,9 @@ else:
             st.markdown("### 📋 Información del río seleccionado")
             info_df = gdf[["river_id", "river_name", "length"]].T.reset_index()
             info_df.columns = ["Campo", "Valor"]
-            st.dataframe(info_df, hide_index=True, use_container_width=True)
+            df_display = info_df.rename(columns=COLUMN_LABELS)
+            st.dataframe(df_display, hide_index=True, use_container_width=True)
+
     
         else:
             st.info("Selecciona un río para visualizarlo en el mapa y ver su información.")
