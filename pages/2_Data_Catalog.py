@@ -259,39 +259,101 @@ COLUMN_LABELS = {
     # --- General ---
     "extraction_id": "ID de extracción",
     "extraction_point_id": "ID del punto de extracción",
+    "reservoir_id": "ID del embalse",
+    "river_id": "ID del río",
     "reservoir_name": "Nombre del embalse",
     "river_name": "Nombre del río",
+    "water_body_name": "Nombre del cuerpo de agua",
     "latitude": "Latitud",
     "longitude": "Longitud",
     "geometry": "Geometría",
     "date_time": "Fecha y hora",
+    "datetime": "Fecha y hora",
     "date": "Fecha",
     "time": "Hora",
     "depth": "Profundidad (m)",
     "depth_m": "Profundidad (m)",
 
-    # --- Sensor data ---
+    # --- extraction_points ---
+    "location_code": "Código de localización",
+    "sampling_instance_per_location": "Instancia de muestreo por localización",
+
+    # --- all_samples / samples ---
+    "sample_type": "Tipo de muestra",
+    "sample_date": "Fecha de muestra",
+    "sample_time": "Hora de muestra",
+
+    # --- sensor_data ---
     "chlorophyll": "Clorofila (µg/L)",
     "phycocyanin": "Ficocianina (µg/L)",
     "water_temp": "Temperatura del agua (°C)",
     "ph": "pH",
     "turbidity": "Turbidez (NTU)",
 
-    # --- In situ sampling ---
-    "sample_date": "Fecha de muestreo",
-    "sampling_hour": "Hora de muestreo",
+    # --- insitu_sampling ---
+    "climate_description": "Descripción del clima",
     "water_temperature_celsius": "Temperatura del agua (°C)",
     "water_ph": "pH del agua",
+    "water_depth_meters": "Profundidad del agua (m)",
     "secchi_depth_meters": "Profundidad Secchi (m)",
+    "water_transparency_percent": "Transparencia del agua (%)",
     "electrical_conductivity_us_cm": "Conductividad eléctrica (µS/cm)",
     "dissolved_oxygen_percent_1": "Oxígeno disuelto 1 (%)",
+    "dissolved_oxygen_percent_2": "Oxígeno disuelto 2 (%)",
+    "chlorophyll_volume_estimation": "Estimación de volumen de clorofila",
     "chlorophyll_a_mg_m3": "Clorofila a (mg/m³)",
+    "chlorophyll_b_mg_m3": "Clorofila b (mg/m³)",
+    "chlorophyll_c_mg_m3": "Clorofila c (mg/m³)",
+    "alkalinity_meq_l": "Alcalinidad (meq/L)",
+    "chloride_ion_mg_l": "Ion cloruro (mg/L)",
+    "nitrite_no2_mg_l": "Nitrito (mg/L)",
     "nitrate_no3_mg_l": "Nitrato (mg/L)",
+    "sulfate_so4_mg_l": "Sulfato (mg/L)",
     "ammonium_nh4_mg_l": "Amonio (mg/L)",
     "npoc_mg_l": "NPOC (mg/L)",
+    "total_nitrogen_wstn_mg_l": "Nitrógeno total (mg/L)",
+    "elisa_cylindrospermopsin_ng_ml": "Cilindrospermopsina (ng/mL)",
     "elisa_microcystin_nodularin_ng_ml": "Microcistina/Nodularina (ng/mL)",
 
-    # --- In situ determinations ---
+    # --- insitu_sampling: metales ---
+    "beryllium_ppm": "Berilio (ppm)",
+    "boron_ppm": "Boro (ppm)",
+    "sodium_ppm": "Sodio (ppm)",
+    "magnesium_ppm": "Magnesio (ppm)",
+    "aluminum_ppm": "Aluminio (ppm)",
+    "silicon_ppm": "Silicio (ppm)",
+    "phosphorus_ppm": "Fósforo (ppm)",
+    "sulfur_34_ppm": "Azufre (ppm)",
+    "potassium_ppm": "Potasio (ppm)",
+    "calcium_44_ppm": "Calcio (ppm)",
+    "titanium_ppm": "Titanio (ppm)",
+    "vanadium_ppm": "Vanadio (ppm)",
+    "chromium_ppm": "Cromo (ppm)",
+    "manganese_ppm": "Manganeso (ppm)",
+    "iron_ppm": "Hierro (ppm)",
+    "cobalt_ppm": "Cobalto (ppm)",
+    "nickel_ppm": "Níquel (ppm)",
+    "copper_ppm": "Cobre (ppm)",
+    "zinc_ppm": "Zinc (ppm)",
+    "gallium_ppm": "Galio (ppm)",
+    "germanium_ppm": "Germanio (ppm)",
+    "arsenic_ppm": "Arsénico (ppm)",
+    "selenium_ppm": "Selenio (ppm)",
+    "rubidium_ppm": "Rubidio (ppm)",
+    "strontium_ppm": "Estroncio (ppm)",
+    "zirconium_ppm": "Zirconio (ppm)",
+    "niobium_ppm": "Niobio (ppm)",
+    "molybdenum_ppm": "Molibdeno (ppm)",
+    "silver_ppm": "Plata (ppm)",
+    "cadmium_ppm": "Cadmio (ppm)",
+    "tin_ppm": "Estaño (ppm)",
+    "antimony_ppm": "Antimonio (ppm)",
+    "tellurium_ppm": "Telurio (ppm)",
+    "barium_ppm": "Bario (ppm)",
+
+    # --- insitu_determinations ---
+    "date_sampling": "Fecha de muestreo",
+    "time_sampling": "Hora de muestreo",
     "probe": "Sonda",
     "lote_medida": "Lote de medida",
     "do_percent": "Oxígeno disuelto (%)",
@@ -300,7 +362,7 @@ COLUMN_LABELS = {
     "conduc_uscm_2": "Conductividad (µS/cm) 2",
     "temp": "Temperatura (°C)",
 
-    # --- Profiles data ---
+    # --- profiles_data ---
     "green_algae_ug_l": "Algas verdes (µg/L)",
     "bluegreen_ug_l": "Cianobacterias (µg/L)",
     "diatoms_ug_l": "Diatomeas (µg/L)",
@@ -310,7 +372,32 @@ COLUMN_LABELS = {
     "transmission_percent": "Transmisión (%)",
     "sample_temperature_celsius": "Temperatura de la muestra (°C)",
 
-    # --- Reservoirs & Rivers ---
+    # --- sediment_data ---
+    "sampling_date": "Fecha de muestreo",
+    "treatment_date": "Fecha de tratamiento",
+    "plate_code": "Código de placa",
+    "drying_temperature": "Temperatura de secado (°C)",
+    "crisol_code": "Código del crisol",
+    "crucible_tare": "Tara del crisol (g)",
+    "sample_01_tare": "Tara muestra 01 (g)",
+    "date_02": "Fecha 02",
+    "sample_02_tare": "Tara muestra 02 (g)",
+    "date_03": "Fecha 03",
+    "sample_03_tare": "Tara muestra 03 (g)",
+    "date_04": "Fecha 04",
+    "sample_04_tare": "Tara muestra 04 (g)",
+    "humidity": "Humedad (%)",
+    "date_ppi": "Fecha PPI",
+    "sample_105_tare": "Tara muestra 105°C (g)",
+    "ppi_temperature": "Temperatura PPI (°C)",
+    "sample_550_tare": "Tara muestra 550°C (g)",
+    "tara_sample_550": "Tara muestra + crisol (550°C)",
+    "ppi": "Pérdida por ignición (%)",
+    "co": "Carbono orgánico (%)",
+    "observations": "Observaciones",
+
+    # --- reservoirs_spain ---
+    "report_url": "URL del informe",
     "capacity_nmn": "Capacidad (hm³)",
     "elevation_nmn": "Elevación (m)",
     "owner": "Propietario",
@@ -324,19 +411,11 @@ COLUMN_LABELS = {
     "ownership_type": "Tipo de propiedad",
     "use_purpose": "Uso principal",
     "area_m2": "Superficie (m²)",
+
+    # --- rivers_spain ---
     "length": "Longitud (m)",
 
-    # --- Sediment data ---
-    "sampling_date": "Fecha de muestreo",
-    "treatment_date": "Fecha de tratamiento",
-    "humidity": "Humedad (%)",
-    "ppi": "Pérdida por ignición (%)",
-    "co": "Carbono orgánico (%)",
-    "observations": "Observaciones",
-    "crisol_code": "Código del crisol",
-    "drying_temperature": "Temperatura de secado (°C)",
-
-    # --- Lab images ---
+    # --- lab_images ---
     "image_id": "ID de imagen",
     "image_name": "Nombre de la imagen",
     "image_url": "URL de la imagen",
@@ -346,6 +425,7 @@ COLUMN_LABELS = {
     "photographer": "Fotógrafo",
     "notes": "Notas",
 }
+
 
 
 # Layout compacto: título a la izquierda, selector a la derecha
