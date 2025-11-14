@@ -254,6 +254,99 @@ TABLE_LABELS = {
     "sensor_data": "📈 Datos de sensores",
     "samples": "🧫 Muestras de laboratorio",
 }
+# Diccionario de nombres de columnas traducidos al español
+COLUMN_LABELS = {
+    # --- General ---
+    "extraction_id": "ID de extracción",
+    "extraction_point_id": "ID del punto de extracción",
+    "reservoir_name": "Nombre del embalse",
+    "river_name": "Nombre del río",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "geometry": "Geometría",
+    "date_time": "Fecha y hora",
+    "date": "Fecha",
+    "time": "Hora",
+    "depth": "Profundidad (m)",
+    "depth_m": "Profundidad (m)",
+
+    # --- Sensor data ---
+    "chlorophyll": "Clorofila (µg/L)",
+    "phycocyanin": "Ficocianina (µg/L)",
+    "water_temp": "Temperatura del agua (°C)",
+    "ph": "pH",
+    "turbidity": "Turbidez (NTU)",
+
+    # --- In situ sampling ---
+    "sample_date": "Fecha de muestreo",
+    "sampling_hour": "Hora de muestreo",
+    "water_temperature_celsius": "Temperatura del agua (°C)",
+    "water_ph": "pH del agua",
+    "secchi_depth_meters": "Profundidad Secchi (m)",
+    "electrical_conductivity_us_cm": "Conductividad eléctrica (µS/cm)",
+    "dissolved_oxygen_percent_1": "Oxígeno disuelto 1 (%)",
+    "chlorophyll_a_mg_m3": "Clorofila a (mg/m³)",
+    "nitrate_no3_mg_l": "Nitrato (mg/L)",
+    "ammonium_nh4_mg_l": "Amonio (mg/L)",
+    "npoc_mg_l": "NPOC (mg/L)",
+    "elisa_microcystin_nodularin_ng_ml": "Microcistina/Nodularina (ng/mL)",
+
+    # --- In situ determinations ---
+    "probe": "Sonda",
+    "lote_medida": "Lote de medida",
+    "do_percent": "Oxígeno disuelto (%)",
+    "do_ppm": "Oxígeno disuelto (ppm)",
+    "conduc_uscm_1": "Conductividad (µS/cm) 1",
+    "conduc_uscm_2": "Conductividad (µS/cm) 2",
+    "temp": "Temperatura (°C)",
+
+    # --- Profiles data ---
+    "green_algae_ug_l": "Algas verdes (µg/L)",
+    "bluegreen_ug_l": "Cianobacterias (µg/L)",
+    "diatoms_ug_l": "Diatomeas (µg/L)",
+    "cryptophyta_ug_l": "Criptófitas (µg/L)",
+    "yellow_substances_ru": "Sustancias amarillas (RU)",
+    "total_concentration_ug_l": "Concentración total (µg/L)",
+    "transmission_percent": "Transmisión (%)",
+    "sample_temperature_celsius": "Temperatura de la muestra (°C)",
+
+    # --- Reservoirs & Rivers ---
+    "capacity_nmn": "Capacidad (hm³)",
+    "elevation_nmn": "Elevación (m)",
+    "owner": "Propietario",
+    "managing_authority": "Autoridad gestora",
+    "river_basin_district": "Cuenca hidrográfica",
+    "province": "Provincia",
+    "basin_area_km2": "Área de cuenca (km²)",
+    "annual_precip_mm": "Precipitación anual (mm)",
+    "reservoir_type": "Tipo de embalse",
+    "responsible_operator": "Operador responsable",
+    "ownership_type": "Tipo de propiedad",
+    "use_purpose": "Uso principal",
+    "area_m2": "Superficie (m²)",
+    "length": "Longitud (m)",
+
+    # --- Sediment data ---
+    "sampling_date": "Fecha de muestreo",
+    "treatment_date": "Fecha de tratamiento",
+    "humidity": "Humedad (%)",
+    "ppi": "Pérdida por ignición (%)",
+    "co": "Carbono orgánico (%)",
+    "observations": "Observaciones",
+    "crisol_code": "Código del crisol",
+    "drying_temperature": "Temperatura de secado (°C)",
+
+    # --- Lab images ---
+    "image_id": "ID de imagen",
+    "image_name": "Nombre de la imagen",
+    "image_url": "URL de la imagen",
+    "description": "Descripción",
+    "date_captured": "Fecha de captura",
+    "uploaded_at": "Fecha de subida",
+    "photographer": "Fotógrafo",
+    "notes": "Notas",
+}
+
 
 # Layout compacto: título a la izquierda, selector a la derecha
 col_title, col_controls = st.columns([3, 2])
@@ -345,7 +438,10 @@ if "page" in params and params.get("page") in ["lab_image", "detail"] and "id" i
     st.markdown("### 📋 Información del registro")
     df_meta = pd.DataFrame(row).reset_index()
     df_meta.columns = ["Campo", "Valor"]
-    st.dataframe(df_meta, hide_index=True, use_container_width=True)
+    # Aplicar traducción de nombres de columnas
+    df_display = df.rename(columns=COLUMN_LABELS)
+    st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
     # =============================
     # Mostrar mapa si existe extraction_point_id
@@ -430,7 +526,10 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         # Mostrar mapa del embalse si existe
         st.markdown("### 🗺️ Ubicación del embalse (si aplica)")
         coords = get_extraction_point_coords(engine, None)  # opcional, podrías enlazar a otra tabla
-        st.dataframe(df_group, use_container_width=True, hide_index=True)
+        # Aplicar traducción de nombres de columnas
+        df_display = df.rename(columns=COLUMN_LABELS)
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
         st.markdown("---")
         col1, col2 = st.columns(2)
@@ -516,11 +615,17 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
         if df_check.empty:
             st.info("No hay registros para este punto de extracción.")
         else:
-            st.dataframe(df_check, use_container_width=True, hide_index=True)
+            # Aplicar traducción de nombres de columnas
+            df_display = df.rename(columns=COLUMN_LABELS)
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+
             st.caption(f"Mostrando las 15 primeras fechas del punto {point_id} (columna '{time_col}').")
 
     else:
-        st.dataframe(df_group, use_container_width=True, hide_index=True)
+        # Aplicar traducción de nombres de columnas
+        df_display = df.rename(columns=COLUMN_LABELS)
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
     st.markdown("---")
 
