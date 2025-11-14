@@ -627,8 +627,9 @@ if params.get("page") == "detail" and "group" in params and "time" in params:
 
     else:
         # Aplicar traducción de nombres de columnas
-        df_display = df.rename(columns=COLUMN_LABELS)
+        df_display = df_group.rename(columns=COLUMN_LABELS)
         st.dataframe(df_display, use_container_width=True, hide_index=True)
+
 
 
     st.markdown("---")
