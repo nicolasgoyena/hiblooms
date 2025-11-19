@@ -649,7 +649,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
 
-        # Obtener lista de metadatos sin descargar imágenes
         metadata_list = sentinel2.aggregate_array('system:time_start').getInfo()
         
         best_image = None
@@ -667,7 +666,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             if coverage < 50 or cloud_score > max_cloud_percentage:
                 continue
         
-            # Busca la imagen server-side con esa fecha
             best_image = sentinel2.filterDate(
                 ee.Date(formatted_date),
                 ee.Date(formatted_date).advance(1, 'day')
@@ -680,20 +678,25 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             })
             break
 
-
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
             return None, None, None
 
-
         sentinel2_image = best_image
-        image_date = sentinel2_image.get('system:time_start').getInfo()
-        image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        image_date = datetime.utcfromtimestamp(
+            sentinel2_image.get('system:time_start').getInfo() / 1000
+        ).strftime('%Y-%m-%d %H:%M:%S')
 
-        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
-        scl = sentinel2_image.select('SCL')
-        cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
+        # ============================
+        # 🌥️ MÁSCARA SCL DE NUBES (CORREGIDA)
+        # ============================
+        scl = sentinel2_image.select("SCL")
+        cloud_values = [3, 7, 8, 9, 10, 11]  # sombra, nubes, nieve, etc.
+        cloud_mask = scl.remap(cloud_values, [0]*len(cloud_values), 1).eq(1)
 
+        # ============================
+        # 📌 CARGAR BANDAS Y ENMASCARAR ANTES DEL CÁLCULO
+        # ============================
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
 
@@ -703,76 +706,67 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 return None, None, None
 
         clipped_image = sentinel2_image.clip(aoi)
+
+        # Enmascaramos AQUÍ todas las bandas antes de cálculos
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
+        optical_bands = optical_bands.updateMask(cloud_mask)
+
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
         b3 = scaled_image.select('B3')
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A') 
+        b8A = scaled_image.select('B8A')
 
+        # ============================
+        # 📌 CÁLCULO DE ÍNDICES SIN updateMask (YA ENMASCARADO)
+        # ============================
         indices_functions = {
-            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
-            "PCI_B5/B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('PCI_B5/B4'),
-            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
+            "MCI": lambda: b5.subtract(b4)
+                            .subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665)))
+                            .rename('MCI'),
+
+            "PCI_B5/B4": lambda: b5.divide(b4).rename('PCI_B5/B4'),
+
+            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI_ind'),
+
             "PC_Val_cal": lambda: (
                 ee.Image(100)
                 .divide(
-                    ee.Image(1).add(
-                        (b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp()
-                    )
-                )
-                .max(0)
-                .updateMask(cloud_mask)
-                .rename("PC_Val_cal")
+                    ee.Image(1).add((b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp())
+                ).max(0).rename("PC_Val_cal")
             ),
 
             "Chla_Val_cal": lambda: (
-                ee.Image(450)  
+                ee.Image(450)
                 .divide(
                     ee.Image(1).add(
-                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))  
-                        .multiply(-7.14)  
-                        .exp()
+                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))
+                        .multiply(-7.14).exp()
                     )
-                )
-                .max(0)
-                .updateMask(cloud_mask)
-                .rename("Chla_Val_cal")
+                ).max(0).rename("Chla_Val_cal")
             ),
+
             "PC_Bellus_cal": lambda: (
                 ee.Image(16957)
                 .multiply(
                     b6.subtract(
-                        b8A.multiply(0.96).add(
-                            (b3.subtract(b8A)).multiply(0.51)
-                        )
+                        b8A.multiply(0.96).add((b3.subtract(b8A)).multiply(0.51))
                     )
-                )
-                .add(571)
-                .max(0)
-                .updateMask(cloud_mask)
-                .rename("PC_Bellus_cal")
+                ).add(571).max(0).rename("PC_Bellus_cal")
             ),
+
             "Chla_Bellus_cal": lambda: (
                 ee.Image(112.78)
-                .multiply(
-                    b5.subtract(b4).divide(b5.add(b4))  # NDI
-                )
-                .add(10.779)
-                .max(0)
-                .updateMask(cloud_mask)
-                .rename("Chla_Bellus_cal")
+                .multiply(b5.subtract(b4).divide(b5.add(b4)))
+                .add(10.779).max(0).rename("Chla_Bellus_cal")
             ),
+
             "UV_PC_Gral_cal": lambda: (
                 ee.Image(24.665)
-                .multiply(
-                    b5.divide(b4).pow(3.4607)
-                )
-                .max(0)
-                .updateMask(cloud_mask)
-                .rename("UV_PC_Gral_cal")
+                .multiply(b5.divide(b4).pow(3.4607))
+                .max(0).rename("UV_PC_Gral_cal")
             )
         }
 
@@ -790,6 +784,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         indices_image = scaled_image.addBands(indices_to_add)
         return scaled_image, indices_image, image_date
+
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
     if indices_image is None:
@@ -2319,6 +2314,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
