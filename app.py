@@ -690,9 +690,6 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         image_date = sentinel2_image.get('system:time_start').getInfo()
         image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
-        scl = sentinel2_image.select('SCL')
-        cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
@@ -706,11 +703,23 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
-        b3 = scaled_image.select('B3')
-        b4 = scaled_image.select('B4')
-        b5 = scaled_image.select('B5')
-        b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A') 
+        scl = sentinel2_image.select('SCL')
+        mask_valid = (
+            scl.neq(7)   # Cloud shadows
+            .And(scl.neq(8))   # Low cloud prob
+            .And(scl.neq(9))   # Med-high cloud prob
+            .And(scl.neq(10))  # Cirrus
+        )
+
+
+        # Aplicar máscara de píxeles válidos solo a las bandas usadas para índices
+        b2  = scaled_image.select('B2').updateMask(mask_valid)
+        b3  = scaled_image.select('B3').updateMask(mask_valid)
+        b4  = scaled_image.select('B4').updateMask(mask_valid)
+        b5  = scaled_image.select('B5').updateMask(mask_valid)
+        b6  = scaled_image.select('B6').updateMask(mask_valid)
+        b8A = scaled_image.select('B8A').updateMask(mask_valid)
+
 
         indices_functions = {
             "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
@@ -2319,5 +2328,6 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
