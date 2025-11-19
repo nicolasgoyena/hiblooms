@@ -1641,7 +1641,10 @@ with tab2:
                             # Proceso de las fechas
                             for day in available_dates:
                                 # Procesar la imagen para cada fecha
-                                scaled_image, indices_image, image_date = process_sentinel2(aoi, day, max_cloud_percentage, selected_indices)
+                                rgb_image, indices_image, fecha_dt = process_sentinel2(
+                                    aoi, selected_date, max_cloud_percentage, selected_indices
+                                )
+
                                 if indices_image is not None:
                                     # Añadir solo las imágenes y fechas necesarias (una vez por fecha)
                                     st.session_state["image_list"].append(indices_image)
@@ -2318,6 +2321,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
