@@ -688,11 +688,15 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         ).strftime('%Y-%m-%d %H:%M:%S')
 
         # ============================
-        # 🌥️ MÁSCARA SCL DE NUBES (ESTRICTa)
+        # 🌥️ MÁSCARA DE NUBES (SCL 7,8,9,10) — SOLO PARA ÍNDICES
         # ============================
-        scl = sentinel2_image.select("SCL")
-        cloud_values = [3, 7, 8, 9, 10, 11]  # sombra, nubes, nieve, hielo
-        cloud_mask = scl.remap(cloud_values, [0]*len(cloud_values), 1).eq(1)
+        scl = sentinel2_image.select('SCL')
+        cloud_mask = (
+            scl.neq(7)
+               .And(scl.neq(8))
+               .And(scl.neq(9))
+               .And(scl.neq(10))
+        )
 
         # ============================
         # 📌 CARGA DE BANDAS
@@ -707,43 +711,37 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         clipped_image = sentinel2_image.clip(aoi)
 
-        # ============================
-        # ✔️ BANDAS ESCALADAS RENOMBRADAS (NO SOBRESCRIBEN RGB)
-        # ============================
-        optical_bands = (
-            clipped_image.select(bandas_requeridas)
-            .divide(10000)
-            .rename([f"{b}_scaled" for b in bandas_requeridas])
-            .updateMask(cloud_mask)
-        )
+        # Bandas ópticas originales (0–10000)
+        optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
 
-        # Añadimos las bandas escaladas sin overwrite (para no tocar B2,B3,B4 originales)
-        scaled_image = clipped_image.addBands(optical_bands)
+        # Definir bandas para índices
+        b2 = optical_bands.select('B2')
+        b3 = optical_bands.select('B3')
+        b4 = optical_bands.select('B4')
+        b5 = optical_bands.select('B5')
+        b6 = optical_bands.select('B6')
+        b8A = optical_bands.select('B8A')
 
         # ============================
-        # ✔️ LOS ÍNDICES USAN SOLO LAS BANDAS ESCALADAS
+        # 📈 ÍNDICES (solo enmascarados con cloud_mask)
         # ============================
-        b2 = optical_bands.select('B2_scaled')
-        b3 = optical_bands.select('B3_scaled')
-        b4 = optical_bands.select('B4_scaled')
-        b5 = optical_bands.select('B5_scaled')
-        b6 = optical_bands.select('B6_scaled')
-        b8A = optical_bands.select('B8A_scaled')
-
         indices_functions = {
             "MCI": lambda: b5.subtract(b4)
                             .subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665)))
+                            .updateMask(cloud_mask)
                             .rename('MCI'),
 
-            "PCI_B5/B4": lambda: b5.divide(b4).rename('PCI_B5/B4'),
+            "PCI_B5/B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('PCI_B5/B4'),
 
-            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).rename('NDCI_ind'),
+            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
 
             "PC_Val_cal": lambda: (
                 ee.Image(100)
                 .divide(
                     ee.Image(1).add((b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp())
-                ).max(0).rename("PC_Val_cal")
+                )
+                .updateMask(cloud_mask)
+                .rename("PC_Val_cal")
             ),
 
             "Chla_Val_cal": lambda: (
@@ -753,7 +751,9 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                         (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))
                         .multiply(-7.14).exp()
                     )
-                ).max(0).rename("Chla_Val_cal")
+                )
+                .updateMask(cloud_mask)
+                .rename("Chla_Val_cal")
             ),
 
             "PC_Bellus_cal": lambda: (
@@ -762,40 +762,44 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                     b6.subtract(
                         b8A.multiply(0.96).add((b3.subtract(b8A)).multiply(0.51))
                     )
-                ).add(571).max(0).rename("PC_Bellus_cal")
+                )
+                .add(571)
+                .updateMask(cloud_mask)
+                .rename("PC_Bellus_cal")
             ),
 
             "Chla_Bellus_cal": lambda: (
                 ee.Image(112.78)
                 .multiply(b5.subtract(b4).divide(b5.add(b4)))
-                .add(10.779).max(0).rename("Chla_Bellus_cal")
+                .add(10.779)
+                .updateMask(cloud_mask)
+                .rename("Chla_Bellus_cal")
             ),
 
             "UV_PC_Gral_cal": lambda: (
                 ee.Image(24.665)
                 .multiply(b5.divide(b4).pow(3.4607))
-                .max(0).rename("UV_PC_Gral_cal")
+                .updateMask(cloud_mask)
+                .rename("UV_PC_Gral_cal")
             )
         }
 
+        # ============================
+        # Añadir índices
+        # ============================
         indices_to_add = []
         for index in selected_indices:
-            try:
-                if index in indices_functions:
+            if index in indices_functions:
+                try:
                     indices_to_add.append(indices_functions[index]())
-            except Exception as e:
-                st.warning(f"⚠️ No se pudo calcular el índice {index} en {selected_date}: {e}")
+                except Exception as e:
+                    st.warning(f"⚠️ Error calculando {index}: {e}")
 
-        if not indices_to_add:
-            st.warning(f"⚠️ No se generó ningún índice válido para la fecha {selected_date}.")
-            return scaled_image, None, image_date
+        # Imagen final
+        indices_image = clipped_image.addBands(indices_to_add)
 
-        # ============================
-        # 🟩 Añadir índices enmascarados al scaled_image
-        # ============================
-        indices_image = scaled_image.addBands(indices_to_add)
+        return clipped_image, indices_image, image_date
 
-        return scaled_image, indices_image, image_date
 
 
 
@@ -2327,6 +2331,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
