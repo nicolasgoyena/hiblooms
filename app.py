@@ -1667,7 +1667,8 @@ with tab2:
                                         bins = np.linspace(min_val, max_val, 6)  # Usamos 6 bins de forma estándar
                             
                                         # Llamar a la función para calcular la distribución por clases
-                                        result = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins)
+                                        result = calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins, fecha_dt)
+
                                 if indices_image is not None:
                                     url = generar_url_geotiff_multibanda(indices_image, selected_indices, aoi)
                                 
@@ -2317,6 +2318,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
