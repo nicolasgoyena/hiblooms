@@ -421,15 +421,17 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     st.session_state["cloud_results"] = results_list
     return sorted([r["Fecha"] for r in results_list])
 
-def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
-    scl = indices_image.select("SCL")
-    year = datetime.utcfromtimestamp(indices_image.get('system:time_start').getInfo() / 1000).year
+def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins, fecha_dt):
 
-    # En 2018 aceptamos también SCL == 2 (área oscura)
+    year = fecha_dt.year   # ← ¡YA NO USA metadatos inexistentes!
+
+    scl = indices_image.select("SCL") if "SCL" in indices_image.bandNames().getInfo() else None
+
+    # Ajuste especial para 2018 (SCL==2)
     if year == 2018:
-        mask_agua = scl.eq(6).Or(scl.eq(2))
+        mask_agua = indices_image.select("SCL").eq(6).Or(indices_image.select("SCL").eq(2))
     else:
-        mask_agua = scl.eq(6)
+        mask_agua = indices_image.select("SCL").eq(6)
 
     imagen_indice = indices_image.select(index_name).updateMask(mask_agua)
     pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())
@@ -449,10 +451,9 @@ def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
 
         results.append({
             "rango": f"{lower}–{upper}",
-            "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
+            "area_ha": ee.Number(bin_area).divide(10000)
         })
 
-    # Calcular área total de agua
     total_area = pixel_area.reduceRegion(
         reducer=ee.Reducer.sum(),
         geometry=aoi,
@@ -462,15 +463,14 @@ def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
 
     total_area_ha = ee.Number(total_area).divide(10000).getInfo()
 
-    # Evitar división por cero
     if total_area_ha == 0 or total_area_ha is None:
-        return []  # No hay agua o no se pudo calcular
+        return []
 
     resultados_finales = []
     for r in results:
         try:
             area_ha = r["area_ha"].getInfo()
-        except Exception:
+        except:
             area_ha = 0
         porcentaje = (area_ha / total_area_ha) * 100 if total_area_ha > 0 else 0
         resultados_finales.append({
@@ -480,6 +480,7 @@ def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
         })
 
     return resultados_finales
+
 
 
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
@@ -647,30 +648,29 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         if num_images == 0:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
-            return None, None, None
+            return None, None, None, None
 
         metadata_list = sentinel2.aggregate_array('system:time_start').getInfo()
-        
         best_image = None
-        
+
         for timestamp in metadata_list:
             formatted_date = datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d')
             hora = datetime.utcfromtimestamp(timestamp / 1000).strftime('%H:%M')
-        
+
             if formatted_date not in cloud_results_dict:
                 continue
-        
+
             cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
             coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
-        
+
             if coverage < 50 or cloud_score > max_cloud_percentage:
                 continue
-        
+
             best_image = sentinel2.filterDate(
                 ee.Date(formatted_date),
                 ee.Date(formatted_date).advance(1, 'day')
             ).first()
-        
+
             st.session_state.setdefault("used_cloud_results", []).append({
                 "Fecha": formatted_date,
                 "Hora": hora,
@@ -680,41 +680,30 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
-            return None, None, None
+            return None, None, None, None
 
         sentinel2_image = best_image
-        image_date = datetime.utcfromtimestamp(
-            sentinel2_image.get('system:time_start').getInfo() / 1000
-        ).strftime('%Y-%m-%d %H:%M:%S')
 
-        # ============================
-        # 🌥️ MÁSCARA DE NUBES (SCL 7,8,9,10) — SOLO PARA ÍNDICES
-        # ============================
+        # Guardamos la fecha en formato datetime
+        fecha_millis = sentinel2_image.get('system:time_start').getInfo()
+        fecha_dt = datetime.utcfromtimestamp(fecha_millis / 1000)
+
+        # -----------------------------
+        #  NUBE MASK SOLO PARA ÍNDICES
+        # -----------------------------
         scl = sentinel2_image.select('SCL')
-        cloud_mask = (
-            scl.neq(7)
-               .And(scl.neq(8))
-               .And(scl.neq(9))
-               .And(scl.neq(10))
-        )
+        cloud_mask = scl.neq(7).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))
 
-        # ============================
-        # 📌 CARGA DE BANDAS
-        # ============================
-        bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
-        bandas_disponibles = sentinel2_image.bandNames().getInfo()
+        # -----------------------------
+        #  RGB SIN TOCAR
+        # -----------------------------
+        rgb_image = sentinel2_image.clip(aoi)
 
-        for banda in bandas_requeridas:
-            if banda not in bandas_disponibles:
-                st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}.")
-                return None, None, None
+        # -----------------------------
+        #  BANDAS PARA ÍNDICES (ESCALADAS)
+        # -----------------------------
+        optical_bands = sentinel2_image.clip(aoi).select(['B2','B3','B4','B5','B6','B8A']).divide(10000)
 
-        clipped_image = sentinel2_image.clip(aoi)
-
-        # Bandas ópticas originales (0–10000)
-        optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
-
-        # Definir bandas para índices
         b2 = optical_bands.select('B2')
         b3 = optical_bands.select('B3')
         b4 = optical_bands.select('B4')
@@ -722,9 +711,11 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b6 = optical_bands.select('B6')
         b8A = optical_bands.select('B8A')
 
-        # ============================
-        # 📈 ÍNDICES (solo enmascarados con cloud_mask)
-        # ============================
+        # -----------------------------
+        # ÍNDICES (enmascarados en nubes)
+        # -----------------------------
+        indices_to_add = []
+
         indices_functions = {
             "MCI": lambda: b5.subtract(b4)
                             .subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665)))
@@ -738,10 +729,10 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             "PC_Val_cal": lambda: (
                 ee.Image(100)
                 .divide(
-                    ee.Image(1).add((b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp())
-                )
-                .updateMask(cloud_mask)
-                .rename("PC_Val_cal")
+                    ee.Image(1).add(
+                        (b5.divide(b4).subtract(1.9895)).multiply(-4.6755).exp()
+                    )
+                ).updateMask(cloud_mask).rename("PC_Val_cal")
             ),
 
             "Chla_Val_cal": lambda: (
@@ -751,9 +742,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                         (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))
                         .multiply(-7.14).exp()
                     )
-                )
-                .updateMask(cloud_mask)
-                .rename("Chla_Val_cal")
+                ).updateMask(cloud_mask).rename("Chla_Val_cal")
             ),
 
             "PC_Bellus_cal": lambda: (
@@ -762,8 +751,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                     b6.subtract(
                         b8A.multiply(0.96).add((b3.subtract(b8A)).multiply(0.51))
                     )
-                )
-                .add(571)
+                ).add(571)
                 .updateMask(cloud_mask)
                 .rename("PC_Bellus_cal")
             ),
@@ -784,25 +772,18 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             )
         }
 
-        # ============================
-        # Añadir índices
-        # ============================
-        indices_to_add = []
         for index in selected_indices:
             if index in indices_functions:
-                try:
-                    indices_to_add.append(indices_functions[index]())
-                except Exception as e:
-                    st.warning(f"⚠️ Error calculando {index}: {e}")
+                indices_to_add.append(indices_functions[index]())
 
-        # Imagen final
-        # Imagen RGB intacta (sin máscara)
-        rgb_image = clipped_image
-        
-        # Imagen de índices separada
+        # -----------------------------
+        #  NO AÑADIR ÍNDICES A LA RGB
+        #  (EVITA QUE SE PONGA EN BLANCO)
+        # -----------------------------
         indices_image = ee.Image.cat(indices_to_add)
-        
-        return rgb_image, indices_image, image_date
+
+        return rgb_image, indices_image, fecha_dt
+
 
 
 
@@ -2336,6 +2317,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
