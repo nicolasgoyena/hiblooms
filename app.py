@@ -688,14 +688,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         ).strftime('%Y-%m-%d %H:%M:%S')
 
         # ============================
-        # 🌥️ MÁSCARA SCL DE NUBES (CORREGIDA)
+        # 🌥️ MÁSCARA SCL DE NUBES (ESTRICTa)
         # ============================
         scl = sentinel2_image.select("SCL")
-        cloud_values = [3, 7, 8, 9, 10, 11]  # sombra, nubes, nieve, etc.
+        cloud_values = [3, 7, 8, 9, 10, 11]  # sombra, nubes, nieve, hielo
         cloud_mask = scl.remap(cloud_values, [0]*len(cloud_values), 1).eq(1)
 
         # ============================
-        # 📌 CARGAR BANDAS Y ENMASCARAR ANTES DEL CÁLCULO
+        # 📌 CARGA DE BANDAS
         # ============================
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
         bandas_disponibles = sentinel2_image.bandNames().getInfo()
@@ -707,22 +707,29 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
 
         clipped_image = sentinel2_image.clip(aoi)
 
-        # Enmascaramos AQUÍ todas las bandas antes de cálculos
-        optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
-        optical_bands = optical_bands.updateMask(cloud_mask)
+        # ============================
+        # ✔️ BANDAS ESCALADAS RENOMBRADAS (NO SOBRESCRIBEN RGB)
+        # ============================
+        optical_bands = (
+            clipped_image.select(bandas_requeridas)
+            .divide(10000)
+            .rename([f"{b}_scaled" for b in bandas_requeridas])
+            .updateMask(cloud_mask)
+        )
 
-        scaled_image = clipped_image.addBands(optical_bands, overwrite=False)
-
-        b3 = optical_bands.select('B3')
-        b4 = optical_bands.select('B4')
-        b5 = optical_bands.select('B5')
-        b6 = optical_bands.select('B6')
-        b8A = optical_bands.select('B8A')
-
+        # Añadimos las bandas escaladas sin overwrite (para no tocar B2,B3,B4 originales)
+        scaled_image = clipped_image.addBands(optical_bands)
 
         # ============================
-        # 📌 CÁLCULO DE ÍNDICES SIN updateMask (YA ENMASCARADO)
+        # ✔️ LOS ÍNDICES USAN SOLO LAS BANDAS ESCALADAS
         # ============================
+        b2 = optical_bands.select('B2_scaled')
+        b3 = optical_bands.select('B3_scaled')
+        b4 = optical_bands.select('B4_scaled')
+        b5 = optical_bands.select('B5_scaled')
+        b6 = optical_bands.select('B6_scaled')
+        b8A = optical_bands.select('B8A_scaled')
+
         indices_functions = {
             "MCI": lambda: b5.subtract(b4)
                             .subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665)))
@@ -783,8 +790,13 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             st.warning(f"⚠️ No se generó ningún índice válido para la fecha {selected_date}.")
             return scaled_image, None, image_date
 
+        # ============================
+        # 🟩 Añadir índices enmascarados al scaled_image
+        # ============================
         indices_image = scaled_image.addBands(indices_to_add)
+
         return scaled_image, indices_image, image_date
+
 
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
@@ -2315,6 +2327,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
