@@ -796,9 +796,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                     st.warning(f"⚠️ Error calculando {index}: {e}")
 
         # Imagen final
-        indices_image = clipped_image.addBands(indices_to_add)
+        # Imagen RGB intacta (sin máscara)
+        rgb_image = clipped_image
+        
+        # Imagen de índices separada
+        indices_image = ee.Image.cat(indices_to_add)
+        
+        return rgb_image, indices_image, image_date
 
-        return clipped_image, indices_image, image_date
 
 
 
@@ -2331,6 +2336,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
