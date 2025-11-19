@@ -711,13 +711,14 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         optical_bands = optical_bands.updateMask(cloud_mask)
 
-        scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
+        scaled_image = clipped_image.addBands(optical_bands, overwrite=False)
 
-        b3 = scaled_image.select('B3')
-        b4 = scaled_image.select('B4')
-        b5 = scaled_image.select('B5')
-        b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A')
+        b3 = optical_bands.select('B3')
+        b4 = optical_bands.select('B4')
+        b5 = optical_bands.select('B5')
+        b6 = optical_bands.select('B6')
+        b8A = optical_bands.select('B8A')
+
 
         # ============================
         # 📌 CÁLCULO DE ÍNDICES SIN updateMask (YA ENMASCARADO)
@@ -2314,6 +2315,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
