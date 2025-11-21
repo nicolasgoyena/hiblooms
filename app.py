@@ -1880,101 +1880,103 @@ with tab2:
 
                             # Dentro de tu código de interfaz para visualizar las distribuciones
                             if "image_list" in st.session_state and "selected_dates" in st.session_state:
-                                # Un único expander para toda la sección de distribución
                                 with st.expander("📊 Distribución diaria por clases del índice en el embalse", expanded=False):
                             
-                                    # Inicializar la lista de datos
-                                    data = []  # Guardamos los datos para todas las fechas
+                                    data = []  # Guardamos todos los resultados
                             
-                                    # Recorremos las imágenes y las fechas almacenadas en session_state
+                                    # Recorremos imágenes y fechas
                                     for i, (img, fecha_str) in enumerate(zip(st.session_state["image_list"], st.session_state["selected_dates"])):
                                         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
                             
                                         for index_name in st.session_state["selected_indices"]:
-                                            # Obtener min/max según vis_params (utilizando la paleta exacta para cada índice)
-                                            min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red'] 
+                            
+                                            # Obtener min/max según índice
+                                            min_val, max_val, palette = -0.1, 0.4, ['blue', 'green', 'yellow', 'red']
                             
                                             if index_name == "PC_Val_cal":
                                                 min_val, max_val = 0, 25
-                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF8000", "#FF0000"]  # Azul, verde, amarillo,naranja, rojo
+                                                palette = ["#ADD8E6", "#008000", "#FFFF00", "#FF8000", "#FF0000"]
                                             elif index_name == "Chla_Val_cal":
                                                 min_val, max_val = 0, 150
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index_name == "Chla_Bellus_cal":
                                                 min_val, max_val = 5, 100
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index_name == "PC_Bellus_cal":
                                                 min_val, max_val = 25, 500
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                                             elif index_name == "UV_PC_Gral_cal":
                                                 min_val, max_val = 0, 100
-                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']  # Azul, verde, amarillo, rojo
+                                                palette = ['#2171b5', '#75ba82', '#fdae61', '#e31a1c']
                             
+                                            # Crear bins según índice
                                             if index_name == "PC_Val_cal":
-                                                bins = np.linspace(min_val, max_val, 6)
-                                            else: 
-                                                bins = np.linspace(min_val, max_val, 5)# 4 categorías, por lo tanto, 5 puntos
-                                            # Llamar a la función para calcular la distribución por clases
+                                                bins = np.linspace(min_val, max_val, 6)  # 5 clases
+                                            else:
+                                                bins = np.linspace(min_val, max_val, 5)  # 4 clases
+                            
+                                            # Crear bin_labels ESTABLES para este índice
+                                            bin_labels = [f"{bins[i]:.2f}–{bins[i+1]:.2f}" for i in range(len(bins) - 1)]
+                            
+                                            # Obtener distribución
                                             result = calcular_distribucion_area_por_clases(img, index_name, aoi, bins)
                             
                                             if result:
-                                                # Convertir el resultado en un DataFrame para graficarlo
                                                 df_distribution = pd.DataFrame(result)
                             
-                                                # Añadir los resultados al dataframe final, incluyendo la fecha para cada entrada
+                                                # Normalizar rangos
+                                                df_distribution["rango"] = df_distribution["rango"].str.replace("–", "-", regex=False)
+                            
+                                                def norm_r(r):
+                                                    try:
+                                                        lo, hi = r.split("-")
+                                                        return f"{float(lo):.2f}–{float(hi):.2f}"
+                                                    except:
+                                                        return None
+                            
+                                                df_distribution["rango"] = df_distribution["rango"].apply(norm_r)
+                                                df_distribution = df_distribution.dropna(subset=["rango"])
+                            
+                                                # Añadir resultados + bins correctos para este índice
                                                 for row in df_distribution.itertuples():
                                                     data.append({
                                                         "Fecha": fecha,
                                                         "Rango": row.rango,
-                                                        "Porcentaje": row.porcentaje
+                                                        "Porcentaje": row.porcentaje,
+                                                        "Índice": index_name,
+                                                        "Bins": bin_labels.copy(),       # <--- BINS CORRECTOS
+                                                        "Palette": palette.copy()        # <--- PALETA POR ÍNDICE
                                                     })
                             
-                                    # Si se ha recogido algún dato, generar el gráfico
+                                    # ===========================
+                                    #   GENERAR EL GRÁFICO
+                                    # ===========================
                                     if data:
                                         df_final = pd.DataFrame(data)
-                                        # Normalizar el formato de los rangos generados por calcular_distribucion_area_por_clases
-                                        df_final["Rango"] = (
-                                            df_final["Rango"]
-                                            .str.replace("–", "-", regex=False)
-                                            .str.replace("–", "-", regex=False)
+                            
+                                        # Obtener TODOS los bins usados realmente:
+                                        all_bin_labels = sorted(
+                                            set(label for lst in df_final["Bins"] for label in lst),
+                                            key=lambda x: float(x.split("–")[0])
                                         )
-                                        
-                                        # Convertir a float los extremos y volver a escribir el rango en formato estable
-                                        def normalizar_rango(r):
-                                            try:
-                                                low, high = r.split("-")
-                                                low = float(low)
-                                                high = float(high)
-                                                return f"{low:.2f}–{high:.2f}"
-                                            except:
-                                                return None
-                                        
-                                        df_final["Rango"] = df_final["Rango"].apply(normalizar_rango)
-                                        df_final = df_final.dropna(subset=["Rango"])
-
-                                        
-                                                                    
-                                        # Invertir el orden de las categorías en la barra (se apilarán de abajo hacia arriba)
-                                        # Crear etiquetas de bins estables (4 o 5 clases fijas)
-                                        bin_labels = [f"{bins[i]:.2f}–{bins[i+1]:.2f}" for i in range(len(bins)-1)]
-
-                                        
-                                        # Forzar los rangos a ser exactamente estos, en este orden
+                            
+                                        # Seleccionar una paleta (si hay varios índices, coger primero)
+                                        palette = df_final["Palette"].iloc[0]
+                            
+                                        # Forzar categorías estables
                                         df_final["Rango"] = pd.Categorical(
                                             df_final["Rango"],
-                                            categories=bin_labels,
+                                            categories=all_bin_labels,
                                             ordered=True
                                         )
-
-
                             
-                                        # Graficar la distribución como un gráfico de barras apiladas
+                                        # Crear gráfico
                                         chart = alt.Chart(df_final).mark_bar(size=25).encode(
                                             x=alt.X('Fecha:T', title='Fecha'),
                                             y=alt.Y('Porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
                                             color=alt.Color(
                                                 'Rango:N',
-                                                scale=alt.Scale(domain=bin_labels, range=palette),
+                                                scale=alt.Scale(domain=all_bin_labels, range=palette),
                                                 legend=alt.Legend(title="Rango de valores")
                                             )
                                         ).properties(
@@ -1982,10 +1984,9 @@ with tab2:
                                             width=800,
                                             height=400
                                         )
-
                             
-                                        # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
+
                                         
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
                             if reservoir_name.lower() == "val" and "PC_Val_cal" in selected_indices:
@@ -2355,6 +2356,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
