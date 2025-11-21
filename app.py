@@ -422,38 +422,22 @@ def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
     return sorted([r["Fecha"] for r in results_list])
 
 def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
+
+    # SCL
     scl = indices_image.select("SCL")
     year = datetime.utcfromtimestamp(indices_image.get('system:time_start').getInfo() / 1000).year
 
-    # En 2018 aceptamos también SCL == 2 (área oscura)
     if year == 2018:
         mask_agua = scl.eq(6).Or(scl.eq(2))
     else:
         mask_agua = scl.eq(6)
 
+    # Imagen del índice sobre agua
     imagen_indice = indices_image.select(index_name).updateMask(mask_agua)
-    pixel_area = ee.Image.pixelArea().updateMask(imagen_indice.mask())
 
-    results = []
-    for i in range(len(bins) - 1):
-        lower = bins[i]
-        upper = bins[i + 1]
-
-        bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
-        bin_area = pixel_area.updateMask(bin_mask).reduceRegion(
-            reducer=ee.Reducer.sum(),
-            geometry=aoi,
-            scale=20,
-            maxPixels=1e13
-        ).get("area")
-
-        results.append({
-            "rango": f"{lower}–{upper}",
-            "area_ha": ee.Number(bin_area).divide(10000)  # m² → ha
-        })
-
-    # Calcular área total de agua
-    total_area = pixel_area.reduceRegion(
+    # AREA TOTAL DEL EMBALSE (solo una vez)
+    pixel_area_total = ee.Image.pixelArea().updateMask(mask_agua)
+    total_area = pixel_area_total.reduceRegion(
         reducer=ee.Reducer.sum(),
         geometry=aoi,
         scale=20,
@@ -461,25 +445,42 @@ def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
     ).get("area")
 
     total_area_ha = ee.Number(total_area).divide(10000).getInfo()
+    if not total_area_ha or total_area_ha == 0:
+        return []
 
-    # Evitar división por cero
-    if total_area_ha == 0 or total_area_ha is None:
-        return []  # No hay agua o no se pudo calcular
+    results = []
 
-    resultados_finales = []
-    for r in results:
-        try:
-            area_ha = r["area_ha"].getInfo()
-        except Exception:
+    # Calcular el área para cada bin
+    for i in range(len(bins) - 1):
+        lower = bins[i]
+        upper = bins[i+1]
+
+        bin_mask = imagen_indice.gte(lower).And(imagen_indice.lt(upper))
+
+        # pixel_area por bin
+        pixel_area_bin = ee.Image.pixelArea().updateMask(bin_mask)
+
+        bin_area = pixel_area_bin.reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=aoi,
+            scale=20,
+            maxPixels=1e13
+        ).get("area")
+
+        area_ha = ee.Number(bin_area).divide(10000).getInfo()
+        if area_ha is None:
             area_ha = 0
-        porcentaje = (area_ha / total_area_ha) * 100 if total_area_ha > 0 else 0
-        resultados_finales.append({
-            "rango": r["rango"],
+
+        porcentaje = (area_ha / total_area_ha) * 100
+
+        results.append({
+            "rango": f"{lower}–{upper}",
             "area_ha": area_ha,
             "porcentaje": porcentaje
         })
 
-    return resultados_finales
+    return results
+
 
 
 def load_reservoir_shapefile(reservoir_name, shapefile_path="shapefiles/embalses_hiblooms.shp"):
@@ -2356,6 +2357,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
