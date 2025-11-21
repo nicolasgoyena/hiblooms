@@ -1950,6 +1950,8 @@ with tab2:
                                                 return None
                                         
                                         df_final["Rango"] = df_final["Rango"].apply(normalizar_rango)
+                                        df_final = df_final.dropna(subset=["Rango"])
+
                                         
                                                                     
                                         # Invertir el orden de las categorías en la barra (se apilarán de abajo hacia arriba)
@@ -2348,6 +2350,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
