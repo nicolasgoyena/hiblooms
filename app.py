@@ -1932,10 +1932,30 @@ with tab2:
                                     # Si se ha recogido algún dato, generar el gráfico
                                     if data:
                                         df_final = pd.DataFrame(data)
-                            
+                                        # Normalizar el formato de los rangos generados por calcular_distribucion_area_por_clases
+                                        df_final["Rango"] = (
+                                            df_final["Rango"]
+                                            .str.replace("–", "-", regex=False)
+                                            .str.replace("–", "-", regex=False)
+                                        )
+                                        
+                                        # Convertir a float los extremos y volver a escribir el rango en formato estable
+                                        def normalizar_rango(r):
+                                            try:
+                                                low, high = r.split("-")
+                                                low = float(low)
+                                                high = float(high)
+                                                return f"{low:.2f}–{high:.2f}"
+                                            except:
+                                                return None
+                                        
+                                        df_final["Rango"] = df_final["Rango"].apply(normalizar_rango)
+                                        
+                                                                    
                                         # Invertir el orden de las categorías en la barra (se apilarán de abajo hacia arriba)
                                         # Crear etiquetas de bins estables (4 o 5 clases fijas)
-                                        bin_labels = [f"{bins[i]}–{bins[i+1]}" for i in range(len(bins)-1)]
+                                        bin_labels = [f"{bins[i]:.2f}–{bins[i+1]:.2f}" for i in range(len(bins)-1)]
+
                                         
                                         # Forzar los rangos a ser exactamente estos, en este orden
                                         df_final["Rango"] = pd.Categorical(
@@ -1943,6 +1963,7 @@ with tab2:
                                             categories=bin_labels,
                                             ordered=True
                                         )
+
 
                             
                                         # Graficar la distribución como un gráfico de barras apiladas
@@ -2327,6 +2348,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
