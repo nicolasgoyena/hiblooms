@@ -1934,8 +1934,16 @@ with tab2:
                                         df_final = pd.DataFrame(data)
                             
                                         # Invertir el orden de las categorías en la barra (se apilarán de abajo hacia arriba)
-                                        df_final['Rango'] = pd.Categorical(df_final['Rango'], categories=df_final['Rango'].unique(), ordered=True)
-                                        df_final['Rango'] = df_final['Rango'].cat.reorder_categories(df_final['Rango'].cat.categories[::-1])  # Invertir el orden
+                                        # Crear etiquetas de bins estables (4 o 5 clases fijas)
+                                        bin_labels = [f"{bins[i]}–{bins[i+1]}" for i in range(len(bins)-1)]
+                                        
+                                        # Forzar los rangos a ser exactamente estos, en este orden
+                                        df_final["Rango"] = pd.Categorical(
+                                            df_final["Rango"],
+                                            categories=bin_labels,
+                                            ordered=True
+                                        )
+
                             
                                         # Graficar la distribución como un gráfico de barras apiladas
                                         chart = alt.Chart(df_final).mark_bar(size=25).encode(  # Aumentar el tamaño de las barras
@@ -2319,6 +2327,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
