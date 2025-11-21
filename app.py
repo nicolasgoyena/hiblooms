@@ -1969,15 +1969,20 @@ with tab2:
 
                             
                                         # Graficar la distribución como un gráfico de barras apiladas
-                                        chart = alt.Chart(df_final).mark_bar(size=25).encode(  # Aumentar el tamaño de las barras
+                                        chart = alt.Chart(df_final).mark_bar(size=25).encode(
                                             x=alt.X('Fecha:T', title='Fecha'),
                                             y=alt.Y('Porcentaje:Q', title='Porcentaje de área (%)', stack='zero'),
-                                            color=alt.Color('Rango:N', scale=alt.Scale(domain=df_final['Rango'].unique().tolist(), range=palette), legend=alt.Legend(title="Rango de valores"))
+                                            color=alt.Color(
+                                                'Rango:N',
+                                                scale=alt.Scale(domain=bin_labels, range=palette),
+                                                legend=alt.Legend(title="Rango de valores")
+                                            )
                                         ).properties(
                                             title=f"Distribución de las clases del índice por fecha",
                                             width=800,
                                             height=400
                                         )
+
                             
                                         # Mostrar el gráfico
                                         st.altair_chart(chart, use_container_width=True)
@@ -2350,6 +2355,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
