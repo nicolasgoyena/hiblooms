@@ -1986,7 +1986,8 @@ with tab2:
                                             height=400
                                         )
                             
-                                        st.altair_chart(chart, use_container_width=True)
+                                        st.warning("⚠️ El gráfico de distribución por clases no está disponible temporalmente.")
+
 
                                         
                             # Serie temporal real de ficocianina (solo si embalse es VAL)
@@ -2357,6 +2358,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
