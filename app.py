@@ -1216,7 +1216,7 @@ with tab1:
     # ==== Contenido bilingüe con el MISMO formato ====
     if lang() == "es":
         st.markdown(
-            '<div class="header">Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles (HIBLOOMS)</div>',
+            '<div class="header">Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles: HIBLOOMS (PID2023-153234OB-I00) </div>',
             unsafe_allow_html=True)
 
         st.markdown(
@@ -2358,6 +2358,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
