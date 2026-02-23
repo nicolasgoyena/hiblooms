@@ -8,7 +8,6 @@ numpy==2.2.4
 geopandas==1.0.1
 matplotlib==3.10.1
 setuptools>=70
-pkg_resources
 bs4
 pydrive2
 streamlit-extras
@@ -16,4 +15,5 @@ requests
 SQLAlchemy>=2.0
 psycopg2-binary
 python-dotenv
+
 
