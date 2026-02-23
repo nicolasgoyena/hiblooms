@@ -1495,9 +1495,9 @@ with tab2:
                 
                         if usar_csv_val or usar_csv_bellus:
                             if usar_csv_val:
-                                url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_el_val_historico.csv"
+                                url_csv = "fechas_validas_el_val_historico.csv"
                             elif usar_csv_bellus:
-                                url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/fechas_validas_bellus_historico.csv"
+                                url_csv = "fechas_validas_bellus_historico.csv"
                 
                             df_fechas = cargar_fechas_csv(url_csv)
                 
@@ -2358,6 +2358,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
