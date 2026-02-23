@@ -2021,7 +2021,7 @@ with tab2:
 
                             if reservoir_name.lower() == "val" and hay_clorofila:
                                 with st.expander("📈 Valores reales de clorofila-a (valores de sonda Aquadam en 41.8761,-1.7883)", expanded=False):
-                                    url_cloro_val = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/clorofila_val_entero.csv"
+                                    url_cloro_val = "clorofila_val_entero.csv"
                                     try:
                                         df_cloro = pd.read_csv(url_cloro_val)
                             
@@ -2358,6 +2358,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
