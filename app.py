@@ -259,7 +259,7 @@ except Exception as e:
     st.stop()
 
 # URL pública del archivo CSV en S3
-url_csv = "https://hibloomsbucket.s3.eu-south-2.amazonaws.com/puntos_interes.csv"
+url_csv = "puntos_interes.csv"
 
 try:
     df_poi = pd.read_csv(url_csv)
@@ -2358,6 +2358,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
