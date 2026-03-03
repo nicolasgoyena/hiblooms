@@ -373,52 +373,72 @@ def cargar_y_mostrar_embalses(map_object, shapefile_path="shapefiles/embalses_hi
         st.error(f"No se encontró el archivo {shapefile_path}.")
 
 def get_available_dates(aoi, start_date, end_date, max_cloud_percentage):
-    inicio_total = time.time()
 
-    sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
-        .filterBounds(aoi) \
+    sentinel2 = (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(aoi)
         .filterDate(start_date, end_date)
+    )
 
-    if sentinel2.size().getInfo() == 0:
+    def compute_metrics(image):
+
+        scl = image.select("SCL")
+
+        cloud_mask = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
+        valid_mask = scl.mask().And(scl.neq(4)).And(scl.neq(5))
+
+        cloud_fraction = cloud_mask.updateMask(valid_mask).reduceRegion(
+            ee.Reducer.mean(), aoi, 20, maxPixels=1e13
+        ).get("SCL")
+
+        total_pixels = ee.Image(1).clip(aoi).reduceRegion(
+            ee.Reducer.count(), aoi, 20, maxPixels=1e13
+        ).get("constant")
+
+        valid_pixels = ee.Image(1).updateMask(image.select("B4").mask()).clip(aoi).reduceRegion(
+            ee.Reducer.count(), aoi, 20, maxPixels=1e13
+        ).get("constant")
+
+        coverage = ee.Number(valid_pixels).divide(total_pixels).multiply(100)
+
+        return image.set({
+            "cloud_pct": ee.Number(cloud_fraction).multiply(100),
+            "coverage_pct": coverage,
+            "date_str": ee.Date(image.get("system:time_start")).format("YYYY-MM-dd"),
+            "time_str": ee.Date(image.get("system:time_start")).format("HH:mm")
+        })
+
+    processed = sentinel2.map(compute_metrics)
+
+    # 🔥 Traemos todo en una sola llamada
+    dates = processed.aggregate_array("date_str").getInfo()
+    times = processed.aggregate_array("time_str").getInfo()
+    clouds = processed.aggregate_array("cloud_pct").getInfo()
+    coverages = processed.aggregate_array("coverage_pct").getInfo()
+
+    if not dates:
         st.warning(t("warn.no_imgs"))
         return []
 
-    images = sentinel2.toList(sentinel2.size())
     results_list = []
 
-    for i in range(images.size().getInfo()):
-        image = ee.Image(images.get(i)).clip(aoi)
-        image_date = image.get('system:time_start').getInfo()
-        formatted_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d')
-        image_time = datetime.utcfromtimestamp(image_date / 1000).strftime('%H:%M')
+    for d, t_, c, cov in zip(dates, times, clouds, coverages):
 
-        # Evitar duplicados
-        if any(r["Fecha"] == formatted_date for r in results_list):
-            continue
+        if (max_cloud_percentage == 100 or c <= max_cloud_percentage) and cov >= 50:
 
-        with st.spinner(f"{t('spinner.img')} {formatted_date}..."):
-            cloud_obj = calculate_cloud_percentage(image, aoi)
-            if cloud_obj is None:
-                continue
-            
-            try:
-                cloud_percentage = cloud_obj.getInfo()
-            except Exception as e:
-                continue
+            results_list.append({
+                "Fecha": d,
+                "Hora": t_,
+                "Nubosidad aproximada (%)": round(c, 2),
+                "Cobertura (%)": round(cov, 2)
+            })
 
-            coverage = calculate_coverage_percentage(image, aoi)
-            if coverage is None:
-                continue
-
-            if (max_cloud_percentage == 100 or cloud_percentage <= max_cloud_percentage) and coverage >= 50:
-                results_list.append({
-                    "Fecha": formatted_date,
-                    "Hora": image_time,
-                    "Nubosidad aproximada (%)": round(cloud_percentage, 2),
-                    "Cobertura (%)": round(coverage, 2)
-                })
+    # eliminar duplicados por fecha
+    unique = {r["Fecha"]: r for r in results_list}
+    results_list = list(unique.values())
 
     st.session_state["cloud_results"] = results_list
+
     return sorted([r["Fecha"] for r in results_list])
 
 def calcular_distribucion_area_por_clases(indices_image, index_name, aoi, bins):
@@ -2383,6 +2403,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
