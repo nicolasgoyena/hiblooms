@@ -635,75 +635,74 @@ def calculate_coverage_percentage(image, aoi):
         return 0
 
 def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices):
+
     with st.spinner("Procesando imágenes de Sentinel-2 para " + selected_date + "..."):
+
         selected_date_ee = ee.Date(selected_date)
         end_date_ee = selected_date_ee.advance(1, 'day')
 
-        sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
-            .filterBounds(aoi) \
+        sentinel2 = (
+            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+            .filterBounds(aoi)
             .filterDate(selected_date_ee, end_date_ee)
+        )
 
-        num_images = sentinel2.size().getInfo()
-        cloud_results_dict = {r["Fecha"]: r for r in st.session_state.get("cloud_results", [])}
+        # 🔥 Una sola llamada al servidor
+        metadata_list = sentinel2.aggregate_array('system:time_start').getInfo()
 
-        if num_images == 0:
+        if not metadata_list:
             st.warning(f"No hay imágenes disponibles para la fecha {selected_date}")
             return None, None, None
 
-        # Obtener lista de metadatos sin descargar imágenes
-        metadata_list = sentinel2.aggregate_array('system:time_start').getInfo()
-        
+        cloud_results_dict = {
+            r["Fecha"]: r for r in st.session_state.get("cloud_results", [])
+        }
+
         best_image = None
-        
+        selected_timestamp = None
+
         for timestamp in metadata_list:
+
             formatted_date = datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d')
-            hora = datetime.utcfromtimestamp(timestamp / 1000).strftime('%H:%M')
-        
+
             if formatted_date not in cloud_results_dict:
                 continue
-        
+
             cloud_score = cloud_results_dict[formatted_date]["Nubosidad aproximada (%)"]
             coverage = cloud_results_dict[formatted_date]["Cobertura (%)"]
-        
+
             if coverage < 50 or cloud_score > max_cloud_percentage:
                 continue
-        
-            # Busca la imagen server-side con esa fecha
-            best_image = sentinel2.filterDate(
-                ee.Date(formatted_date),
-                ee.Date(formatted_date).advance(1, 'day')
-            ).first()
-        
+
+            # 🔥 No volvemos a filtrar, usamos la colección ya filtrada
+            best_image = sentinel2.first()
+            selected_timestamp = timestamp
+
             st.session_state.setdefault("used_cloud_results", []).append({
                 "Fecha": formatted_date,
-                "Hora": hora,
+                "Hora": datetime.utcfromtimestamp(timestamp / 1000).strftime('%H:%M'),
                 "Nubosidad aproximada (%)": round(cloud_score, 2)
             })
-            break
 
+            break
 
         if best_image is None:
             st.warning(f"No se encontró ninguna imagen útil para la fecha {selected_date}")
             return None, None, None
 
+        # 🔥 Usamos timestamp ya disponible (evita getInfo extra)
+        image_date = datetime.utcfromtimestamp(selected_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
-        sentinel2_image = best_image
-        image_date = sentinel2_image.get('system:time_start').getInfo()
-        image_date = datetime.utcfromtimestamp(image_date / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        # -------------------------------
+        # Procesamiento de bandas
+        # -------------------------------
 
-        # Aplicar máscara de nubes SOLO a las bandas de índices seleccionados
-        scl = sentinel2_image.select('SCL')
+        scl = best_image.select('SCL')
         cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
         bandas_requeridas = ['B2', 'B3', 'B4', 'B5', 'B6', 'B8A']
-        bandas_disponibles = sentinel2_image.bandNames().getInfo()
 
-        for banda in bandas_requeridas:
-            if banda not in bandas_disponibles:
-                st.warning(f"La banda {banda} no está disponible en la imagen del {selected_date}.")
-                return None, None, None
-
-        clipped_image = sentinel2_image.clip(aoi)
+        clipped_image = best_image.clip(aoi)
         optical_bands = clipped_image.select(bandas_requeridas).divide(10000)
         scaled_image = clipped_image.addBands(optical_bands, overwrite=True)
 
@@ -711,12 +710,34 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         b4 = scaled_image.select('B4')
         b5 = scaled_image.select('B5')
         b6 = scaled_image.select('B6')
-        b8A = scaled_image.select('B8A') 
+        b8A = scaled_image.select('B8A')
+
+        # -------------------------------
+        # Índices
+        # -------------------------------
 
         indices_functions = {
-            "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename('MCI'),
-            "PCI_B5/B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename('PCI_B5/B4'),
-            "NDCI_ind": lambda: b5.subtract(b4).divide(b5.add(b4)).updateMask(cloud_mask).rename('NDCI_ind'),
+
+            "MCI": lambda: (
+                b5.subtract(b4)
+                  .subtract((b6.subtract(b4).multiply(40).divide(75)))
+                  .updateMask(cloud_mask)
+                  .rename('MCI')
+            ),
+
+            "PCI_B5/B4": lambda: (
+                b5.divide(b4)
+                  .updateMask(cloud_mask)
+                  .rename('PCI_B5/B4')
+            ),
+
+            "NDCI_ind": lambda: (
+                b5.subtract(b4)
+                  .divide(b5.add(b4))
+                  .updateMask(cloud_mask)
+                  .rename('NDCI_ind')
+            ),
+
             "PC_Val_cal": lambda: (
                 ee.Image(100)
                 .divide(
@@ -730,11 +751,11 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
             ),
 
             "Chla_Val_cal": lambda: (
-                ee.Image(450)  
+                ee.Image(450)
                 .divide(
                     ee.Image(1).add(
-                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))  
-                        .multiply(-7.14)  
+                        (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))
+                        .multiply(-7.14)
                         .exp()
                     )
                 )
@@ -742,6 +763,7 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .updateMask(cloud_mask)
                 .rename("Chla_Val_cal")
             ),
+
             "PC_Bellus_cal": lambda: (
                 ee.Image(16957)
                 .multiply(
@@ -756,16 +778,18 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
                 .updateMask(cloud_mask)
                 .rename("PC_Bellus_cal")
             ),
+
             "Chla_Bellus_cal": lambda: (
                 ee.Image(112.78)
                 .multiply(
-                    b5.subtract(b4).divide(b5.add(b4))  # NDI
+                    b5.subtract(b4).divide(b5.add(b4))
                 )
                 .add(10.779)
                 .max(0)
                 .updateMask(cloud_mask)
                 .rename("Chla_Bellus_cal")
             ),
+
             "UV_PC_Gral_cal": lambda: (
                 ee.Image(24.665)
                 .multiply(
@@ -778,18 +802,19 @@ def process_sentinel2(aoi, selected_date, max_cloud_percentage, selected_indices
         }
 
         indices_to_add = []
+
         for index in selected_indices:
-            try:
-                if index in indices_functions:
+            if index in indices_functions:
+                try:
                     indices_to_add.append(indices_functions[index]())
-            except Exception as e:
-                st.warning(f"⚠️ No se pudo calcular el índice {index} en {selected_date}: {e}")
+                except Exception as e:
+                    st.warning(f"No se pudo calcular {index}: {e}")
 
         if not indices_to_add:
-            st.warning(f"⚠️ No se generó ningún índice válido para la fecha {selected_date}.")
             return scaled_image, None, image_date
 
         indices_image = scaled_image.addBands(indices_to_add)
+
         return scaled_image, indices_image, image_date
 
 def get_values_at_point(lat, lon, indices_image, selected_indices):
@@ -2358,6 +2383,7 @@ with tab4:
                                         if not df_medias.empty:
                                             st.markdown("### 💧 Datos de medias del embalse")
                                             st.dataframe(df_medias.reset_index(drop=True))
+
 
 
 
