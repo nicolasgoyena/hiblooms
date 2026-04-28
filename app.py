@@ -356,20 +356,37 @@ with open("styles.css", "r", encoding="utf-8") as _f:
     st.markdown(f"<style>{_f.read()}</style>", unsafe_allow_html=True)
 
 # ── Header: logos originales + título + idioma ────────────────
+
+# Barra de idioma superior
+_lang_col, _ = st.columns([1, 4])
+with _lang_col:
+    chosen = st.selectbox(
+        "",
+        options=_LANGS,
+        format_func=lambda x: "🇪🇸 Español" if x == "es" else "🇬🇧 English",
+        index=_LANGS.index(lang()),
+        label_visibility="collapsed",
+    )
+    if chosen != lang():
+        set_lang(chosen)
+
+# Header principal
 _hdr_left, _hdr_center, _hdr_right = st.columns([1.6, 3.0, 1.8])
 
 with _hdr_left:
+    st.markdown("<div style='padding-top:0.5rem'>", unsafe_allow_html=True)
     st.image("images/logo_hiblooms.png", width=240)
     _min_c1, _min_c2 = st.columns([1.6, 1])
     with _min_c1:
         st.image("images/ministerio.png", width=160)
     with _min_c2:
         st.image("images/logo_unav.png", width=90)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with _hdr_center:
     st.markdown(
         f"""
-        <div class="hb-hero">
+        <div class="hb-hero" style="padding-top:1.5rem">
           <div class="hb-hero-title">
             HI<span>BLOOMS</span>
           </div>
@@ -382,22 +399,14 @@ with _hdr_center:
     )
 
 with _hdr_right:
+    st.markdown("<div style='padding-top:0.5rem'>", unsafe_allow_html=True)
     st.image("images/logo_bioma.png", width=200)
     _ebro_c, _jucar_c = st.columns([1, 1.2])
     with _ebro_c:
         st.image("images/logo_ebro.png", width=100)
     with _jucar_c:
         st.image("images/logo_jucar.png", width=120)
-    chosen = st.selectbox(
-        t("ui.language"),
-        options=_LANGS,
-        format_func=lambda x: "🇪🇸 Español" if x == "es" else "🇬🇧 English",
-        index=_LANGS.index(lang()),
-    )
-    if chosen != lang():
-        set_lang(chosen)
-
-st.markdown('<div class="hb-divider"></div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 
