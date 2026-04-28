@@ -8,3 +8,13 @@ services:
     envVars:
       - key: GEE_SERVICE_ACCOUNT_JSON
         sync: false
+
+  - type: web
+    name: hiblooms-app
+    runtime: python
+    pythonVersion: "3.11.9"
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: api_url
+        value: https://hiblooms-api.onrender.com   # ← URL pública de la API
