@@ -489,46 +489,56 @@ with tab1:
                 <span style="font-size:10px;font-weight:500;color:#00a896;background:#e6f7f5;border:1px solid #c8dce4;border-radius:999px;padding:2px 9px">Pasos no excluyentes</span>
             </div>
             <svg viewBox="0 0 780 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-                <defs>
-                    <marker id="d1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00a896"/></marker>
-                    <marker id="d2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#4a6372"/></marker>
-                </defs>
                 <circle cx="48" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
                 <text x="48" y="85" text-anchor="middle" font-size="22">🛰</text>
                 <text x="48" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
                 <text x="48" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">Cada 5 días</text>
-                <line x1="75" y1="78" x2="128" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d1)"/>
+
+                <line x1="75" y1="78" x2="130" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="130,74 138,78 130,82" fill="#00a896"/>
+
                 <circle cx="158" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
                 <text x="158" y="85" text-anchor="middle" font-size="22">☁️</text>
                 <text x="158" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth Engine</text>
                 <text x="158" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">Filtrado de Imágenes</text>
+
                 <line x1="184" y1="78" x2="218" y2="78" stroke="#4a6372" stroke-width="1.1"/>
                 <line x1="218" y1="78" x2="218" y2="38" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="38" x2="248" y2="38" stroke="#4a6372" stroke-width="1.1" marker-end="url(#d2)"/>
+                <line x1="218" y1="38" x2="246" y2="38" stroke="#4a6372" stroke-width="1.1"/>
+                <polygon points="246,34 254,38 246,42" fill="#4a6372"/>
                 <line x1="218" y1="78" x2="218" y2="118" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="118" x2="248" y2="118" stroke="#4a6372" stroke-width="1.1" marker-end="url(#d2)"/>
+                <line x1="218" y1="118" x2="246" y2="118" stroke="#4a6372" stroke-width="1.1"/>
+                <polygon points="246,114 254,118 246,122" fill="#4a6372"/>
                 <circle cx="218" cy="78" r="3.5" fill="#4a6372"/>
-                <rect x="250" y="10" width="132" height="54" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
-                <text x="316" y="30" text-anchor="middle" font-size="18">📊</text>
-                <text x="316" y="46" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración in situ</text>
-                <rect x="250" y="92" width="132" height="54" rx="9" fill="#e6f7f5" stroke="#00a896" stroke-width="1.4"/>
-                <text x="316" y="112" text-anchor="middle" font-size="18">📐</text>
-                <text x="316" y="128" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales</text>
-                <text x="316" y="140" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">predefinidos · MCI · NDCI · PCI</text>
-                <line x1="382" y1="37" x2="414" y2="37" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="37" x2="414" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="382" y1="119" x2="414" y2="119" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="119" x2="414" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="78" x2="444" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d1)"/>
-                <circle cx="414" cy="78" r="3.5" fill="#4a6372"/>
-                <circle cx="474" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
-                <text x="474" y="85" text-anchor="middle" font-size="22">🗺️</text>
-                <text x="474" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas de</text>
-                <text x="474" y="126" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">concentración</text>
-                <line x1="500" y1="78" x2="550" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d1)"/>
-                <circle cx="580" cy="78" r="26" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
-                <text x="580" y="85" text-anchor="middle" font-size="22">🚨</text>
-                <text x="580" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Posible bloom</text>
+
+                <rect x="256" y="10" width="132" height="54" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
+                <text x="322" y="30" text-anchor="middle" font-size="18">📊</text>
+                <text x="322" y="46" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración in situ</text>
+
+                <rect x="256" y="92" width="132" height="54" rx="9" fill="#e6f7f5" stroke="#00a896" stroke-width="1.4"/>
+                <text x="322" y="112" text-anchor="middle" font-size="18">📐</text>
+                <text x="322" y="128" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales</text>
+                <text x="322" y="140" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">predefinidos · MCI · NDCI · PCI</text>
+
+                <line x1="388" y1="37" x2="416" y2="37" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="37" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="388" y1="119" x2="416" y2="119" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="119" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="78" x2="444" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="444,74 452,78 444,82" fill="#00a896"/>
+                <circle cx="416" cy="78" r="3.5" fill="#4a6372"/>
+
+                <circle cx="480" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
+                <text x="480" y="85" text-anchor="middle" font-size="22">🗺️</text>
+                <text x="480" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas de</text>
+                <text x="480" y="126" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">concentración</text>
+
+                <line x1="506" y1="78" x2="548" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="548,74 556,78 548,82" fill="#00a896"/>
+
+                <circle cx="584" cy="78" r="26" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
+                <text x="584" y="85" text-anchor="middle" font-size="22">🚨</text>
+                <text x="584" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Posible bloom</text>
             </svg>
         </div>
     """
@@ -541,46 +551,56 @@ with tab1:
                 <span style="font-size:10px;font-weight:500;color:#00a896;background:#e6f7f5;border:1px solid #c8dce4;border-radius:999px;padding:2px 9px">Non-exclusive steps</span>
             </div>
             <svg viewBox="0 0 780 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-                <defs>
-                    <marker id="d3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00a896"/></marker>
-                    <marker id="d4" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#4a6372"/></marker>
-                </defs>
                 <circle cx="48" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
                 <text x="48" y="85" text-anchor="middle" font-size="22">🛰</text>
                 <text x="48" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
                 <text x="48" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">5-day revisit</text>
-                <line x1="75" y1="78" x2="128" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d3)"/>
+
+                <line x1="75" y1="78" x2="130" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="130,74 138,78 130,82" fill="#00a896"/>
+
                 <circle cx="158" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
                 <text x="158" y="85" text-anchor="middle" font-size="22">☁️</text>
                 <text x="158" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth Engine</text>
                 <text x="158" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">Image filtering</text>
+
                 <line x1="184" y1="78" x2="218" y2="78" stroke="#4a6372" stroke-width="1.1"/>
                 <line x1="218" y1="78" x2="218" y2="38" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="38" x2="248" y2="38" stroke="#4a6372" stroke-width="1.1" marker-end="url(#d4)"/>
+                <line x1="218" y1="38" x2="246" y2="38" stroke="#4a6372" stroke-width="1.1"/>
+                <polygon points="246,34 254,38 246,42" fill="#4a6372"/>
                 <line x1="218" y1="78" x2="218" y2="118" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="118" x2="248" y2="118" stroke="#4a6372" stroke-width="1.1" marker-end="url(#d4)"/>
+                <line x1="218" y1="118" x2="246" y2="118" stroke="#4a6372" stroke-width="1.1"/>
+                <polygon points="246,114 254,118 246,122" fill="#4a6372"/>
                 <circle cx="218" cy="78" r="3.5" fill="#4a6372"/>
-                <rect x="250" y="10" width="132" height="54" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
-                <text x="316" y="30" text-anchor="middle" font-size="18">📊</text>
-                <text x="316" y="46" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">In-situ calibration</text>
-                <rect x="250" y="92" width="132" height="54" rx="9" fill="#e6f7f5" stroke="#00a896" stroke-width="1.4"/>
-                <text x="316" y="112" text-anchor="middle" font-size="18">📐</text>
-                <text x="316" y="128" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Spectral indices</text>
-                <text x="316" y="140" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">predefined · MCI · NDCI · PCI</text>
-                <line x1="382" y1="37" x2="414" y2="37" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="37" x2="414" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="382" y1="119" x2="414" y2="119" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="119" x2="414" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="414" y1="78" x2="444" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d3)"/>
-                <circle cx="414" cy="78" r="3.5" fill="#4a6372"/>
-                <circle cx="474" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
-                <text x="474" y="85" text-anchor="middle" font-size="22">🗺️</text>
-                <text x="474" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Concentration</text>
-                <text x="474" y="126" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">maps</text>
-                <line x1="500" y1="78" x2="550" y2="78" stroke="#00a896" stroke-width="1.4" marker-end="url(#d3)"/>
-                <circle cx="580" cy="78" r="26" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
-                <text x="580" y="85" text-anchor="middle" font-size="22">🚨</text>
-                <text x="580" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Possible bloom</text>
+
+                <rect x="256" y="10" width="132" height="54" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
+                <text x="322" y="30" text-anchor="middle" font-size="18">📊</text>
+                <text x="322" y="46" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">In-situ calibration</text>
+
+                <rect x="256" y="92" width="132" height="54" rx="9" fill="#e6f7f5" stroke="#00a896" stroke-width="1.4"/>
+                <text x="322" y="112" text-anchor="middle" font-size="18">📐</text>
+                <text x="322" y="128" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Spectral indices</text>
+                <text x="322" y="140" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">predefined · MCI · NDCI · PCI</text>
+
+                <line x1="388" y1="37" x2="416" y2="37" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="37" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="388" y1="119" x2="416" y2="119" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="119" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
+                <line x1="416" y1="78" x2="444" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="444,74 452,78 444,82" fill="#00a896"/>
+                <circle cx="416" cy="78" r="3.5" fill="#4a6372"/>
+
+                <circle cx="480" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
+                <text x="480" y="85" text-anchor="middle" font-size="22">🗺️</text>
+                <text x="480" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Concentration</text>
+                <text x="480" y="126" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">maps</text>
+
+                <line x1="506" y1="78" x2="548" y2="78" stroke="#00a896" stroke-width="1.4"/>
+                <polygon points="548,74 556,78 548,82" fill="#00a896"/>
+
+                <circle cx="584" cy="78" r="26" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
+                <text x="584" y="85" text-anchor="middle" font-size="22">🚨</text>
+                <text x="584" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Possible bloom</text>
             </svg>
         </div>
     """
