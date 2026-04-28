@@ -891,7 +891,7 @@ with tab3:
                 calcular = st.button(t("btn.compute"))
 
                 # Separador siempre visible
-    st.markdown('<div class="hb-divider"></div>', unsafe_allow_html=True)
+                st.divider()
 
                 # Al pulsar el botón: construir el payload y enviarlo a la API de jobs
     if calcular:
@@ -972,8 +972,6 @@ with tab3:
                 st.info("⏳ Esperando respuesta del servidor de jobs…")
 
         _polling_fragment()
-
-    st.divider()
 
     # ── RENDERIZADO DE RESULTADOS ────────────────────────────────────────────────
     # Se activa cuando los resultados ya están en session_state
