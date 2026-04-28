@@ -488,58 +488,84 @@ with tab1:
                 <span style="flex:1;height:1px;background:#e2ecf0;display:block"></span>
                 <span style="font-size:10px;font-weight:500;color:#00a896;background:#e6f7f5;border:1px solid #c8dce4;border-radius:999px;padding:2px 9px">Pasos no excluyentes</span>
             </div>
-            <svg viewBox="0 0 780 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-                <circle cx="48" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
-                <text x="48" y="85" text-anchor="middle" font-size="22">🛰</text>
-                <text x="48" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
-                <text x="48" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">Cada 5 días</text>
+            <div style="display:flex;align-items:center;gap:0;overflow-x:auto;padding:.5rem 0">
 
-                <line x1="75" y1="78" x2="130" y2="78" stroke="#00a896" stroke-width="1.4"/>
-                <polygon points="130,74 138,78 130,82" fill="#00a896"/>
+                <!-- Nodo 1 -->
+                <div style="text-align:center;min-width:80px">
+                    <div style="width:52px;height:52px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .4rem;font-size:22px">🛰</div>
+                    <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Sentinel-2</div>
+                    <div style="font-size:8.5px;color:#8fa3b0;font-family:DM Sans,sans-serif">Cada 5 días</div>
+                </div>
 
-                <circle cx="158" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
-                <text x="158" y="85" text-anchor="middle" font-size="22">☁️</text>
-                <text x="158" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth Engine</text>
-                <text x="158" y="126" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">Filtrado de Imágenes</text>
+                <!-- Flecha -->
+                <div style="flex:1;height:2px;background:#00a896;position:relative;min-width:20px">
+                    <div style="position:absolute;right:-6px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #00a896"></div>
+                </div>
 
-                <line x1="184" y1="78" x2="218" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="78" x2="218" y2="38" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="38" x2="246" y2="38" stroke="#4a6372" stroke-width="1.1"/>
-                <polygon points="246,34 254,38 246,42" fill="#4a6372"/>
-                <line x1="218" y1="78" x2="218" y2="118" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="218" y1="118" x2="246" y2="118" stroke="#4a6372" stroke-width="1.1"/>
-                <polygon points="246,114 254,118 246,122" fill="#4a6372"/>
-                <circle cx="218" cy="78" r="3.5" fill="#4a6372"/>
+                <!-- Nodo 2 -->
+                <div style="text-align:center;min-width:90px">
+                    <div style="width:52px;height:52px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .4rem;font-size:22px">☁️</div>
+                    <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Google Earth Engine</div>
+                    <div style="font-size:8.5px;color:#8fa3b0;font-family:DM Sans,sans-serif">Filtrado de Imágenes</div>
+                </div>
 
-                <rect x="256" y="10" width="132" height="54" rx="9" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
-                <text x="322" y="30" text-anchor="middle" font-size="18">📊</text>
-                <text x="322" y="46" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración in situ</text>
+                <!-- Bifurcación -->
+                <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:30px;margin:0 2px">
+                    <div style="width:24px;height:2px;background:#4a6372;position:relative;top:14px"></div>
+                    <div style="width:24px;height:2px;background:#4a6372;position:relative;top:-14px"></div>
+                </div>
 
-                <rect x="256" y="92" width="132" height="54" rx="9" fill="#e6f7f5" stroke="#00a896" stroke-width="1.4"/>
-                <text x="322" y="112" text-anchor="middle" font-size="18">📐</text>
-                <text x="322" y="128" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales</text>
-                <text x="322" y="140" text-anchor="middle" font-size="8.5" fill="#8fa3b0" font-family="DM Sans,sans-serif">predefinidos · MCI · NDCI · PCI</text>
+                <!-- Dos nodos centrales -->
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:0">
+                        <!-- Cajita Calibración -->
+                        <div style="background:#eff6ff;border:1.5px solid #3b82f6;border-radius:9px;padding:.4rem .7rem;text-align:center;min-width:120px">
+                            <div style="font-size:18px;margin-bottom:2px">📊</div>
+                            <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Calibración in situ</div>
+                        </div>
+                        <!-- Flecha derecha -->
+                        <div style="width:20px;height:2px;background:#4a6372;position:relative">
+                            <div style="position:absolute;right:-6px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #4a6372"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0">
+                        <!-- Cajita Índices -->
+                        <div style="background:#e6f7f5;border:1.5px solid #00a896;border-radius:9px;padding:.4rem .7rem;text-align:center;min-width:120px">
+                            <div style="font-size:18px;margin-bottom:2px">📐</div>
+                            <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Índices espectrales</div>
+                            <div style="font-size:8px;color:#8fa3b0;font-family:DM Sans,sans-serif">predefinidos · MCI · NDCI · PCI</div>
+                        </div>
+                        <!-- Flecha derecha -->
+                        <div style="width:20px;height:2px;background:#4a6372;position:relative">
+                            <div style="position:absolute;right:-6px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #4a6372"></div>
+                        </div>
+                    </div>
+                </div>
 
-                <line x1="388" y1="37" x2="416" y2="37" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="416" y1="37" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="388" y1="119" x2="416" y2="119" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="416" y1="119" x2="416" y2="78" stroke="#4a6372" stroke-width="1.1"/>
-                <line x1="416" y1="78" x2="444" y2="78" stroke="#00a896" stroke-width="1.4"/>
-                <polygon points="444,74 452,78 444,82" fill="#00a896"/>
-                <circle cx="416" cy="78" r="3.5" fill="#4a6372"/>
+                <!-- Flecha convergencia -->
+                <div style="flex:1;height:2px;background:#00a896;position:relative;min-width:20px">
+                    <div style="position:absolute;right:-6px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #00a896"></div>
+                </div>
 
-                <circle cx="480" cy="78" r="26" fill="#e6f7f5" stroke="#00a896" stroke-width="1.8"/>
-                <text x="480" y="85" text-anchor="middle" font-size="22">🗺️</text>
-                <text x="480" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas de</text>
-                <text x="480" y="126" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">concentración</text>
+                <!-- Nodo 4 -->
+                <div style="text-align:center;min-width:80px">
+                    <div style="width:52px;height:52px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .4rem;font-size:22px">🗺️</div>
+                    <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Mapas de</div>
+                    <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">concentración</div>
+                </div>
 
-                <line x1="506" y1="78" x2="548" y2="78" stroke="#00a896" stroke-width="1.4"/>
-                <polygon points="548,74 556,78 548,82" fill="#00a896"/>
+                <!-- Flecha -->
+                <div style="flex:1;height:2px;background:#00a896;position:relative;min-width:20px">
+                    <div style="position:absolute;right:-6px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #00a896"></div>
+                </div>
 
-                <circle cx="584" cy="78" r="26" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
-                <text x="584" y="85" text-anchor="middle" font-size="22">🚨</text>
-                <text x="584" y="115" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Posible bloom</text>
-            </svg>
+                <!-- Nodo 5 -->
+                <div style="text-align:center;min-width:80px">
+                    <div style="width:52px;height:52px;border-radius:50%;background:#fef3c7;border:2px solid #f59e0b;display:flex;align-items:center;justify-content:center;margin:0 auto .4rem;font-size:22px">🚨</div>
+                    <div style="font-size:9.5px;font-weight:700;color:#0f1f2e;font-family:DM Sans,sans-serif">Posible bloom</div>
+                </div>
+
+            </div>
         </div>
     """
 
