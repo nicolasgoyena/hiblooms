@@ -983,23 +983,6 @@ with tab3:
     if _data_time or _available_dates:
         df_time = pd.DataFrame(_data_time)
 
-        # Timeline de fechas disponibles
-        if _available_dates:
-            st.subheader(t("avail.h"))
-            # Deduplicar por fecha (sin hora) y ordenar
-            _fechas_unicas = sorted(set(
-                pd.to_datetime(f).strftime("%Y-%m-%d") for f in _available_dates
-            ))
-
-            # Renderizar como pills HTML
-            _style = "background:#5297d2;color:white;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:500;white-space:nowrap;display:inline-block;"
-            _pills = "".join(
-                "<span style='" + _style + "'>📅 " + pd.to_datetime(_f).strftime("%d %b %Y") + "</span>"
-                for _f in _fechas_unicas
-            )
-            _wrap = "<div style='display:flex;flex-wrap:wrap;gap:10px;padding:12px 0;'>" + _pills + "</div>"
-            st.markdown(_wrap, unsafe_allow_html=True)
-
         with row2[1]:
             # Leyenda de índices y capas
             with st.expander(t("legend.exp"), expanded=False):
@@ -1037,6 +1020,20 @@ with tab3:
                             st.altair_chart(chart, use_container_width=True)
 
         with row2[0]:
+            # Timeline de fechas disponibles
+            if _available_dates:
+                st.subheader(t("avail.h"))
+                _fechas_unicas = sorted(set(
+                    pd.to_datetime(f).strftime("%Y-%m-%d") for f in _available_dates
+                ))
+                _style = "background:#5297d2;color:white;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:500;white-space:nowrap;display:inline-block;"
+                _pills = "".join(
+                    "<span style='" + _style + "'>📅 " + pd.to_datetime(_f).strftime("%d %b %Y") + "</span>"
+                    for _f in _fechas_unicas
+                )
+                _wrap = "<div style='display:flex;flex-wrap:wrap;gap:10px;padding:12px 0;'>" + _pills + "</div>"
+                st.markdown(_wrap, unsafe_allow_html=True)
+
             # Mapas por fecha — disponibles si el worker devolvió tile_urls en results
             _tile_data = st.session_state.get("viz_job_results", {}).get("tile_urls", [])
             _scl_palette = {
