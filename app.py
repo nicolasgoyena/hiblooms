@@ -973,6 +973,8 @@ with tab3:
 
         _polling_fragment()
 
+    st.divider()
+
     # ── RENDERIZADO DE RESULTADOS ────────────────────────────────────────────────
     # Se activa cuando los resultados ya están en session_state
     # (igual que antes, pero leyendo de session_state en vez de calcular en vivo)
