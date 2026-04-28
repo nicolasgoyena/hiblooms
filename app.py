@@ -496,12 +496,12 @@ with tab1:
                 <circle cx="55" cy="90" r="32" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
                 <text x="55" y="98" text-anchor="middle" font-size="30">🛰</text>
                 <text x="55" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
-                <text x="55" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">5 días</text>
+                <text x="55" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Cada 5 días</text>
                 <line x1="88" y1="90" x2="148" y2="90" stroke="#00a896" stroke-width="1.5" marker-end="url(#a1)"/>
                 <circle cx="182" cy="90" r="32" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
                 <text x="182" y="98" text-anchor="middle" font-size="30">☁️</text>
-                <text x="182" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth</text>
-                <text x="182" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Engine</text>
+                <text x="182" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth Engine</text>
+                <text x="182" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Filtrado de Imágenes</text>
                 <line x1="214" y1="90" x2="252" y2="90" stroke="#4a6372" stroke-width="1.2"/>
                 <line x1="252" y1="90" x2="252" y2="45" stroke="#4a6372" stroke-width="1.2"/>
                 <line x1="252" y1="45" x2="288" y2="45" stroke="#4a6372" stroke-width="1.2" marker-end="url(#a2)"/>
@@ -510,11 +510,10 @@ with tab1:
                 <circle cx="252" cy="90" r="4" fill="#4a6372"/>
                 <rect x="290" y="14" width="110" height="60" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
                 <text x="345" y="40" text-anchor="middle" font-size="22">📊</text>
-                <text x="345" y="57" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración</text>
-                <text x="345" y="69" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">in situ</text>
+                <text x="345" y="57" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración in situ</text>
                 <rect x="290" y="106" width="110" height="60" rx="10" fill="#e6f7f5" stroke="#00a896" stroke-width="1.5"/>
                 <text x="345" y="132" text-anchor="middle" font-size="22">📐</text>
-                <text x="345" y="149" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales</text>
+                <text x="345" y="149" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales predefinidos</text>
                 <text x="345" y="161" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">MCI · NDCI · PCI</text>
                 <line x1="400" y1="44" x2="438" y2="44" stroke="#4a6372" stroke-width="1.2"/>
                 <line x1="438" y1="44" x2="438" y2="90" stroke="#4a6372" stroke-width="1.2"/>
@@ -524,13 +523,11 @@ with tab1:
                 <circle cx="438" cy="90" r="4" fill="#4a6372"/>
                 <circle cx="506" cy="90" r="32" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
                 <text x="506" y="98" text-anchor="middle" font-size="30">🗺️</text>
-                <text x="506" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas conc.</text>
-                <text x="506" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Chl-a · µg/L</text>
+                <text x="506" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas de concentración</text>
                 <line x1="539" y1="90" x2="598" y2="90" stroke="#00a896" stroke-width="1.5" marker-end="url(#a1)"/>
                 <circle cx="632" cy="90" r="32" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
                 <text x="632" y="98" text-anchor="middle" font-size="30">🚨</text>
-                <text x="632" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Aviso bloom</text>
-                <text x="632" y="145" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Posible evento</text>
+                <text x="632" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Posible bloom</text>
             </svg>
         </div>
     """
