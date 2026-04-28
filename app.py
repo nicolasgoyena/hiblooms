@@ -435,9 +435,8 @@ with tab1:
                     Reconstrucción histórica y monitorización en tiempo casi-real de la proliferación de cianobacterias en embalses españoles mediante teledetección Sentinel-2 · <span style="color:#00e5b4;font-weight:500">PID2023-153234OB-I00</span>
                 </div>
                 <div style="display:flex;gap:10px;margin-top:1.25rem;flex-wrap:wrap">
-                    <div style="background:rgba(0,229,180,.12);border:1px solid rgba(0,229,180,.25);border-radius:8px;padding:6px 14px;font-size:12px;color:#00e5b4;font-family:DM Sans,sans-serif;font-weight:500">🛰 24 embalses</div>
+                    <div style="background:rgba(0,229,180,.12);border:1px solid rgba(0,229,180,.25);border-radius:8px;padding:6px 14px;font-size:12px;color:#00e5b4;font-family:DM Sans,sans-serif;font-weight:500">🛰 24 embalses por defecto</div>
                     <div style="background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25);border-radius:8px;padding:6px 14px;font-size:12px;color:#00d4ff;font-family:DM Sans,sans-serif;font-weight:500">📅 Desde 2017</div>
-                    <div style="background:rgba(240,165,0,.12);border:1px solid rgba(240,165,0,.25);border-radius:8px;padding:6px 14px;font-size:12px;color:#f0a500;font-family:DM Sans,sans-serif;font-weight:500">⚠ 3 alertas activas</div>
                 </div>
             </div>
         </div>
