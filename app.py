@@ -483,105 +483,109 @@ with tab1:
     # ── DIAGRAMA FLUJO SENTINEL-2 ───────────────────────────────
     _diagram_es = """
         <div style="background:#fff;border:1px solid #e2ecf0;border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(15,31,46,.06)">
-            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#8fa3b0;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#8fa3b0;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
                 <span>Flujo de datos · de satélite a alerta</span>
                 <span style="flex:1;height:1px;background:#e2ecf0;display:block"></span>
+                <span style="font-size:10px;font-weight:500;color:#00a896;background:#e6f7f5;border:1px solid #c8dce4;border-radius:999px;padding:2px 9px;letter-spacing:.04em">Pasos no excluyentes</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:0;align-items:center">
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🛰</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Sentinel-2</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Imagen multiespectral<br>cada 5 días</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">→</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">☁</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Google Earth Engine</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Filtrado de nubes<br>y preprocesado L2A</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">→</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">📐</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Índices espectrales</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">MCI · NDCI · PCI<br>Chl-a · Ficocianina</div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;margin-top:4px">
-                <div></div><div></div>
-                <div style="text-align:center;color:#00a896;font-size:20px">↓</div>
-                <div></div><div></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:0;align-items:center;margin-top:4px">
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#fef3c7;border:2px solid #f59e0b;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🚨</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Alerta de bloom</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Nivel de riesgo<br>y notificación</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">←</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">📊</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Calibración in situ</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Ajuste con datos<br>de campo medidos</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">←</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🗺</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Mapas de concentración</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Clorofila-a y<br>ficocianina (µg/L)</div>
-                </div>
-            </div>
+            <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+                <defs>
+                    <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00a896"/></marker>
+                    <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a6372"/></marker>
+                </defs>
+                <circle cx="60" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="60" y="106" text-anchor="middle" font-size="22">🛰</text>
+                <text x="60" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
+                <text x="60" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">5 días</text>
+                <line x1="95" y1="110" x2="158" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a1)"/>
+                <circle cx="192" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="192" y="106" text-anchor="middle" font-size="22">☁</text>
+                <text x="192" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth</text>
+                <text x="192" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Engine</text>
+                <line x1="226" y1="110" x2="270" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="110" x2="270" y2="58" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="58" x2="308" y2="58" stroke="#4a6372" stroke-width="1.2" marker-end="url(#a2)"/>
+                <line x1="270" y1="110" x2="270" y2="162" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="162" x2="308" y2="162" stroke="#4a6372" stroke-width="1.2" marker-end="url(#a2)"/>
+                <circle cx="270" cy="110" r="4" fill="#4a6372"/>
+                <rect x="310" y="28" width="108" height="60" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="364" y="50" text-anchor="middle" font-size="18">📊</text>
+                <text x="364" y="68" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Calibración</text>
+                <text x="364" y="80" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">in situ</text>
+                <rect x="310" y="132" width="108" height="60" rx="10" fill="#e6f7f5" stroke="#00a896" stroke-width="1.5"/>
+                <text x="364" y="154" text-anchor="middle" font-size="18">📐</text>
+                <text x="364" y="172" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Índices espectrales</text>
+                <text x="364" y="184" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">MCI · NDCI · PCI</text>
+                <line x1="418" y1="58" x2="462" y2="58" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="58" x2="462" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="418" y1="162" x2="462" y2="162" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="162" x2="462" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="110" x2="496" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a1)"/>
+                <circle cx="462" cy="110" r="4" fill="#4a6372"/>
+                <circle cx="530" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="530" y="106" text-anchor="middle" font-size="22">🗺</text>
+                <text x="530" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Mapas conc.</text>
+                <text x="530" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Chl-a · µg/L</text>
+                <line x1="565" y1="110" x2="628" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a1)"/>
+                <circle cx="662" cy="110" r="34" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+                <text x="662" y="106" text-anchor="middle" font-size="22">🚨</text>
+                <text x="662" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Aviso bloom</text>
+                <text x="662" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Posible evento</text>
+            </svg>
         </div>
     """
 
     _diagram_en = """
         <div style="background:#fff;border:1px solid #e2ecf0;border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(15,31,46,.06)">
-            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#8fa3b0;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#8fa3b0;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
                 <span>Data flow · from satellite to alert</span>
                 <span style="flex:1;height:1px;background:#e2ecf0;display:block"></span>
+                <span style="font-size:10px;font-weight:500;color:#00a896;background:#e6f7f5;border:1px solid #c8dce4;border-radius:999px;padding:2px 9px;letter-spacing:.04em">Non-exclusive steps</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:0;align-items:center">
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🛰</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Sentinel-2</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Multispectral image<br>every 5 days</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">→</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">☁</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Google Earth Engine</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Cloud filtering<br>& L2A preprocessing</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">→</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">📐</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Spectral indices</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">MCI · NDCI · PCI<br>Chl-a · Phycocyanin</div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;margin-top:4px">
-                <div></div><div></div>
-                <div style="text-align:center;color:#00a896;font-size:20px">↓</div>
-                <div></div><div></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:0;align-items:center;margin-top:4px">
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#fef3c7;border:2px solid #f59e0b;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🚨</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Bloom alert</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Risk level<br>& notification</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">←</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">📊</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">In-situ calibration</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Tuned with field<br>measurements</div>
-                </div>
-                <div style="text-align:center;color:#00a896;font-size:20px;font-weight:300;padding-bottom:18px">←</div>
-                <div style="text-align:center;padding:.5rem">
-                    <div style="width:54px;height:54px;border-radius:50%;background:#e6f7f5;border:2px solid #00a896;display:flex;align-items:center;justify-content:center;margin:0 auto .6rem;font-size:24px">🗺</div>
-                    <div style="font-size:12px;font-weight:700;color:#0f1f2e;margin-bottom:.2rem;font-family:DM Sans,sans-serif">Concentration maps</div>
-                    <div style="font-size:11px;color:#8fa3b0;font-family:DM Sans,sans-serif;line-height:1.4">Chl-a &<br>phycocyanin (µg/L)</div>
-                </div>
-            </div>
+            <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+                <defs>
+                    <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00a896"/></marker>
+                    <marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a6372"/></marker>
+                </defs>
+                <circle cx="60" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="60" y="106" text-anchor="middle" font-size="22">🛰</text>
+                <text x="60" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Sentinel-2</text>
+                <text x="60" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">5-day revisit</text>
+                <line x1="95" y1="110" x2="158" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a3)"/>
+                <circle cx="192" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="192" y="106" text-anchor="middle" font-size="22">☁</text>
+                <text x="192" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Google Earth</text>
+                <text x="192" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Engine</text>
+                <line x1="226" y1="110" x2="270" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="110" x2="270" y2="58" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="58" x2="308" y2="58" stroke="#4a6372" stroke-width="1.2" marker-end="url(#a4)"/>
+                <line x1="270" y1="110" x2="270" y2="162" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="270" y1="162" x2="308" y2="162" stroke="#4a6372" stroke-width="1.2" marker-end="url(#a4)"/>
+                <circle cx="270" cy="110" r="4" fill="#4a6372"/>
+                <rect x="310" y="28" width="108" height="60" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="364" y="50" text-anchor="middle" font-size="18">📊</text>
+                <text x="364" y="68" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">In-situ</text>
+                <text x="364" y="80" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">calibration</text>
+                <rect x="310" y="132" width="108" height="60" rx="10" fill="#e6f7f5" stroke="#00a896" stroke-width="1.5"/>
+                <text x="364" y="154" text-anchor="middle" font-size="18">📐</text>
+                <text x="364" y="172" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Spectral indices</text>
+                <text x="364" y="184" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">MCI · NDCI · PCI</text>
+                <line x1="418" y1="58" x2="462" y2="58" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="58" x2="462" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="418" y1="162" x2="462" y2="162" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="162" x2="462" y2="110" stroke="#4a6372" stroke-width="1.2"/>
+                <line x1="462" y1="110" x2="496" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a3)"/>
+                <circle cx="462" cy="110" r="4" fill="#4a6372"/>
+                <circle cx="530" cy="110" r="34" fill="#e6f7f5" stroke="#00a896" stroke-width="2"/>
+                <text x="530" y="106" text-anchor="middle" font-size="22">🗺</text>
+                <text x="530" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Conc. maps</text>
+                <text x="530" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Chl-a · µg/L</text>
+                <line x1="565" y1="110" x2="628" y2="110" stroke="#00a896" stroke-width="1.5" marker-end="url(#a3)"/>
+                <circle cx="662" cy="110" r="34" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+                <text x="662" y="106" text-anchor="middle" font-size="22">🚨</text>
+                <text x="662" y="153" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1f2e" font-family="DM Sans,sans-serif">Bloom alert</text>
+                <text x="662" y="165" text-anchor="middle" font-size="9" fill="#8fa3b0" font-family="DM Sans,sans-serif">Possible event</text>
+            </svg>
         </div>
     """
 
