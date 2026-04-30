@@ -1,1 +1,17 @@
 .streamlit/secrets.toml
+
+# Entornos virtuales
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
