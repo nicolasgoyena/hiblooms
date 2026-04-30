@@ -130,7 +130,7 @@ if __name__ == "__main__":
     )
 
     df = pd.DataFrame(fechas)
-    df.to_csv("fechas_validas_el_val_historico.csv", index=False)
+    df.to_csv("data/fechas_validas_el_val_historico.csv", index=False)
     print("\n💾 Resultados guardados en 'fechas_validas_el_val_rapido.csv'")
 
     fin = time.time()
