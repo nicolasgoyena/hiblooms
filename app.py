@@ -126,7 +126,7 @@ except Exception as e:
     st.stop()
 
 # URL pública del archivo CSV en S3
-url_csv = "puntos_interes.csv"
+url_csv = "data/puntos_interes.csv"
 
 try:
     df_poi = pd.read_csv(url_csv)
