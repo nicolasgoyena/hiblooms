@@ -109,8 +109,8 @@ def run_visualization_job(
         )
         if usar_csv:
             csv_map = {
-                "val":    "fechas_validas_el_val_historico.csv",
-                "bellus": "fechas_validas_bellus_historico.csv",
+                "val":    "data/fechas_validas_el_val_historico.csv",
+                "bellus": "data/fechas_validas_bellus_historico.csv",
             }
             csv_path = csv_map[reservoir_name.lower()]
             if os.path.exists(csv_path):
