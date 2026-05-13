@@ -79,11 +79,20 @@ def prepare_insitu(df: pd.DataFrame, target_variable: str, start_hour: int, end_
 
 
 def _init_ee():
-    try:
-        ee.Initialize()
-    except Exception:
-        ee.Authenticate()
-        ee.Initialize()
+    import os as _os, json as _json
+    raw = _os.environ.get("GEE_SERVICE_ACCOUNT_JSON")
+    if raw:
+        json_obj = _json.loads(raw)
+        credentials = ee.ServiceAccountCredentials(
+            json_obj["client_email"], key_data=_json.dumps(json_obj)
+        )
+        ee.Initialize(credentials)
+    else:
+        try:
+            ee.Initialize()
+        except Exception:
+            ee.Authenticate()
+            ee.Initialize()
 
 
 def _coverage_percentage(image: ee.Image, aoi: ee.Geometry, scale_m: int) -> float:
