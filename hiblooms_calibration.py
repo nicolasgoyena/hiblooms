@@ -8,7 +8,6 @@ import ee
 import joblib
 import numpy as np
 import pandas as pd
-import streamlit as st
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
@@ -691,6 +690,7 @@ def render_calibration_tab(
     gdf_to_ee_geometry: Callable[..., Any],
     lang: str = "es",
 ):
+    import streamlit as st
     from i18n import STR as _CAL_STR
     def _t(key):
         return _CAL_STR.get(lang, {}).get(key) or _CAL_STR["es"].get(key, key)
