@@ -916,7 +916,7 @@ def render_calibration_tab(
             import io as _io
             _img_bytes = base64.b64decode(_diag_b64)
             _img = Image.open(_io.BytesIO(_img_bytes))
-            st.image(_img, use_column_width=True)
+            st.image(_img, use_container_width=True)
 
         # Botones de descarga — los artefactos los devuelve el worker como base64
         _downloads = _res.get("download_files", {})
