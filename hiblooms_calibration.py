@@ -35,6 +35,87 @@ CANDIDATE_INDICES = [
     "B7_B5_diff",
 ]
 
+RASTERIZABLE_MODELS = {"linear", "ridge", "lasso", "elastic_net"}
+
+
+def build_raster_calibration_config(artifact: dict[str, Any]) -> dict[str, Any]:
+    """Return a compact config that can be applied pixel-wise in Earth Engine.
+
+    Supported pipelines are linear models over the original predictor bands,
+    optionally with SimpleImputer + StandardScaler. Tree, RBF and polynomial
+    models are intentionally excluded here because they are not lightweight
+    raster expressions in Earth Engine.
+    """
+    model_name = artifact.get("best_model_name")
+    predictor_set = list(artifact.get("predictor_set") or [])
+    estimator = artifact.get("model")
+
+    if model_name not in RASTERIZABLE_MODELS or estimator is None or not hasattr(estimator, "named_steps"):
+        return {
+            "available": False,
+            "reason": f"Model '{model_name}' is not rasterizable as a lightweight Earth Engine expression.",
+            "supported_models": sorted(RASTERIZABLE_MODELS),
+        }
+
+    steps = estimator.named_steps
+    if "poly" in steps:
+        return {
+            "available": False,
+            "reason": "Polynomial models are not enabled for raster visualization in this version.",
+            "supported_models": sorted(RASTERIZABLE_MODELS),
+        }
+
+    reg = steps.get("model")
+    if reg is None or not hasattr(reg, "coef_"):
+        return {
+            "available": False,
+            "reason": f"Model '{model_name}' does not expose linear coefficients.",
+            "supported_models": sorted(RASTERIZABLE_MODELS),
+        }
+
+    coefs = np.asarray(reg.coef_, dtype=float).ravel()
+    if len(coefs) != len(predictor_set):
+        return {
+            "available": False,
+            "reason": "Coefficient count does not match the predictor set.",
+            "supported_models": sorted(RASTERIZABLE_MODELS),
+        }
+
+    intercept = float(np.asarray(reg.intercept_, dtype=float).ravel()[0])
+
+    scaler = steps.get("scaler")
+    if scaler is not None:
+        scale = np.asarray(getattr(scaler, "scale_", np.ones(len(coefs))), dtype=float)
+        mean = np.asarray(getattr(scaler, "mean_", np.zeros(len(coefs))), dtype=float)
+        scale = np.where(scale == 0, 1.0, scale)
+        effective_coefs = coefs / scale
+        effective_intercept = intercept - float(np.sum(coefs * mean / scale))
+    else:
+        effective_coefs = coefs
+        effective_intercept = intercept
+
+    imputer = steps.get("imputer")
+    fill_values = None
+    if imputer is not None and hasattr(imputer, "statistics_"):
+        fill_values = [float(x) if np.isfinite(x) else 0.0 for x in np.asarray(imputer.statistics_, dtype=float).ravel()]
+
+    target = artifact.get("target_variable") or "calibrated"
+    safe_target = "".join(ch if ch.isalnum() else "_" for ch in str(target)).strip("_") or "calibrated"
+    band_name = f"Calibrated_{safe_target}"[:80]
+
+    return {
+        "available": True,
+        "model_name": model_name,
+        "target_variable": target,
+        "band_name": band_name,
+        "display_name": f"Modelo calibrado - {target}",
+        "predictor_set": predictor_set,
+        "intercept": effective_intercept,
+        "coefficients": [float(c) for c in effective_coefs],
+        "fill_values": fill_values,
+        "supported_models": sorted(RASTERIZABLE_MODELS),
+    }
+
 
 def _rmse(y_true, y_pred):
     return float(np.sqrt(mean_squared_error(y_true, y_pred)))
@@ -638,6 +719,8 @@ def fit_calibration_model(
         "best_model_name": model_name,
         "config": config,
     }
+    raster_config = build_raster_calibration_config(artifact)
+    config["raster_visualization"] = raster_config
 
     return {
         "config": config,
@@ -750,10 +833,19 @@ def render_calibration_tab(
             key="cal_predictors",
         )
         model_names = ["linear", "ridge", "lasso", "elastic_net", "poly2", "poly3", "svr_rbf", "random_forest", "gradient_boosting"]
+        calibration_mode = st.radio(
+            "Modo de calibración",
+            ["Mejor precisión", "Compatible con mapa Earth Engine"],
+            index=0,
+            key="calibration_mode",
+            help="El modo compatible limita los modelos a regresiones lineales que pueden convertirse en una capa raster en Visualización.",
+        )
+        selectable_models = model_names if calibration_mode == "Mejor precisión" else ["linear", "ridge", "lasso", "elastic_net"]
+        default_models = ["linear", "ridge", "poly2", "svr_rbf"] if calibration_mode == "Mejor precisión" else ["linear", "ridge", "lasso", "elastic_net"]
         selected_models = st.multiselect(
             _t("cal.models"),
-            model_names,
-            default=["linear", "ridge", "poly2", "svr_rbf"],
+            selectable_models,
+            default=[m for m in default_models if m in selectable_models],
             key="cal_models",
         )
         cv_scheme = st.selectbox(_t("cal.cv"), ["kfold", "timeseries"], index=0, key="cal_cv")
@@ -809,6 +901,7 @@ def render_calibration_tab(
             "reservoir": reservoir_name,
             "aoi_geojson": gdf.to_crs(epsg=4326).to_json(),
             "target_variable": target_variable,
+            "calibration_mode": calibration_mode,
             "start_hour": int(start_hour),
             "end_hour": int(end_hour),
             "overpass_window": float(overpass_window),
@@ -898,6 +991,12 @@ def render_calibration_tab(
         st.markdown("#### Best calibration summary")
         st.json(_config, expanded=False)
 
+        _raster_cfg = _config.get("raster_visualization", {})
+        if _raster_cfg.get("available"):
+            st.success(f"Este modelo se puede usar como capa raster en Visualización: {_raster_cfg.get('display_name')}")
+        else:
+            st.warning(_raster_cfg.get("reason", "Este modelo no se puede convertir automáticamente a una capa raster de Earth Engine."))
+
         if _metrics:
             st.markdown("#### Model comparison")
             st.dataframe(pd.DataFrame(_metrics), use_container_width=True)
@@ -958,8 +1057,3 @@ def render_calibration_tab(
                     mime="application/octet-stream",
                 )
 
-        st.info(
-            "The calibration model is stored in session state. "
-            "A full pixel-wise calibrated map requires translating the selected "
-            "model to an Earth Engine raster expression."
-        )

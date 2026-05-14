@@ -250,10 +250,67 @@ def _ensure_bands_available(image: ee.Image, bands: Sequence[str], date_label: s
     if missing:
         raise ValueError(f"Faltan bandas {missing} en la imagen {date_label or ''}.")
 
+def _add_calibration_feature_bands(image: ee.Image) -> ee.Image:
+    """Add the calibration predictor bands used by the calibration workflow.
+
+    Band names intentionally match hiblooms_calibration.CANDIDATE_INDICES so a
+    saved linear calibration can be applied pixel-wise in Earth Engine.
+    """
+    b4 = image.select("B4").toFloat()
+    b5 = image.select("B5").toFloat()
+    b6 = image.select("B6").toFloat()
+    b7 = image.select("B7").toFloat()
+
+    out = image
+    out = out.addBands(b5.subtract(b4).divide(b5.add(b4)).rename("NDCI_705_665"), overwrite=True)
+    out = out.addBands(
+        b5.subtract(
+            b4.add(
+                b6.subtract(b4).multiply((705 - 665) / (740 - 665))
+            )
+        ).rename("MCI_705"),
+        overwrite=True,
+    )
+    out = out.addBands(b5.divide(b4).rename("R705_R665"), overwrite=True)
+    out = out.addBands(b6.divide(b4).rename("R740_R665"), overwrite=True)
+    out = out.addBands(b7.divide(b4).rename("R783_R665"), overwrite=True)
+    out = out.addBands(b6.subtract(b5).rename("TB_740"), overwrite=True)
+    out = out.addBands(b7.subtract(b5).rename("TB_783"), overwrite=True)
+    out = out.addBands(b7.subtract(b5).divide(b7.add(b5)).rename("NDRE_783_705"), overwrite=True)
+    out = out.addBands(b6.subtract(b5).divide(b6.add(b5)).rename("NDRE_740_705"), overwrite=True)
+    out = out.addBands(b5.subtract(b4).rename("B5_B4_diff"), overwrite=True)
+    out = out.addBands(b6.subtract(b5).rename("B6_B5_diff"), overwrite=True)
+    out = out.addBands(b7.subtract(b5).rename("B7_B5_diff"), overwrite=True)
+    return out
+
+
+def _apply_calibrated_model_band(image: ee.Image, raster_config: Optional[Dict]) -> Optional[ee.Image]:
+    if not raster_config or not raster_config.get("available"):
+        return None
+
+    predictors = list(raster_config.get("predictor_set") or [])
+    coefficients = list(raster_config.get("coefficients") or [])
+    if not predictors or len(predictors) != len(coefficients):
+        return None
+
+    fill_values = raster_config.get("fill_values") or [0.0] * len(predictors)
+    if len(fill_values) != len(predictors):
+        fill_values = [0.0] * len(predictors)
+
+    expr = ee.Image.constant(float(raster_config.get("intercept", 0.0)))
+    for predictor, coefficient, fill in zip(predictors, coefficients, fill_values):
+        term = image.select(predictor).unmask(float(fill)).multiply(float(coefficient))
+        expr = expr.add(term)
+
+    band_name = raster_config.get("band_name") or "Calibrated_model"
+    return expr.max(0).rename(str(band_name))
+
+
 def _build_indices_image(
     base_image: ee.Image,
     aoi: ee.Geometry,
-    selected_indices: Sequence[str]
+    selected_indices: Sequence[str],
+    calibration_raster_config: Optional[Dict] = None,
 ) -> ee.Image:
     """
     Construye una imagen con las bandas base + índices seleccionados.
@@ -262,12 +319,13 @@ def _build_indices_image(
     scl = base_image.select("SCL")
     cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
-    required = ["B2", "B3", "B4", "B5", "B6", "B8A"]
+    required = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A"]
     _ensure_bands_available(base_image, required)
 
     clipped = base_image.clip(aoi)
     optical = clipped.select(required).divide(10000)
     scaled = clipped.addBands(optical, overwrite=True)
+    scaled = _add_calibration_feature_bands(scaled)
 
     b3 = scaled.select("B3")
     b4 = scaled.select("B4")
@@ -347,6 +405,10 @@ def _build_indices_image(
             # Silencioso: si un índice no existe, no se añade.
             pass
 
+    calibrated_band = _apply_calibrated_model_band(scaled, calibration_raster_config)
+    if calibrated_band is not None:
+        bands_to_add.append(calibrated_band.updateMask(cloud_mask))
+
     if not bands_to_add:
         return scaled  # sin índices adicionales
     return scaled.addBands(bands_to_add)
@@ -358,6 +420,7 @@ def process_sentinel2(
     max_cloud_percentage: int,
     selected_indices: Sequence[str],
     min_coverage_percentage: float = 50.0,
+    calibration_raster_config: Optional[Dict] = None,
 ) -> Tuple[Optional[ee.Image], Optional[ee.Image], Optional[str], Optional[float], Optional[float]]:
     """
     Devuelve:
@@ -409,12 +472,12 @@ def process_sentinel2(
 
     # Escalar bandas ópticas de DN (0-10000) a reflectancia (0-1)
     # igual que hacía app.py originalmente
-    bandas_requeridas = ["B2", "B3", "B4", "B5", "B6", "B8A"]
+    bandas_requeridas = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A"]
     clipped = best.clip(aoi)
     optical = clipped.select(bandas_requeridas).divide(10000)
     scaled = clipped.addBands(optical, overwrite=True)
 
-    indices_image = _build_indices_image(scaled, aoi, selected_indices)
+    indices_image = _build_indices_image(scaled, aoi, selected_indices, calibration_raster_config=calibration_raster_config)
 
     return scaled, indices_image, image_iso, best_cloud, best_cov
 
@@ -554,7 +617,8 @@ def run_batch_processing(
     puntos_interes: Optional[Dict[str, Dict[str, Tuple[float, float]]]] = None,
     reservoir_name_for_pois: Optional[str] = None,
     compute_distributions: bool = False,
-    distribution_bins_by_index: Optional[Dict[str, Sequence[float]]] = None
+    distribution_bins_by_index: Optional[Dict[str, Sequence[float]]] = None,
+    calibration_raster_config: Optional[Dict] = None,
 ) -> BatchResult:
     """
     Procesa múltiples fechas y devuelve:
@@ -584,6 +648,7 @@ def run_batch_processing(
             max_cloud_percentage=max_cloud_percentage,
             selected_indices=selected_indices,
             min_coverage_percentage=min_coverage_percentage,
+            calibration_raster_config=calibration_raster_config,
         )
         if indices_img is None or image_iso is None:
             continue
