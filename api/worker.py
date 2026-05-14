@@ -86,6 +86,7 @@ def run_visualization_job(
         selected_indices  = config["indices"]
         aoi_geojson       = config["aoi_geojson"]
         puntos_interes_raw = config.get("puntos_interes", {})
+        calibrated_model_config = config.get("calibrated_model_config")
 
         # puntos_interes: {"Sonda": [lat, lon], ...}
         puntos_interes = {k: tuple(v) for k, v in puntos_interes_raw.items()}
@@ -277,10 +278,32 @@ def run_visualization_job(
                 ).getMapId()["tile_fetcher"].url_format
 
                 for idx in selected_indices:
-                    mn, mx = vis_ranges.get(idx, (-0.1, 0.4))
-                    layers[idx] = indices_image.select(idx).visualize(
-                        min=mn, max=mx, palette=index_palettes.get(idx, ["blue","green","yellow","red"])
-                    ).getMapId()["tile_fetcher"].url_format
+                    # Si el índice es el modelo calibrado, aplicarlo como expresión lineal
+                    _cal_band = (calibrated_model_config or {}).get("band_name")
+                    if calibrated_model_config and idx == _cal_band:
+                        try:
+                            _coefs = calibrated_model_config["coefficients"]
+                            _intercept = calibrated_model_config["intercept"]
+                            _predictors = calibrated_model_config["predictor_set"]
+                            _fill_vals = calibrated_model_config.get("fill_values")
+                            # Construir expresión lineal pixel a pixel
+                            _cal_image = indices_image.select(_predictors[0]).multiply(_coefs[0])
+                            for _pi, (_p, _c) in enumerate(zip(_predictors[1:], _coefs[1:]), 1):
+                                _fill = _fill_vals[_pi] if _fill_vals else 0.0
+                                _cal_image = _cal_image.add(
+                                    indices_image.select(_p).unmask(_fill).multiply(_c)
+                                )
+                            _cal_image = _cal_image.add(_intercept).rename(_cal_band)
+                            layers[idx] = _cal_image.visualize(
+                                min=0, max=100, palette=["blue", "green", "yellow", "red"]
+                            ).getMapId()["tile_fetcher"].url_format
+                        except Exception as _ce:
+                            log.warning(f"[{job_id}] No se pudo aplicar modelo calibrado para {idx}: {_ce}")
+                    else:
+                        mn, mx = vis_ranges.get(idx, (-0.1, 0.4))
+                        layers[idx] = indices_image.select(idx).visualize(
+                            min=mn, max=mx, palette=index_palettes.get(idx, ["blue","green","yellow","red"])
+                        ).getMapId()["tile_fetcher"].url_format
 
                 tile_urls.append({"date": image_date_fmt, "layers": layers})
             except Exception as e:
