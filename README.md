@@ -60,38 +60,38 @@ python hiblooms_core.py --help
 
 ```
 hiblooms/
-├── .devcontainer/             # Configuración opcional para entorno de desarrollo en contenedor
+├── .devcontainer/             # Optional configuration for container-based development
 │   └── devcontainer.json
-├── api/                       # Backend FastAPI
-│   ├── main.py                #   Endpoints REST
-│   └── worker.py              #   Procesamiento asíncrono con Google Earth Engine
-├── data/                      # Datos auxiliares usados por la app
-│   ├── puntos_interes.csv     #   Coordenadas de puntos de muestreo
+├── api/                       # FastAPI backend
+│   ├── main.py                #   REST endpoints
+│   └── worker.py              #   Asynchronous processing with Google Earth Engine
+├── data/                      # Auxiliary data used by the app
+│   ├── puntos_interes.csv     #   Sampling point coordinates
 │   ├── clorofila_val_entero.csv
-│   └── fechas_validas_*.csv   #   Fechas válidas por embalse precalculadas
-├── images/                    # Logos e imágenes de la app
-├── pages/                     # Páginas Streamlit adicionales
+│   └── fechas_validas_*.csv   #   Precomputed valid dates by reservoir
+├── images/                    # App logos and images
+├── pages/                     # Additional Streamlit pages
 │   ├── login.py
 │   └── 2_Data_Catalog.py
-├── scripts/                   # Utilidades ETL y precálculo
+├── scripts/                   # ETL and precomputation utilities
 │   ├── actualizar_ficocianina.py
 │   ├── descargar_cloro.py
 │   ├── descargar_ficocianina.py
 │   └── precalculo_fechas_optimizado.py
-├── shapefiles/                # Shapefile de embalses HIBLOOMS
+├── shapefiles/                # HIBLOOMS reservoir shapefile
 │   ├── embalses_hiblooms.shp
 │   ├── embalses_hiblooms.dbf
 │   ├── embalses_hiblooms.shx
 │   └── embalses_hiblooms.prj
-├── app.py                     # Aplicación Streamlit principal e interfaz de visualización
-├── hiblooms_core.py           # Lógica GEE: índices, mapas, estadísticas y exportaciones
-├── hiblooms_calibration.py    # Flujo de calibración y modelos compatibles con mapas GEE
-├── db_utils.py                # Conexión y utilidades PostgreSQL
-├── i18n.py                    # Traducciones ES/EN
-├── styles.css                 # Estilos globales de la app
-├── requirements.txt           # Dependencias de la app Streamlit
-├── requirements_api.txt       # Dependencias de la API FastAPI
-├── render.yaml                # Configuración de despliegue en Render.com
+├── app.py                     # Main Streamlit application and visualization interface
+├── hiblooms_core.py           # GEE logic: indices, maps, statistics, and exports
+├── hiblooms_calibration.py    # Calibration workflow and GEE-compatible map models
+├── db_utils.py                # PostgreSQL connection and utilities
+├── i18n.py                    # ES/EN translations
+├── styles.css                 # Global app styles
+├── requirements.txt           # Streamlit app dependencies
+├── requirements_api.txt       # FastAPI backend dependencies
+├── render.yaml                # Render.com deployment configuration
 └── README.md
 ```
 
