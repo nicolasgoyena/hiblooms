@@ -60,9 +60,15 @@ python hiblooms_core.py --help
 
 ```
 hiblooms/
-├── api/                       # FastAPI backend
+├── .devcontainer/             # Configuración opcional para entorno de desarrollo en contenedor
+│   └── devcontainer.json
+├── api/                       # Backend FastAPI
 │   ├── main.py                #   Endpoints REST
-│   └── worker.py              #   Procesamiento asíncrono (GEE)
+│   └── worker.py              #   Procesamiento asíncrono con Google Earth Engine
+├── data/                      # Datos auxiliares usados por la app
+│   ├── puntos_interes.csv     #   Coordenadas de puntos de muestreo
+│   ├── clorofila_val_entero.csv
+│   └── fechas_validas_*.csv   #   Fechas válidas por embalse precalculadas
 ├── images/                    # Logos e imágenes de la app
 ├── pages/                     # Páginas Streamlit adicionales
 │   ├── login.py
@@ -73,18 +79,19 @@ hiblooms/
 │   ├── descargar_ficocianina.py
 │   └── precalculo_fechas_optimizado.py
 ├── shapefiles/                # Shapefile de embalses HIBLOOMS
-├── app.py                     # Aplicación Streamlit principal
-├── hiblooms_core.py           # Lógica de procesamiento (también CLI)
-├── hiblooms_calibration.py    # Flujo de calibración de modelos
+│   ├── embalses_hiblooms.shp
+│   ├── embalses_hiblooms.dbf
+│   ├── embalses_hiblooms.shx
+│   └── embalses_hiblooms.prj
+├── app.py                     # Aplicación Streamlit principal e interfaz de visualización
+├── hiblooms_core.py           # Lógica GEE: índices, mapas, estadísticas y exportaciones
+├── hiblooms_calibration.py    # Flujo de calibración y modelos compatibles con mapas GEE
 ├── db_utils.py                # Conexión y utilidades PostgreSQL
 ├── i18n.py                    # Traducciones ES/EN
 ├── styles.css                 # Estilos globales de la app
-├── puntos_interes.csv         # Coordenadas de puntos de muestreo
-├── clorofila_val_entero.csv   # Datos históricos de clorofila (El Val)
-├── fechas_validas_*.csv       # Fechas válidas por embalse (precalculadas)
-├── requirements.txt           # Dependencias app Streamlit
-├── requirements_api.txt       # Dependencias API FastAPI
-├── render.yaml                # Configuración de despliegue (Render.com)
+├── requirements.txt           # Dependencias de la app Streamlit
+├── requirements_api.txt       # Dependencias de la API FastAPI
+├── render.yaml                # Configuración de despliegue en Render.com
 └── README.md
 ```
 
