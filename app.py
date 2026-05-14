@@ -148,6 +148,12 @@ try:
             base += ["PC_Val_cal", "Chla_Val_cal"]
         elif rk == "bellus":
             base += ["Chla_Bellus_cal", "PC_Bellus_cal"]
+        # Añadir modelo calibrado si hay uno disponible en session_state
+        _cal_cfg = st.session_state.get("calibrated_model_config")
+        if _cal_cfg and _cal_cfg.get("available"):
+            _cal_band = _cal_cfg.get("band_name", "Calibrated")
+            if _cal_band not in base:
+                base.append(_cal_band)
         return base
 
     for _, row in df_poi.iterrows():
@@ -909,6 +915,7 @@ with tab3:
                             "puntos_interes": {
                                 k: list(v) for k, v in puntos_interes.get(reservoir_name, {}).items()
                             },
+                            "calibrated_model_config": st.session_state.get("calibrated_model_config"),
                         }
                         try:
                             _resp = _requests.post(

@@ -993,8 +993,10 @@ def render_calibration_tab(
 
         _raster_cfg = _config.get("raster_visualization", {})
         if _raster_cfg.get("available"):
+            st.session_state["calibrated_model_config"] = _raster_cfg
             st.success(f"Este modelo se puede usar como capa raster en Visualización: {_raster_cfg.get('display_name')}")
         else:
+            st.session_state.pop("calibrated_model_config", None)
             st.warning(_raster_cfg.get("reason", "Este modelo no se puede convertir automáticamente a una capa raster de Earth Engine."))
 
         if _metrics:
