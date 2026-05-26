@@ -965,14 +965,21 @@ def render_calibration_tab(
             st.rerun()
 
         elif _state == "error":
-            st.error(f"❌ Calibration failed: {_status.get('error', 'unknown error')}")
+            st.session_state["cal_job_error"] = _status.get("error", "unknown error")
             del st.session_state["cal_job_id"]
+            st.rerun()
 
         else:
             st.info("⏳ Waiting for job server response…")
 
     # ── RENDER DE RESULTADOS ─────────────────────────────────────────────────
     # Se activa cuando los resultados ya están en session_state
+    if "cal_job_error" in st.session_state:
+        st.error(f"❌ Calibration failed: {st.session_state['cal_job_error']}")
+        if st.button("Clear", key="cal_clear_error"):
+            del st.session_state["cal_job_error"]
+            st.rerun()
+        
     if "cal_job_results" in st.session_state:
         _res = st.session_state["cal_job_results"]
         _config      = _res.get("config", {})
