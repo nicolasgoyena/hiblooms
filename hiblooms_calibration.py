@@ -209,13 +209,17 @@ def compute_satellite_features(
     scale_m: int,
     candidate_indices: list[str],
     priority_dates: list[str] | None = None,
+    temporal_window_days: int = 3,
     progress_bar=None,
     progress_text=None,
+    progress_callback=None,
 ) -> pd.DataFrame:
     _init_ee()
 
     expected_cols = [
         "date",
+        "sentinel_date",
+        "days_from_insitu",
         "datetime_utc",
         "overpass_hour_utc",
         "image_id",
@@ -267,19 +271,42 @@ def compute_satellite_features(
             progress_text.warning("No priority dates were provided from the uploaded CSV.")
         return pd.DataFrame(columns=expected_cols)
 
+    import time
+
     n_dates = len(dates_to_process)
+    t0 = time.time()
+    valid_matches = 0
 
     for i, day_str in enumerate(dates_to_process):
+        elapsed = time.time() - t0
+        avg_per_date = elapsed / max(i, 1)
+        remaining = avg_per_date * max(n_dates - i, 0)
+
+        elapsed_min = int(elapsed // 60)
+        elapsed_sec = int(elapsed % 60)
+        remaining_min = int(remaining // 60)
+        remaining_sec = int(remaining % 60)
+
+        progress_msg = (
+            f"Processing Sentinel-2 date {i + 1}/{n_dates}: {day_str} | "
+            f"valid matches: {valid_matches} | "
+            f"elapsed: {elapsed_min}m {elapsed_sec}s | "
+            f"ETA: {remaining_min}m {remaining_sec}s"
+        )
+        progress_pct = 25 + int(35 * (i + 1) / max(n_dates, 1))
+
         if progress_bar is not None:
             progress_bar.progress((i + 1) / n_dates)
 
         if progress_text is not None:
-            progress_text.info(
-                f"Processing in situ dates: {i + 1}/{n_dates} | current date: {day_str}"
-            )
+            progress_text.info(progress_msg)
 
-        day_start = ee.Date(day_str)
-        day_end = day_start.advance(1, "day")
+        if progress_callback is not None:
+            progress_callback(progress_msg, progress_pct)
+
+        target_date = ee.Date(day_str)
+        day_start = target_date.advance(-int(temporal_window_days), "day")
+        day_end = target_date.advance(int(temporal_window_days) + 1, "day")
 
         day_collection = (
             ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -308,10 +335,18 @@ def compute_satellite_features(
             valid_by_coverage = coverage_pct >= min_coverage_percentage
             valid_final = bool(valid_by_cloud and valid_by_coverage)
 
+            img_datetime = ee.Date(img.get("system:time_start"))
+            img_date_str = img_datetime.format("YYYY-MM-dd").getInfo()
+            days_from_insitu = abs(
+                (pd.to_datetime(img_date_str) - pd.to_datetime(day_str)).days
+            )
+
             row = {
                 "date": day_str,
-                "datetime_utc": ee.Date(img.get("system:time_start")).format("YYYY-MM-dd HH:mm:ss").getInfo(),
-                "overpass_hour_utc": float(ee.Date(img.get("system:time_start")).get("hour").getInfo()),
+                "sentinel_date": img_date_str,
+                "days_from_insitu": int(days_from_insitu),
+                "datetime_utc": img_datetime.format("YYYY-MM-dd HH:mm:ss").getInfo(),
+                "overpass_hour_utc": float(img_datetime.get("hour").getInfo()),
                 "image_id": image_id,
                 "cloudy_pixel_percentage": cloud_pct,
                 "coverage_percentage_aoi": coverage_pct,
@@ -339,11 +374,13 @@ def compute_satellite_features(
             else:
                 current_key = (
                     row["valid_final"],
+                    -row["days_from_insitu"],
                     -row["cloudy_pixel_percentage"],
                     row["coverage_percentage_aoi"],
                 )
                 best_key = (
                     best_row["valid_final"],
+                    -best_row["days_from_insitu"],
                     -best_row["cloudy_pixel_percentage"],
                     best_row["coverage_percentage_aoi"],
                 )
@@ -352,6 +389,8 @@ def compute_satellite_features(
 
         if best_row is not None:
             rows.append(best_row)
+            if best_row.get("valid_final"):
+                valid_matches += 1
 
     if not rows:
         if progress_text is not None:
@@ -825,6 +864,15 @@ def render_calibration_tab(
     with col2:
         max_cloud = st.slider(_t("cal.max_cloud"), 0, 100, 20, key="cal_max_cloud")
         min_coverage = st.slider(_t("cal.min_coverage"), 0, 100, 50, key="cal_min_coverage")
+        temporal_window_days = st.slider(
+            "Sentinel temporal window ± days",
+            min_value=0,
+            max_value=10,
+            value=3,
+            step=1,
+            key="cal_temporal_window_days",
+            help="Searches Sentinel-2 images within this number of days before/after each in-situ date.",
+        )
     with col3:
         predictor_set = st.multiselect(
             _t("cal.predictors"),
@@ -905,6 +953,7 @@ def render_calibration_tab(
             "start_hour": int(start_hour),
             "end_hour": int(end_hour),
             "overpass_window": float(overpass_window),
+            "temporal_window_days": int(temporal_window_days),
             "max_cloud": int(max_cloud),
             "min_coverage": int(min_coverage),
             "predictor_set": predictor_set,
