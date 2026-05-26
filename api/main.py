@@ -89,6 +89,7 @@ def _new_job(workflow: str, config: Dict[str, Any]) -> str:
 
 def _update_progress(job_id: str, step: str, progress: int) -> None:
     if job_id in _JOBS:
+        progress = max(0, min(100, int(progress)))
         _JOBS[job_id].update({"state": "running", "step": step, "progress": progress})
 
 

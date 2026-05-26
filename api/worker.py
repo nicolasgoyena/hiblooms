@@ -388,6 +388,7 @@ def run_calibration_job(
         start_hour         = int(config["start_hour"])
         end_hour           = int(config["end_hour"])
         overpass_window    = float(config["overpass_window"])
+        temporal_window_days = int(config.get("temporal_window_days", 3))
         max_cloud          = int(config["max_cloud"])
         min_coverage       = int(config["min_coverage"])
         predictor_set      = config["predictor_set"]
@@ -434,6 +435,8 @@ def run_calibration_job(
             scale_m=20,
             candidate_indices=predictor_set,
             priority_dates=priority_dates,
+            temporal_window_days=temporal_window_days,
+            progress_callback=lambda msg, pct: update(job_id, msg, pct),
         )
 
         # ── Paso 4: Match in-situ con sobrepaso ──────────────────────────
