@@ -489,4 +489,5 @@ def run_calibration_job(
 
     except Exception as e:
         log.error(f"[{job_id}] Calibration job failed: {e}", exc_info=True)
-        fail(job_id, str(e))
+        import traceback
+        fail(job_id, str(e) or traceback.format_exc().strip().splitlines()[-1])
