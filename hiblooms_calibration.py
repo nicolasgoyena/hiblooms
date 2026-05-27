@@ -210,11 +210,38 @@ def compute_satellite_features(
     candidate_indices: list[str],
     priority_dates: list[str] | None = None,
     temporal_window_days: int = 3,
+    progress_lang: str = "es",
     progress_bar=None,
     progress_text=None,
     progress_callback=None,
 ) -> pd.DataFrame:
     _init_ee()
+
+    def _progress_t(key: str) -> str:
+        strings = {
+            "es": {
+                "no_priority_dates": "No se han proporcionado fechas prioritarias desde el CSV subido.",
+                "processing_sentinel": "Procesando fecha Sentinel-2",
+                "valid_matches": "coincidencias válidas",
+                "elapsed": "transcurrido",
+                "eta": "tiempo restante",
+                "no_rows": "Ninguna fila Sentinel-2 coincidió con las fechas in situ subidas.",
+                "completed": "Extracción satelital completada",
+                "dates_processed": "fechas procesadas",
+            },
+            "en": {
+                "no_priority_dates": "No priority dates were provided from the uploaded CSV.",
+                "processing_sentinel": "Processing Sentinel-2 date",
+                "valid_matches": "valid matches",
+                "elapsed": "elapsed",
+                "eta": "ETA",
+                "no_rows": "No Sentinel-2 rows matched the uploaded in situ dates.",
+                "completed": "Satellite extraction completed",
+                "dates_processed": "dates processed",
+            },
+        }
+        lang_code = "en" if str(progress_lang).lower().startswith("en") else "es"
+        return strings[lang_code].get(key, key)
 
     expected_cols = [
         "date",
@@ -268,7 +295,7 @@ def compute_satellite_features(
         if progress_bar is not None:
             progress_bar.progress(1.0)
         if progress_text is not None:
-            progress_text.warning("No priority dates were provided from the uploaded CSV.")
+            progress_text.warning(_progress_t("no_priority_dates"))
         return pd.DataFrame(columns=expected_cols)
 
     import time
@@ -288,10 +315,10 @@ def compute_satellite_features(
         remaining_sec = int(remaining % 60)
 
         progress_msg = (
-            f"Processing Sentinel-2 date {i + 1}/{n_dates}: {day_str} | "
-            f"valid matches: {valid_matches} | "
-            f"elapsed: {elapsed_min}m {elapsed_sec}s | "
-            f"ETA: {remaining_min}m {remaining_sec}s"
+            f"{_progress_t('processing_sentinel')} {i + 1}/{n_dates}: {day_str} | "
+            f"{_progress_t('valid_matches')}: {valid_matches} | "
+            f"{_progress_t('elapsed')}: {elapsed_min}m {elapsed_sec}s | "
+            f"{_progress_t('eta')}: {remaining_min}m {remaining_sec}s"
         )
         progress_pct = 25 + int(35 * (i + 1) / max(n_dates, 1))
 
@@ -394,7 +421,7 @@ def compute_satellite_features(
 
     if not rows:
         if progress_text is not None:
-            progress_text.warning("No Sentinel-2 rows matched the uploaded in situ dates.")
+            progress_text.warning(_progress_t("no_rows"))
         return pd.DataFrame(columns=expected_cols)
 
     df = pd.DataFrame(rows, columns=expected_cols)
@@ -403,7 +430,7 @@ def compute_satellite_features(
     if progress_text is not None:
         n_valid = int(df["valid_final"].sum()) if "valid_final" in df.columns else 0
         progress_text.success(
-            f"Satellite extraction completed. Dates processed: {len(df)} | valid_final: {n_valid}"
+            f"{_progress_t('completed')}. {_progress_t('dates_processed')}: {len(df)} | valid_final: {n_valid}"
         )
 
     return df
@@ -853,25 +880,21 @@ def render_calibration_tab(
     with col1:
         target_variable = st.selectbox(_t("cal.target"), numeric_candidates, key="cal_target")
         start_hour, end_hour = st.slider(_t("cal.hours"), 0, 23, (8, 15), key="cal_hours")
-        overpass_window = st.slider(
-            _t("cal.match_window"),
-            0.25,
-            4.0,
-            1.5,
-            0.25,
-            key="cal_match_window",
-        )
+        # Legacy hour-matching setting kept for compatibility with the worker.
+        # We keep it wide because the real matching flexibility is now controlled
+        # by the Sentinel temporal window in days.
+        overpass_window = 24.0
     with col2:
         max_cloud = st.slider(_t("cal.max_cloud"), 0, 100, 20, key="cal_max_cloud")
         min_coverage = st.slider(_t("cal.min_coverage"), 0, 100, 50, key="cal_min_coverage")
         temporal_window_days = st.slider(
-            "Sentinel temporal window ± days",
+            _t("cal.temporal_window_days"),
             min_value=0,
             max_value=10,
             value=3,
             step=1,
             key="cal_temporal_window_days",
-            help="Searches Sentinel-2 images within this number of days before/after each in-situ date.",
+            help=_t("cal.temporal_window_days.help"),
         )
     with col3:
         predictor_set = st.multiselect(
@@ -882,14 +905,15 @@ def render_calibration_tab(
         )
         model_names = ["linear", "ridge", "lasso", "elastic_net", "poly2", "poly3", "svr_rbf", "random_forest", "gradient_boosting"]
         calibration_mode = st.radio(
-            "Modo de calibración",
-            ["Mejor precisión", "Compatible con mapa Earth Engine"],
+            _t("cal.mode"),
+            ["best_accuracy", "ee_compatible"],
             index=0,
             key="calibration_mode",
-            help="El modo compatible limita los modelos a regresiones lineales que pueden convertirse en una capa raster en Visualización.",
+            format_func=lambda option: _t(f"cal.mode.{option}"),
+            help=_t("cal.mode.help"),
         )
-        selectable_models = model_names if calibration_mode == "Mejor precisión" else ["linear", "ridge", "lasso", "elastic_net"]
-        default_models = ["linear", "ridge", "poly2", "svr_rbf"] if calibration_mode == "Mejor precisión" else ["linear", "ridge", "lasso", "elastic_net"]
+        selectable_models = model_names if calibration_mode == "best_accuracy" else ["linear", "ridge", "lasso", "elastic_net"]
+        default_models = ["linear", "ridge", "poly2", "svr_rbf"] if calibration_mode == "best_accuracy" else ["linear", "ridge", "lasso", "elastic_net"]
         selected_models = st.multiselect(
             _t("cal.models"),
             selectable_models,
@@ -926,26 +950,27 @@ def render_calibration_tab(
     _CAL_API_URL = st.secrets.get("api_url", "http://localhost:8000")
 
     # ── BOTÓN: solo construye el payload y envía a la API ────────────────────
-    if st.button("Run calibration", key="cal_run"):
+    if st.button(_t("cal.run"), key="cal_run"):
         try:
             insitu_clean, priority_dates = prepare_insitu(
                 df_raw, target_variable, start_hour, end_hour
             )
         except Exception as e:
-            st.error(f"Error preparing in situ data: {e}")
+            st.error(f"{_t("cal.err_prepare")}: {e}")
             return
 
         if not priority_dates:
-            st.warning("No valid in situ dates found after filtering.")
+            st.warning(_t("cal.no_valid_dates"))
             return
 
         gdf = load_reservoir_shapefile(reservoir_name)
         if gdf is None:
-            st.error("Could not load reservoir shapefile.")
+            st.error(_t("cal.err_shapefile"))
             return
 
         _run_config = {
             "workflow": "calibration",
+            "lang": lang,
             "reservoir": reservoir_name,
             "aoi_geojson": gdf.to_crs(epsg=4326).to_json(),
             "target_variable": target_variable,
@@ -978,13 +1003,13 @@ def render_calibration_tab(
                 st.session_state["cal_job_id"] = _job_id
                 st.session_state.pop("cal_job_results", None)
                 st.success(
-                    f"✅ Calibration job submitted (`{_job_id}`). "
-                    "Results will appear here when ready."
+                    f"✅ {_t('cal.job_submitted')} (`{_job_id}`). "
+                    f"{_t('cal.results_will_appear')}"
                 )
             else:
-                st.error(f"❌ Error submitting job: {_resp.status_code} – {_resp.text}")
+                st.error(f"❌ {_t("cal.err_submit")}: {_resp.status_code} – {_resp.text}")
         except Exception as e:
-            st.error(f"❌ Could not reach the jobs API: {e}")
+            st.error(f"❌ {_t("cal.err_api")}: {e}")
 
     # ── PANEL DE POLLING ─────────────────────────────────────────────────────
     if "cal_job_id" in st.session_state and "cal_job_results" not in st.session_state:
@@ -1003,10 +1028,10 @@ def render_calibration_tab(
 
         if _state == "running":
             _pct  = _status.get("progress", 0)
-            _step = _status.get("step", "Processing…")
+            _step = _status.get("step", _t("cal.processing"))
             st.progress(_pct / 100, text=f"⏳ {_step}")
             if not _CAL_AUTOREFRESH:
-                st.info("Reload the page to update the calibration status.")
+                st.info(_t("cal.reload_status"))
 
         elif _state == "done":
             st.session_state["cal_job_results"] = _status.get("results", {})
@@ -1019,13 +1044,13 @@ def render_calibration_tab(
             st.rerun()
 
         else:
-            st.info("⏳ Waiting for job server response…")
+            st.info(f"⏳ {_t("cal.waiting_server")}")
 
     # ── RENDER DE RESULTADOS ─────────────────────────────────────────────────
     # Se activa cuando los resultados ya están en session_state
     if "cal_job_error" in st.session_state:
-        st.error(f"❌ Calibration failed: {st.session_state['cal_job_error']}")
-        if st.button("Clear", key="cal_clear_error"):
+        st.error(f"❌ {_t("cal.failed")}: {st.session_state['cal_job_error']}")
+        if st.button(_t("cal.clear"), key="cal_clear_error"):
             del st.session_state["cal_job_error"]
             st.rerun()
         
@@ -1037,34 +1062,34 @@ def render_calibration_tab(
         _outliers    = _res.get("removed_outliers_df", [])
         _diag_b64    = _res.get("diagnostics_png_b64", None)
 
-        st.success("Calibration finished successfully.")
+        st.success(_t("cal.finished"))
 
         c1, c2, c3 = st.columns(3)
-        c1.metric("Matched samples", _config.get("n_samples_after_merge", "—"))
-        c2.metric("Best model",      _config.get("best_model_name", "—"))
-        c3.metric("CV R²",           f"{_config.get('cv_r2_mean', 0):.3f}")
+        c1.metric(_t("cal.metric.matched"), _config.get("n_samples_after_merge", "—"))
+        c2.metric(_t("cal.metric.best_model"),      _config.get("best_model_name", "—"))
+        c3.metric(_t("cal.metric.cv_r2"),           f"{_config.get('cv_r2_mean', 0):.3f}")
 
-        st.markdown("#### Best calibration summary")
+        st.markdown(f"#### {_t("cal.summary")}")
         st.json(_config, expanded=False)
 
         _raster_cfg = _config.get("raster_visualization", {})
         if _raster_cfg.get("available"):
             st.session_state["calibrated_model_config"] = _raster_cfg
-            st.success(f"Este modelo se puede usar como capa raster en Visualización: {_raster_cfg.get('display_name')}")
+            st.success(f"{_t("cal.raster_available")}: {_raster_cfg.get('display_name')}")
         else:
             st.session_state.pop("calibrated_model_config", None)
-            st.warning(_raster_cfg.get("reason", "Este modelo no se puede convertir automáticamente a una capa raster de Earth Engine."))
+            st.warning(_raster_cfg.get("reason", _t("cal.raster_unavailable")))
 
         if _metrics:
-            st.markdown("#### Model comparison")
+            st.markdown(f"#### {_t("cal.model_comparison")}")
             st.dataframe(pd.DataFrame(_metrics), use_container_width=True)
 
         if _predictions:
-            st.markdown("#### Predictions")
+            st.markdown(f"#### {_t("cal.predictions")}")
             st.dataframe(pd.DataFrame(_predictions), use_container_width=True)
 
         if _outliers:
-            st.markdown("#### Removed outliers")
+            st.markdown(f"#### {_t("cal.removed_outliers")}")
             st.dataframe(pd.DataFrame(_outliers), use_container_width=True)
 
         if _diag_b64:
