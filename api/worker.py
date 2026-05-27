@@ -92,7 +92,7 @@ def run_visualization_job(
         puntos_interes = {k: tuple(v) for k, v in puntos_interes_raw.items()}
 
         # ── Paso 1: Reconstruir geometría ────────────────────────────────
-        update(job_id, "Cargando geometría del embalse…", 5)
+        update(job_id, _cal_t(config, "load_geometry"), 5)
         gdf, aoi = _aoi_from_geojson(aoi_geojson)
 
         # ── Paso 2: Obtener fechas disponibles ───────────────────────────
@@ -350,7 +350,7 @@ def run_visualization_job(
                 log.warning(f"[{job_id}] Error GeoTIFF URL {day}: {e}")
 
         # ── Paso 4: Devolver resultados ──────────────────────────────────
-        update(job_id, "Finalizando…", 98)
+        update(job_id, _cal_t(config, "finalizing"), 98)
 
         results = {
             "available_dates":    sorted(set(available_dates)),
@@ -372,6 +372,31 @@ def run_visualization_job(
 # ---------------------------------------------------------------------------
 # WORKER: Calibración
 # ---------------------------------------------------------------------------
+def _cal_t(config: Dict[str, Any], key: str) -> str:
+    """Small i18n helper for calibration worker progress messages."""
+    strings = {
+        "es": {
+            "load_insitu": "Cargando datos in situ…",
+            "load_geometry": "Cargando geometría del embalse…",
+            "extract_sentinel": "Extrayendo predictores Sentinel-2…",
+            "match_overpass": "Emparejando datos in situ con el paso satelital…",
+            "train_models": "Entrenando modelos de calibración…",
+            "diagnostics": "Generando gráficos de diagnóstico…",
+            "finalizing": "Finalizando…",
+        },
+        "en": {
+            "load_insitu": "Loading in situ data…",
+            "load_geometry": "Loading reservoir geometry…",
+            "extract_sentinel": "Extracting Sentinel-2 predictors…",
+            "match_overpass": "Matching in situ data with satellite overpass…",
+            "train_models": "Training calibration models…",
+            "diagnostics": "Generating diagnostic plots…",
+            "finalizing": "Finalizing…",
+        },
+    }
+    lang = "en" if str(config.get("lang", "es")).lower().startswith("en") else "es"
+    return strings[lang].get(key, key)
+
 def run_calibration_job(
     job_id: str,
     config: Dict[str, Any],
@@ -400,7 +425,7 @@ def run_calibration_job(
         insitu_csv_b64     = config["insitu_csv_b64"]
 
         # ── Paso 1: Decodificar CSV in-situ ─────────────────────────────
-        update(job_id, "Cargando datos in-situ…", 5)
+        update(job_id, _cal_t(config, "load_insitu"), 5)
         csv_bytes = base64.b64decode(insitu_csv_b64)
         df_raw = pd.read_csv(io.BytesIO(csv_bytes))
 
@@ -418,14 +443,14 @@ def run_calibration_job(
         )
 
         # ── Paso 2: Geometría ────────────────────────────────────────────
-        update(job_id, "Cargando geometría del embalse…", 15)
+        update(job_id, _cal_t(config, "load_geometry"), 15)
         gdf, aoi = _aoi_from_geojson(aoi_geojson)
 
         min_date   = pd.to_datetime(insitu_clean["date"]).min().strftime("%Y-%m-%d")
         max_date   = pd.to_datetime(insitu_clean["date"]).max().strftime("%Y-%m-%d")
 
         # ── Paso 3: Extraer features de satélite ─────────────────────────
-        update(job_id, "Extrayendo predictores Sentinel-2…", 25)
+        update(job_id, _cal_t(config, "extract_sentinel"), 25)
         sat_df = compute_satellite_features(
             aoi=aoi,
             start_date=min_date,
@@ -436,17 +461,18 @@ def run_calibration_job(
             candidate_indices=predictor_set,
             priority_dates=priority_dates,
             temporal_window_days=temporal_window_days,
+            progress_lang=str(config.get("lang", "es")),
             progress_callback=lambda msg, pct: update(job_id, msg, pct),
         )
 
         # ── Paso 4: Match in-situ con sobrepaso ──────────────────────────
-        update(job_id, "Emparejando datos in-situ con sobrepaso satelital…", 60)
+        update(job_id, _cal_t(config, "match_overpass"), 60)
         insitu_daily = match_insitu_to_overpass(
             insitu_clean, sat_df, overpass_window_hours=overpass_window
         )
 
         # ── Paso 5: Entrenar modelos ─────────────────────────────────────
-        update(job_id, "Entrenando modelos de calibración…", 75)
+        update(job_id, _cal_t(config, "train_models"), 75)
         result = fit_calibration_model(
             insitu_daily_df=insitu_daily,
             sat_df=sat_df,
@@ -461,7 +487,7 @@ def run_calibration_job(
         )
 
         # ── Paso 6: Generar figura de diagnóstico ────────────────────────
-        update(job_id, "Generando gráficos de diagnóstico…", 90)
+        update(job_id, _cal_t(config, "diagnostics"), 90)
         fig = build_diagnostics_figure(
             result["predictions_df"],
             f"Best model: {result['config']['best_model_name']}",
@@ -478,7 +504,7 @@ def run_calibration_job(
         }
 
         # ── Paso 7: Devolver resultados ──────────────────────────────────
-        update(job_id, "Finalizando…", 98)
+        update(job_id, _cal_t(config, "finalizing"), 98)
         results = {
             "config":             result["config"],
             "metrics_df":         result["metrics_df"].to_dict(orient="records"),
