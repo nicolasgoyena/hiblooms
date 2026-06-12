@@ -382,11 +382,7 @@ _hdr_left, _hdr_center, _hdr_right = st.columns([1.6, 3.0, 1.8])
 with _hdr_left:
     st.markdown("<div style='padding-top:0.5rem'>", unsafe_allow_html=True)
     st.image("images/logo_hiblooms.png", width=240)
-    _min_c1, _min_c2 = st.columns([1.6, 1])
-    with _min_c1:
-        st.image("images/ministerio.png", width=160)
-    with _min_c2:
-        st.image("images/logo_unav.png", width=90)
+    st.image("images/ministerio.png", width=240)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with _hdr_center:
@@ -406,7 +402,7 @@ with _hdr_center:
 
 with _hdr_right:
     st.markdown("<div style='padding-top:0.5rem'>", unsafe_allow_html=True)
-    st.image("images/logo_bioma.png", width=200)
+    st.image("images/logo_bioma_unav.png", width=220)
     _ebro_c, _jucar_c = st.columns([1, 1.2])
     with _ebro_c:
         st.image("images/logo_ebro.png", width=100)
