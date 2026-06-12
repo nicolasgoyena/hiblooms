@@ -402,7 +402,7 @@ with _hdr_center:
 
 with _hdr_right:
     st.markdown("<div style='padding-top:0.5rem'>", unsafe_allow_html=True)
-    st.markdown("<div style='display:flex; justify-content:center;'>", unsafe_allow_html=True)
+    st.markdown("<div style='display:flex; justify-content:center; padding-left:20px;'>", unsafe_allow_html=True)
     st.image("images/logo_bioma_unav.png", width=220)
     st.markdown("</div>", unsafe_allow_html=True)
     _ebro_c, _jucar_c = st.columns([1, 1.2])
