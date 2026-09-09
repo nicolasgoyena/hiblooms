@@ -1,3 +1,5 @@
+import hmac
+
 import streamlit as st
 
 st.set_page_config(
@@ -90,15 +92,6 @@ def cargar_usuarios():
 
 users = cargar_usuarios()
 
-query_params = st.query_params
-admin_val = query_params.get("admin", "false")
-admin_mode = (admin_val if isinstance(admin_val, str) else admin_val[0]).lower() == "true"
-
-if admin_mode and not st.session_state.get("logged_in", False):
-    st.session_state["logged_in"] = True
-    st.switch_page("app.py")
-    st.stop()
-
 if st.session_state.get("logged_in", False):
     st.switch_page("app.py")
     st.stop()
@@ -128,8 +121,10 @@ with col:
     """, unsafe_allow_html=True)
 
 if submit:
-    if user in users and pwd == users[user]:
+    # compare_digest evita filtrar información por tiempo de comparación
+    if user in users and hmac.compare_digest(str(pwd), str(users[user])):
         st.session_state["logged_in"] = True
+        st.session_state["user"] = user
         st.switch_page("app.py")
     else:
         st.error("Usuario o contraseña incorrectos")
