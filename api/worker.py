@@ -55,14 +55,20 @@ def _init_ee() -> None:
 # Helper: reconstruir GeoDataFrame y geometría EE desde GeoJSON string
 # ---------------------------------------------------------------------------
 def _aoi_from_geojson(aoi_geojson: str):
+    """
+    Reconstruye el GeoDataFrame y la ee.Geometry del AOI a partir del GeoJSON
+    enviado por la app. Conserva la geometría completa: todas las partes de un
+    MultiPolygon y los huecos (islas) de cada una.
+    """
     gdf = gpd.read_file(io.StringIO(aoi_geojson))
+    if gdf.empty:
+        raise ValueError("El AOI recibido no contiene geometrías.")
     if gdf.crs is None or gdf.crs.to_epsg() != 4326:
         gdf = gdf.to_crs(epsg=4326)
-    geometry = gdf.geometry.iloc[0]
-    if geometry.geom_type == "MultiPolygon":
-        geometry = list(geometry.geoms)[0]
-    coords = list(geometry.exterior.coords)
-    return gdf, ee.Geometry.Polygon([coords], geodesic=False)
+    geometry = gdf.geometry.union_all() if len(gdf) > 1 else gdf.geometry.iloc[0]
+    if geometry.is_empty:
+        raise ValueError("La geometría del AOI está vacía.")
+    return gdf, ee.Geometry(geometry.__geo_interface__, geodesic=False)
 
 
 # ---------------------------------------------------------------------------
