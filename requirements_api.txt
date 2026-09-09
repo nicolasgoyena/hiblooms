@@ -11,3 +11,7 @@ scikit-learn
 requests
 pillow>=10.0.0
 shapely
+
+# ── Persistencia de jobs en PostgreSQL ────────────────────────────────────────
+SQLAlchemy>=2.0
+psycopg2-binary

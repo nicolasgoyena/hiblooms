@@ -64,6 +64,7 @@ hiblooms/
 │   └── devcontainer.json
 ├── api/                       # FastAPI backend
 │   ├── main.py                #   REST endpoints
+│   ├── jobs_store.py          #   Job persistence in PostgreSQL
 │   └── worker.py              #   Asynchronous processing with Google Earth Engine
 ├── data/                      # Auxiliary data used by the app
 │   ├── puntos_interes.csv     #   Sampling point coordinates
@@ -78,6 +79,9 @@ hiblooms/
 │   ├── descargar_cloro.py
 │   ├── descargar_ficocianina.py
 │   └── precalculo_fechas_optimizado.py
+├── tests/                     # Test suite (pytest)
+│   ├── test_jobs_store.py
+│   └── test_api.py
 ├── shapefiles/                # HIBLOOMS reservoir shapefile
 │   ├── embalses_hiblooms.shp
 │   ├── embalses_hiblooms.dbf
@@ -95,12 +99,62 @@ hiblooms/
 └── README.md
 ```
 
+## Configuration
+
+### API service (`hiblooms-api`) — environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEE_SERVICE_ACCOUNT_JSON` | yes | Google Earth Engine service account JSON |
+| `DATABASE_URL` | yes | PostgreSQL connection string where jobs are persisted, e.g. `postgresql+psycopg2://user:pass@host:5432/dbname`. The `hiblooms_jobs` table is created automatically on startup |
+| `HIBLOOMS_API_TOKEN` | yes in production | Shared token required in the `X-API-Token` header. If unset, the API accepts unauthenticated requests and logs a warning |
+| `APP_ORIGIN` | recommended | Origin allowed by CORS, e.g. `https://hiblooms-app.onrender.com`. Defaults to `*` |
+
+### Streamlit app (`hiblooms-app`) — `.streamlit/secrets.toml`
+
+```toml
+api_url   = "https://hiblooms-api.onrender.com"
+api_token = "<same value as HIBLOOMS_API_TOKEN>"
+
+GEE_SERVICE_ACCOUNT_JSON = "..."
+
+[postgres]
+host = "..."
+port = 5432
+dbname = "..."
+user = "..."
+password = "..."
+
+[auth]
+username1 = "..."
+password1 = "..."
+```
+
+`api_token` **must** match `HIBLOOMS_API_TOKEN` on the API service, otherwise every
+job submission is rejected with HTTP 401.
+
+## Tests
+
+```bash
+pip install pytest
+export TEST_DATABASE_URL="postgresql://postgres:pass@localhost:5432/hiblooms_test"
+pytest tests/
+```
+
+The tests are skipped (not failed) when `TEST_DATABASE_URL` is not set. Use a
+throwaway database: the suite creates and deletes rows in `hiblooms_jobs`.
+
 ## Deployment
 
 The app is deployed on [Render.com](https://render.com) as two separate services defined in `render.yaml`:
 
 - **hiblooms-api**: FastAPI service running `api/main.py`
 - **hiblooms-app**: Streamlit service running `app.py`
+
+Job state is persisted in PostgreSQL, so jobs survive restarts, cold starts and
+redeploys, and the API can run with more than one instance. Finished jobs are
+deleted automatically after 2 days; a job left running for over an hour without
+progress is reported as failed (its worker died).
 
 ## Citation
 

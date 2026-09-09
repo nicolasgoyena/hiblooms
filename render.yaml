@@ -8,6 +8,17 @@ services:
     envVars:
       - key: GEE_SERVICE_ACCOUNT_JSON
         sync: false
+      # Conexión a PostgreSQL donde se persisten los jobs.
+      # Formato: postgresql+psycopg2://usuario:password@host:5432/dbname
+      - key: DATABASE_URL
+        sync: false
+      # Token compartido con la app. Debe coincidir con api_token en
+      # .streamlit/secrets.toml del servicio hiblooms-app.
+      - key: HIBLOOMS_API_TOKEN
+        sync: false
+      # Origen permitido por CORS (el dominio público de la app Streamlit).
+      - key: APP_ORIGIN
+        value: https://hiblooms-app.onrender.com
 
   - type: web
     name: hiblooms-app

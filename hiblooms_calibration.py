@@ -949,6 +949,10 @@ def render_calibration_tab(
 
     _CAL_API_URL = st.secrets.get("api_url", "http://localhost:8000")
 
+    # Token compartido con la API de jobs (ver HIBLOOMS_API_TOKEN en api/main.py)
+    _CAL_API_TOKEN = st.secrets.get("api_token", "")
+    _CAL_HEADERS = {"X-API-Token": _CAL_API_TOKEN} if _CAL_API_TOKEN else {}
+
     # ── BOTÓN: solo construye el payload y envía a la API ────────────────────
     if st.button(_t("cal.run"), key="cal_run"):
         try:
@@ -996,6 +1000,7 @@ def render_calibration_tab(
             _resp = _cal_requests.post(
                 f"{_CAL_API_URL}/jobs/submit",
                 json=_run_config,
+                headers=_CAL_HEADERS,
                 timeout=60,
             )
             if _resp.ok:
@@ -1019,7 +1024,9 @@ def render_calibration_tab(
         _job_id = st.session_state["cal_job_id"]
         try:
             _status = _cal_requests.get(
-                f"{_CAL_API_URL}/jobs/{_job_id}/status", timeout=5
+                f"{_CAL_API_URL}/jobs/{_job_id}/status",
+                headers=_CAL_HEADERS,
+                timeout=5,
             ).json()
         except Exception:
             _status = {"state": "unknown"}
