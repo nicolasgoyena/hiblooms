@@ -105,6 +105,16 @@ except ImportError:
 # URL de la API de jobs asíncrona (configurar en .streamlit/secrets.toml como api_url)
 _API_URL = st.secrets.get("api_url", "http://localhost:8000")
 
+# Token compartido con la API de jobs. Debe coincidir con la variable de entorno
+# HIBLOOMS_API_TOKEN del servicio hiblooms-api. Si no está definido se envía
+# vacío, lo que solo funciona si la API tampoco lo tiene configurado (desarrollo).
+_API_TOKEN = st.secrets.get("api_token", "")
+
+
+def _api_headers() -> dict:
+    """Cabeceras para las peticiones a la API de jobs."""
+    return {"X-API-Token": _API_TOKEN} if _API_TOKEN else {}
+
 try:
     if "GEE_SERVICE_ACCOUNT_JSON" in st.secrets:
 
@@ -934,9 +944,16 @@ with tab3:
                 _resp = _requests.post(
                     f"{_API_URL}/jobs/submit",
                     json=_run_config,
+                    headers=_api_headers(),
                     timeout=60,
                 )
-                if _resp.ok:
+                if _resp.status_code == 401:
+                    st.error(
+                        "❌ La API rechazó la petición (token inválido). "
+                        "Revisa que `api_token` en secrets.toml coincida con "
+                        "HIBLOOMS_API_TOKEN en el servicio de la API."
+                    )
+                elif _resp.ok:
                     _job_id = _resp.json()["job_id"]
                     st.session_state["viz_job_id"] = _job_id
                     st.session_state.pop("viz_job_results", None)
@@ -960,7 +977,9 @@ with tab3:
                 return
             try:
                 _status = _requests.get(
-                    f"{_API_URL}/jobs/{_job_id}/status", timeout=5
+                    f"{_API_URL}/jobs/{_job_id}/status",
+                    headers=_api_headers(),
+                    timeout=5,
                 ).json()
             except Exception:
                 _status = {"state": "unknown"}
