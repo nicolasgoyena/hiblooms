@@ -118,16 +118,18 @@ def load_reservoir_shapefile(
     return gdf_f
 
 def gdf_to_ee_geometry(gdf: gpd.GeoDataFrame) -> ee.Geometry:
-    """Convierte el primer polígono del GeoDataFrame (EPSG:4326) a ee.Geometry.Polygon."""
+    """
+    Convierte el GeoDataFrame (EPSG:4326) a ee.Geometry conservando la geometría
+    completa: todas las partes de un MultiPolygon y los huecos (islas) de cada una.
+    """
     if gdf.empty:
         raise ValueError("El GeoDataFrame está vacío.")
     if gdf.crs is None or (gdf.crs.to_epsg() or 0) != 4326:
         raise ValueError("El GeoDataFrame debe estar en EPSG:4326.")
-    geom = gdf.geometry.iloc[0]
-    if geom.geom_type == "MultiPolygon":
-        geom = list(geom.geoms)[0]
-    coords = list(geom.exterior.coords)
-    return ee.Geometry.Polygon([coords], geodesic=False)
+    geom = gdf.geometry.union_all() if len(gdf) > 1 else gdf.geometry.iloc[0]
+    if geom.is_empty:
+        raise ValueError("La geometría del embalse está vacía.")
+    return ee.Geometry(geom.__geo_interface__, geodesic=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

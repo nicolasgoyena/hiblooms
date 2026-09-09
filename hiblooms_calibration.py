@@ -956,7 +956,7 @@ def render_calibration_tab(
                 df_raw, target_variable, start_hour, end_hour
             )
         except Exception as e:
-            st.error(f"{_t("cal.err_prepare")}: {e}")
+            st.error(f"{_t('cal.err_prepare')}: {e}")
             return
 
         if not priority_dates:
@@ -1007,9 +1007,9 @@ def render_calibration_tab(
                     f"{_t('cal.results_will_appear')}"
                 )
             else:
-                st.error(f"❌ {_t("cal.err_submit")}: {_resp.status_code} – {_resp.text}")
+                st.error(f"❌ {_t('cal.err_submit')}: {_resp.status_code} – {_resp.text}")
         except Exception as e:
-            st.error(f"❌ {_t("cal.err_api")}: {e}")
+            st.error(f"❌ {_t('cal.err_api')}: {e}")
 
     # ── PANEL DE POLLING ─────────────────────────────────────────────────────
     if "cal_job_id" in st.session_state and "cal_job_results" not in st.session_state:
@@ -1044,12 +1044,12 @@ def render_calibration_tab(
             st.rerun()
 
         else:
-            st.info(f"⏳ {_t("cal.waiting_server")}")
+            st.info(f"⏳ {_t('cal.waiting_server')}")
 
     # ── RENDER DE RESULTADOS ─────────────────────────────────────────────────
     # Se activa cuando los resultados ya están en session_state
     if "cal_job_error" in st.session_state:
-        st.error(f"❌ {_t("cal.failed")}: {st.session_state['cal_job_error']}")
+        st.error(f"❌ {_t('cal.failed')}: {st.session_state['cal_job_error']}")
         if st.button(_t("cal.clear"), key="cal_clear_error"):
             del st.session_state["cal_job_error"]
             st.rerun()
@@ -1069,27 +1069,27 @@ def render_calibration_tab(
         c2.metric(_t("cal.metric.best_model"),      _config.get("best_model_name", "—"))
         c3.metric(_t("cal.metric.cv_r2"),           f"{_config.get('cv_r2_mean', 0):.3f}")
 
-        st.markdown(f"#### {_t("cal.summary")}")
+        st.markdown(f"#### {_t('cal.summary')}")
         st.json(_config, expanded=False)
 
         _raster_cfg = _config.get("raster_visualization", {})
         if _raster_cfg.get("available"):
             st.session_state["calibrated_model_config"] = _raster_cfg
-            st.success(f"{_t("cal.raster_available")}: {_raster_cfg.get('display_name')}")
+            st.success(f"{_t('cal.raster_available')}: {_raster_cfg.get('display_name')}")
         else:
             st.session_state.pop("calibrated_model_config", None)
             st.warning(_raster_cfg.get("reason", _t("cal.raster_unavailable")))
 
         if _metrics:
-            st.markdown(f"#### {_t("cal.model_comparison")}")
+            st.markdown(f"#### {_t('cal.model_comparison')}")
             st.dataframe(pd.DataFrame(_metrics), use_container_width=True)
 
         if _predictions:
-            st.markdown(f"#### {_t("cal.predictions")}")
+            st.markdown(f"#### {_t('cal.predictions')}")
             st.dataframe(pd.DataFrame(_predictions), use_container_width=True)
 
         if _outliers:
-            st.markdown(f"#### {_t("cal.removed_outliers")}")
+            st.markdown(f"#### {_t('cal.removed_outliers')}")
             st.dataframe(pd.DataFrame(_outliers), use_container_width=True)
 
         if _diag_b64:
