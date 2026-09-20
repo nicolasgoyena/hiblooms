@@ -1,0 +1,11 @@
+.git
+web/frontend/node_modules
+web/frontend/dist
+web/backend/_uploads
+**/__pycache__
+.streamlit
+images
+tests
+hiblooms_app
+pages
+api

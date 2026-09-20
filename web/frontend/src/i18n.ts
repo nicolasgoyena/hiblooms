@@ -1,0 +1,445 @@
+import { useSyncExternalStore } from 'react'
+
+export type Lang = 'es' | 'en'
+
+const KEY = 'hiblooms-lang'
+
+function initial(): Lang {
+  try {
+    const v = localStorage.getItem(KEY)
+    if (v === 'es' || v === 'en') return v
+  } catch { /* noop */ }
+  try {
+    return (navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en'
+  } catch { return 'es' }
+}
+
+let lang: Lang = initial()
+const subs = new Set<() => void>()
+const applyDocLang = () => { try { document.documentElement.lang = lang } catch { /* noop */ } }
+applyDocLang()
+
+export const getLang = () => lang
+
+export function setLang(l: Lang) {
+  if (l === lang) return
+  lang = l
+  try { localStorage.setItem(KEY, l) } catch { /* noop */ }
+  applyDocLang()
+  subs.forEach(fn => fn())
+}
+
+const subscribe = (fn: () => void) => { subs.add(fn); return () => { subs.delete(fn) } }
+
+export function useLang(): [Lang, (l: Lang) => void] {
+  const l = useSyncExternalStore(subscribe, getLang, getLang)
+  return [l, setLang]
+}
+
+export const locale = () => (lang === 'es' ? 'es-ES' : 'en-GB')
+
+export function t(es: string, vars?: Record<string, string | number>): string {
+  let s = lang === 'en' ? (EN[es] ?? es) : es
+  if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m))
+  return s
+}
+
+/** English dictionary, keyed by the exact Spanish source string. */
+const EN: Record<string, string> = {
+  'Rango habitual de {a}–{b} (mitad central de los años anteriores) frente a {y}, por quincenas.': 'Usual range for {a}–{b} (middle half of previous years) against {y}, by fortnight.',
+  'Este año va por encima de lo normal en {n} de {m} quincenas comparables.': 'This year is above normal in {n} of {m} comparable fortnights.',
+  'Este año va por debajo de lo normal en {n} de {m} quincenas comparables.': 'This year is below normal in {n} of {m} comparable fortnights.',
+  'habitual': 'usual',
+  'imágenes': 'images',
+  'Percentil 90 del índice sobre la lámina de agua de cada imagen (el mismo criterio que el monitor), con {n} imágenes válidas desde {a}. Las quincenas con menos de 4 imágenes en años anteriores se quedan sin rango.': '90th percentile of the index over the water surface of each image (the same criterion as the monitor), from {n} valid images since {a}. Fortnights with fewer than 4 images in previous years are left without a range.',
+  'La climatología compara con años anteriores, así que solo tiene sentido con índices comparables entre embalses. Elige NDCI o PCI.': 'Climatology compares against previous years, so it only makes sense with indices that are comparable across reservoirs. Choose NDCI or PCI.',
+  'Ver con NDCI': 'Show with NDCI',
+
+  'ene': 'Jan',
+  'feb': 'Feb',
+  'mar': 'Mar',
+  'abr': 'Apr',
+  'may': 'May',
+  'jun': 'Jun',
+  'jul': 'Jul',
+  'ago': 'Aug',
+  'sep': 'Sep',
+  'oct': 'Oct',
+  'nov': 'Nov',
+  'dic': 'Dec',
+  'Climatología': 'Climatology',
+  'Comparar con otra fecha': 'Compare with another date',
+  'Sin comparación': 'No comparison',
+  'Izquierda': 'Left',
+  'derecha': 'right',
+  'rango habitual': 'usual range',
+  'mediana de años anteriores': 'median of previous years',
+  'mínimo habitual': 'usual minimum',
+  'Rango habitual de {a}–{b} (mitad central de los años anteriores) frente a {y}.': 'Usual range for {a}–{b} (middle half of previous years) against {y}.',
+  'Este año va por encima de lo normal en {n} de {m} meses observados.': 'This year is above normal in {n} of {m} observed months.',
+  'Este año va por debajo de lo normal en {n} de {m} meses observados.': 'This year is below normal in {n} of {m} observed months.',
+  'Este año se mueve dentro de lo normal.': 'This year stays within the normal range.',
+  'Una imagen por mes (la menos nubosa) desde {a}. Los meses sin suficientes años previos se quedan sin rango.': 'One image per month (the least cloudy) since {a}. Months without enough previous years are left without a range.',
+  'Calculando la climatología…': 'Computing the climatology…',
+  'Enlace copiado': 'Link copied',
+  'Copiar enlace': 'Copy link',
+
+  'Las flechas comparan con el periodo anterior de la misma duración: en el NDCI y el PCI, ↑ en rojo significa que la señal va a más; en el nivel, ↓ en rojo significa que el embalse sigue bajando.': 'The arrows compare with the previous period of the same length: for NDCI and PCI, a red ↑ means the signal is growing; for the level, a red ↓ means the reservoir keeps falling.',
+
+  'estable': 'steady',
+  'subiendo': 'rising',
+  'bajando': 'falling',
+  'respecto al periodo anterior': 'compared with the previous period',
+  'Las flechas comparan con el periodo anterior de la misma duración: en el NDCI, ↑ en rojo significa que la señal de algas va a más; en el nivel, ↓ en rojo significa que el embalse sigue bajando.': 'The arrows compare with the previous period of the same length: for NDCI, a red ↑ means the algal signal is growing; for the level, a red ↓ means the reservoir keeps falling.',
+
+  'nivel sin estimar': 'level not estimated',
+  'de su capacidad': 'of its capacity',
+  'oficial': 'official',
+  'satélite': 'satellite',
+  'Volumen embalsado oficial · Boletín Hidrológico Semanal (MITECO)': 'Official stored volume · Weekly Hydrological Bulletin (MITECO)',
+  'Nivel del embalse: donde existe, el volumen embalsado oficial del Boletín Hidrológico Semanal (MITECO, embalses de más de 5 hm³, dato semanal); en el resto, la superficie de agua vista por el satélite frente a su lámina habitual (JRC Global Surface Water), con la flecha de los {n} días anteriores. El aviso ⚠ marca los embalses con señal alta de algas y nivel por debajo del 60 %, donde la concentración de nutrientes y el calentamiento agravan el episodio.': 'Reservoir level: where available, the official stored volume from the Weekly Hydrological Bulletin (MITECO, reservoirs over 5 hm³, weekly); otherwise the water surface seen by the satellite against its usual extent (JRC Global Surface Water), with the arrow covering the previous {n} days. The ⚠ flag marks reservoirs with a high algal signal and a level below 60 %, where nutrient concentration and warming make the episode worse.',
+
+  'señal alta + embalse bajo': 'high signal + low reservoir',
+  'Señal alta de algas y lámina por debajo del 60 % de la habitual': 'High algal signal and water surface below 60 % of its usual extent',
+  'lámina sin estimar': 'water extent not estimated',
+  'de su lámina habitual': 'of its usual water extent',
+  'Superficie de agua frente a la lámina habitual (JRC, agua presente más de la mitad del tiempo)': 'Water surface against the reservoir’s usual extent (JRC, water present more than half of the time)',
+  'La lámina de agua se compara con la habitual del embalse (JRC Global Surface Water): 100 % es su superficie normal. La flecha compara con los {n} días anteriores. El aviso ⚠ marca los embalses con señal alta de algas y lámina por debajo del 60 %, donde la concentración de nutrientes y el calentamiento agravan el episodio.': 'Water extent is compared with the reservoir’s usual extent (JRC Global Surface Water): 100 % is its normal surface. The arrow compares with the previous {n} days. The ⚠ flag marks reservoirs with a high algal signal and water below 60 % of normal, where nutrient concentration and warming make the episode worse.',
+
+  'Solo lámina de agua': 'Water surface only',
+  'quita orillas y píxeles de borde': 'removes banks and edge pixels',
+  'Detecta el agua en cada imagen (MNDWI/NDWI) y descarta 20 m de borde, para que las orillas secas no se cuenten como floración.': 'Detects water in each image (MNDWI/NDWI) and drops a 20 m edge, so exposed banks are not counted as a bloom.',
+
+  'cianobact.': 'cyano.',
+
+  'Monitor': 'Monitor',
+  'Estado de todos los embalses': 'Status of every reservoir',
+  'Ventana de tiempo': 'Time window',
+  'Últimos 15 días': 'Last 15 days',
+  'Últimos 30 días': 'Last 30 days',
+  'Últimos 60 días': 'Last 60 days',
+  'Nubes máximas': 'Maximum cloud cover',
+  'Revisando embalses…': 'Checking reservoirs…',
+  'Actualizar estado': 'Refresh status',
+  'Estado orientativo a partir de índices espectrales generalistas (no de calibraciones locales): NDCI como proxy de clorofila-a y PCI como proxy de ficocianina. Sirve para priorizar qué embalse mirar, no para dar concentraciones.': 'Indicative status from general-purpose spectral indices (not from local calibrations): NDCI as a chlorophyll-a proxy and PCI as a phycocyanin proxy. It helps you decide which reservoir to look at, not to report concentrations.',
+  'Estado general · últimos {n} días': 'Overall status · last {n} days',
+  '{n} embalses revisados': '{n} reservoirs checked',
+  '{n} con observación despejada en la ventana': '{n} with a cloud-free observation in the window',
+  'Abrir en el visor': 'Open in the viewer',
+  'sin imagen despejada': 'no cloud-free image',
+  'agua visible': 'water visible',
+  'posible cianobacteria': 'possible cyanobacteria',
+  'muy alto': 'very high',
+  'alto': 'high',
+  'moderado': 'moderate',
+  'bajo': 'low',
+  'muy bajo': 'very low',
+  'sin datos': 'no data',
+  'NDCI es el percentil 90 del píxel despejado más reciente de cada embalse dentro de la ventana, sobre la lámina de agua (NDWI > 0). Un valor alto indica mucha biomasa algal; el aviso de cianobacterias aparece cuando además PCI ≥ 1,35. Confirma siempre en el visor y, donde haya calibración, con el índice calibrado.': 'NDCI is the 90th percentile of each reservoir’s most recent cloud-free pixels within the window, over the water surface (NDWI > 0). A high value means high algal biomass; the cyanobacteria flag appears when PCI is also ≥ 1.35. Always confirm in the viewer and, where a calibration exists, with the calibrated index.',
+  'Consultando Sentinel-2 en todos los embalses…': 'Querying Sentinel-2 across every reservoir…',
+
+  'floraciones algales': 'algal blooms',
+  'Reconstrucción histórica y monitorización en tiempo casi real de las floraciones algales en embalses españoles mediante teledetección Sentinel-2, con especial atención a las algas tóxicas como las cianobacterias.': 'Historical reconstruction and near-real-time monitoring of algal blooms in Spanish reservoirs using Sentinel-2 remote sensing, with particular attention to toxic algae such as cyanobacteria.',
+  'Clorofila-a y ficocianina': 'Chlorophyll-a and phycocyanin',
+  'Las floraciones algales en embalses son una preocupación ambiental y de salud pública, sobre todo cuando las forman algas tóxicas como las cianobacterias. HIBLOOMS evalúa la evolución histórica y actual de estos eventos en los embalses de España, contribuyendo a:': 'Algal blooms in reservoirs are an environmental and public health concern, especially when formed by toxic algae such as cyanobacteria. HIBLOOMS assesses the historical and current evolution of these events in Spanish reservoirs, contributing to:',
+  'son susceptibles a episodios de floración algal. Con el aumento de temperaturas y de la eutrofización, el riesgo de floraciones tóxicas de cianobacterias es mayor.': 'are susceptible to algal bloom episodes. With rising temperatures and eutrophication, the risk of toxic cyanobacterial blooms is higher.',
+  'Detección temprana, con aviso de floraciones tóxicas': 'Early detection, flagging toxic blooms',
+  'Clorofila-a (algas) y ficocianina (cianobacterias)': 'Chlorophyll-a (algae) and phycocyanin (cyanobacteria)',
+  'Sentinel-2 · floraciones algales en embalses': 'Sentinel-2 · algal blooms in reservoirs',
+
+  'Proyecto': 'Project',
+
+  'Ficocianina calibrada · El Val': 'Calibrated phycocyanin · El Val',
+  'Clorofila-a calibrada · El Val': 'Calibrated chlorophyll-a · El Val',
+  'Ficocianina calibrada · Bellús': 'Calibrated phycocyanin · Bellús',
+  'Clorofila-a calibrada · Bellús': 'Calibrated chlorophyll-a · Bellús',
+  'Ficocianina general (UV)': 'General phycocyanin (UV)',
+  'Calibrados': 'Calibrated',
+  'Espectrales': 'Spectral',
+  'Tus calibraciones': 'Your calibrations',
+
+  'Cerrar sesión': 'Log out',
+  'Quitar este shapefile': 'Remove this shapefile',
+  '¿Quitar este shapefile ({n} polígonos) de tus embalses?': 'Remove this shapefile ({n} polygons) from your reservoirs?',
+  'Usuario o contraseña incorrectos': 'Wrong username or password',
+  'No se puede conectar con el servidor': 'Cannot connect to the server',
+  'Sistema de monitorización satelital': 'Satellite monitoring system',
+  'Usuario': 'Username',
+  'Contraseña': 'Password',
+  'Introduce tu usuario': 'Enter your username',
+  'Entrando…': 'Signing in…',
+  'Iniciar sesión': 'Sign in',
+  'Universidad de Navarra': 'University of Navarra',
+
+  // ── App: panel ──
+  'No se puede conectar con el backend (¿está arrancado en :8000?)': 'Cannot connect to the backend (is it running on :8000?)',
+  'No se encontraron puntos válidos en el CSV': 'No valid points found in the CSV',
+  'Visor satelital': 'Satellite viewer',
+  'Sentinel-2 · cianobacterias en embalses': 'Sentinel-2 · cyanobacteria in reservoirs',
+  'Modo demo · datos simulados (sin credenciales GEE)': 'Demo mode · simulated data (no GEE credentials)',
+  'Visor': 'Viewer',
+  'Calibración': 'Calibration',
+  'Información del proyecto': 'Project information',
+  'Embalse': 'Reservoir',
+  'Elige uno o haz clic en el mapa…': 'Choose one or click on the map…',
+  'Tus embalses (shapefile)': 'Your reservoirs (shapefile)',
+  'Embalses HIBLOOMS': 'HIBLOOMS reservoirs',
+  'Subiendo shapefile…': 'Uploading shapefile…',
+  '+ Subir shapefile propio (ZIP)': '+ Upload your own shapefile (ZIP)',
+  'proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.':
+    'project PID2023-153234OB-I00 of the BIOMA Institute (University of Navarra) with the Ebro and Júcar River Basin Authorities.',
+  'busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.':
+    'search Sentinel-2 imagery for any reservoir, index maps, time series, points of interest and downloads.',
+  'sube tus medidas in situ y obtén un modelo validado que se pinta como índice en el mapa.':
+    'upload your in situ measurements and get a validated model that is displayed as an index on the map.',
+  'Empezar': 'Get started',
+  'Desde': 'From',
+  'Hasta': 'To',
+  '1 año': '1 yr',
+  '{m} m': '{m} mo',
+  'Nubosidad máxima': 'Maximum cloud cover',
+  'Índice': 'Index',
+  'Puntos de interés': 'Points of interest',
+  'Quitar {name}': 'Remove {name}',
+  'Haz clic en el mapa…': 'Click on the map…',
+  '+ Añadir en el mapa': '+ Add on the map',
+  'Subir CSV': 'Upload CSV',
+  'Buscando imágenes…': 'Searching images…',
+  'Buscar imágenes': 'Search images',
+  'fechas válidas': 'valid dates',
+  'Calculando…': 'Computing…',
+  'Serie temporal': 'Time series',
+  'Tabla': 'Table',
+  'Clases': 'Classes',
+  'Sin imágenes con esos filtros. Prueba a subir la nubosidad o ampliar el rango.': 'No images match these filters. Try raising the cloud cover limit or widening the date range.',
+  // ── App: map & image card ──
+  'Satélite': 'Satellite',
+  'Mapa': 'Map',
+  'Opacidad': 'Opacity',
+  'Media embalse': 'Reservoir mean',
+  'Nubes': 'Clouds',
+  'Cobertura': 'Coverage',
+  'Rango probable (80 %): {lo} – {hi} {unit}': 'Likely range (80%): {lo} – {hi} {unit}',
+  '{pct} % del embalse está fuera del rango de índices con el que se calibró: esos valores son extrapolación.':
+    '{pct}% of the reservoir lies outside the index range used for calibration: those values are extrapolated.',
+  'GeoTIFF del índice actual': 'GeoTIFF of the current index',
+  'GeoTIFF multibanda con todos los índices': 'Multiband GeoTIFF with all indices',
+  'Todos': 'All',
+  'Pasada: {dt} UTC': 'Overpass: {dt} UTC',
+  'Descargar CSV': 'Download CSV',
+  'Cerrar': 'Close',
+  'Calculando serie… (con GEE tarda ~5–10 s por fecha)': 'Computing series… (with GEE it takes ~5–10 s per date)',
+  'Haz clic en un punto de la gráfica para ver su mapa.': 'Click a point on the chart to view its map.',
+  'Fecha': 'Date',
+  'Calculando superficie por clases…': 'Computing area by class…',
+  'Superficie de agua por rangos de': 'Water surface area by range of',
+  'Extrayendo índices de Sentinel-2 y ajustando modelos…': 'Extracting Sentinel-2 indices and fitting models…',
+  'Selecciona un embalse en el mapa o en el panel para empezar': 'Select a reservoir on the map or in the panel to get started',
+  'Haz clic en el embalse para añadir un punto · Esc para cancelar': 'Click on the reservoir to add a point · Esc to cancel',
+  'clic para ver su serie': 'click to view its time series',
+  'El CSV necesita columnas lat/latitud y lon/longitud': 'The CSV needs lat/latitude and lon/longitude columns',
+  // ── Calibration: form ──
+  'coordenadas': 'coordinates',
+  'Datos in situ (CSV)': 'In situ data (CSV)',
+  '{n} filas': '{n} rows',
+  'Subir CSV de muestras o sonda': 'Upload sample or probe CSV',
+  'Necesita una columna de fecha (y a ser posible hora) y otra con el valor medido.': 'Requires a date column (ideally also a time column) and a column with the measured value.',
+  'Hora': 'Time',
+  '— (en la fecha / 11:00)': '— (in date column / 11:00)',
+  'Columna con el valor medido': 'Measured value column',
+  'Elige…': 'Choose…',
+  'Tipo de parámetro': 'Parameter type',
+  'Unidad': 'Unit',
+  '¿Dónde se midió cada fila?': 'Where was each row measured?',
+  '— sin columna de punto': '— no site column',
+  'Punto: {x}': 'Site: {x}',
+  '— sin coordenadas': '— no coordinates',
+  'Coord.: {a} / {b}': 'Coords: {a} / {b}',
+  'Cada fila usa su propio punto; los nombres se buscan entre los puntos de interés del embalse ({list}).':
+    'Each row uses its own site; names are matched against the reservoir’s points of interest ({list}).',
+  'ninguno': 'none',
+  'Cada fila usa sus propias coordenadas.': 'Each row uses its own coordinates.',
+  'Varios puntos = más pares y el modelo aprende la variabilidad espacial.': 'Multiple sites = more pairs, and the model learns spatial variability.',
+  'El CSV no indica ubicación: todas las filas se asignan al punto de abajo (p. ej. una sonda fija).':
+    'The CSV has no location: all rows are assigned to the point below (e.g. a fixed probe).',
+  'Punto de medida': 'Measurement point',
+  'Otras coordenadas…': 'Other coordinates…',
+  'Media de todo el embalse': 'Whole-reservoir mean',
+  'Latitud (41.87…)': 'Latitude (41.87…)',
+  'Longitud (-1.78…)': 'Longitude (-1.78…)',
+  'Se compara la medida con la media de todo el embalse. Úsalo solo si la muestra es integrada.':
+    'The measurement is compared with the whole-reservoir mean. Use only for integrated samples.',
+  'El satélite se lee en los píxeles de agua despejada a ±45 m del punto (sin exigir que Sen2Cor los clasifique como agua, para no perder floraciones).':
+    'Satellite values are read from cloud-free water pixels within ±45 m of the point (without requiring Sen2Cor to classify them as water, so blooms are not missed).',
+  'La app prueba ~90 modelos (combinaciones de 1–3 índices, en escala lineal y logarítmica, y curvas de saturación) y elige el mejor con validación temporal por bloques.':
+    'The app tests ~90 models (combinations of 1–3 indices, on linear and log scales, plus saturation curves) and selects the best one using blocked temporal cross-validation.',
+  'Modo experto (activado)': 'Expert mode (on)',
+  'Modo experto': 'Expert mode',
+  'Índices': 'Indices',
+  'Modelos': 'Models',
+  'Se puede pintar en el mapa': 'Can be displayed on the map',
+  'No se puede pintar en el mapa': 'Cannot be displayed on the map',
+  'se puede pintar como índice en el mapa. La logística usa un solo índice por modelo.': 'can be displayed as an index on the map. The logistic model uses a single index per model.',
+  'Escala': 'Scale',
+  'Probar lineal y log': 'Try linear and log',
+  'Lineal': 'Linear',
+  'Logarítmica': 'Logarithmic',
+  'Umbral de alerta': 'Alert threshold',
+  'Elegir el modelo por': 'Select model by',
+  'Equilibrado: picos y aguas claras (recomendado)': 'Balanced: peaks and clear water (recommended)',
+  'Precisión en picos (R² en µg/L)': 'Accuracy on peaks (R² in µg/L)',
+  'Precisión general (R² en escala log)': 'Overall accuracy (R² on log scale)',
+  'Detección de alertas por encima del umbral (F1)': 'Detection of exceedances above the threshold (F1)',
+  '± horas': '± hours',
+  '± días extra': '± extra days',
+  'Nubes embalse': 'Reservoir clouds',
+  'Agua despejada': 'Clear water',
+  'Hora del CSV': 'CSV time zone',
+  'Hora local (España)': 'Local time (Spain)',
+  'Calibrando…': 'Calibrating…',
+  'Calibrar en {name}': 'Calibrate on {name}',
+  'Elige primero un embalse arriba.': 'First choose a reservoir above.',
+  // ── Calibration: results ──
+  '{n} puntos': '{n} sites',
+  'punto': 'point',
+  'media del embalse': 'reservoir mean',
+  'datos simulados': 'simulated data',
+  'R² validación temporal': 'R² temporal validation',
+  'fuera de muestra · {k} bloques': 'out-of-sample · {k} blocks',
+  'R² en escala log': 'R² on log scale',
+  'pesa igual aguas claras y picos': 'weights clear water and peaks equally',
+  'Incertidumbre (80 %)': 'Uncertainty (80%)',
+  'Detección > {thr} {unit}': 'Detection > {thr} {unit}',
+  'falsas alarmas {pct}': 'false alarms {pct}',
+  'Pares válidos': 'Valid pairs',
+  '{d} fechas · {i} imágenes S2 revisadas': '{d} dates · {i} S2 images checked',
+  'Métricas honestas: la selección del modelo se repite dentro de cada bloque de entrenamiento y se evalúa en un periodo que el modelo no ha visto.':
+    'Honest metrics: model selection is repeated within each training block and evaluated on a period the model has not seen.',
+  'Con todos los datos (optimista) el R² sería {r2}. Criterio: {crit}.': 'Fitted on all data (optimistic), R² would be {r2}. Criterion: {crit}.',
+  'Incertidumbre: el valor real suele estar entre ×{lo} y ×{hi} de (1 + predicción) en 8 de cada 10 casos.':
+    'Uncertainty: the true value typically lies between ×{lo} and ×{hi} of (1 + prediction) in 8 out of 10 cases.',
+  'El modelo elegido cambia entre bloques: con más datos podría variar.': 'The selected model changes across blocks: it may vary with more data.',
+  'Por punto · validación temporal': 'Per site · temporal validation',
+  'Punto': 'Site',
+  'Pares': 'Pairs',
+  'Detección': 'Detection',
+  'Si un punto va mucho peor que los demás, el modelo no se generaliza bien a esa zona del embalse (orilla, cola, efecto de adyacencia…).':
+    'If one site performs much worse than the others, the model does not generalise well to that part of the reservoir (shoreline, tail, adjacency effect…).',
+  'Observado vs predicho (fuera de muestra)': 'Observed vs predicted (out-of-sample)',
+  'Observado': 'Observed',
+  'Predicho': 'Predicted',
+  'Intervalo 80 %': '80% interval',
+  'Predicho (fuera de muestra)': 'Predicted (out-of-sample)',
+  'Selección automática': 'Automatic selection',
+  'Comparativa': 'Comparison',
+  '{n} modelos probados · puntuación de validación temporal ({crit})': '{n} models tested · temporal validation score ({crit})',
+  '(no pintable)': '(not mappable)',
+  'Usar como índice en el mapa': 'Use as index on the map',
+  'El modelo elegido no se puede pintar en el mapa (no es lineal ni logístico). Incluye un modelo 🗺️ en el modo experto si lo necesitas en el mapa.':
+    'The selected model cannot be displayed on the map (it is neither linear nor logistic). Include a 🗺️ model in expert mode if you need it on the map.',
+  'Pares satélite–in situ': 'Satellite–in situ pairs',
+  'Predicciones validación': 'Validation predictions',
+  'Informe JSON': 'JSON report',
+  'Modelo .joblib': '.joblib model',
+  'Emparejamiento: medidas a ±{h} h del paso del satélite': 'Matching: measurements within ±{h} h of the satellite overpass',
+  '(o ±{d} días)': '(or ±{d} days)',
+  'una imagen por fecha, máscara de agua: {mask}.': 'one image per date, water mask: {mask}.',
+  'Retransformación con corrección de Duan (×{s}).': 'Back-transformation with Duan smearing correction (×{s}).',
+  '{n} medidas in situ en {d} fechas.': '{n} in situ measurements on {d} dates.',
+  // ── Calibration: predictors, kinds, models ──
+  'PCI · cociente B5/B4': 'PCI · B5/B4 ratio',
+  'Ficocianina / cianobacterias': 'Phycocyanin / cyanobacteria',
+  'NDCI · clorofila normalizado': 'NDCI · normalised chlorophyll',
+  'Diferencia B5 − B4': 'B5 − B4 difference',
+  'MCI · pico a 705 nm': 'MCI · 705 nm peak',
+  'Clorofila / biomasa': 'Chlorophyll / biomass',
+  'Borde rojo B6 − B5': 'Red edge B6 − B5',
+  'Cociente B6/B4': 'B6/B4 ratio',
+  'Otros': 'Other',
+  'Cociente B7/B4': 'B7/B4 ratio',
+  'Diferencia B6 − B5': 'B6 − B5 difference',
+  'Diferencia B7 − B5': 'B7 − B5 difference',
+  'Ficocianina': 'Phycocyanin',
+  'Clorofila-a': 'Chlorophyll-a',
+  'Otra variable': 'Other variable',
+  'Logística (saturación)': 'Logistic (saturation)',
+  'Polinómico 2': 'Polynomial (deg. 2)',
+  // ── Project page ──
+  'Monitorización activa · Sentinel-2': 'Active monitoring · Sentinel-2',
+  'Vigilancia satelital de': 'Satellite surveillance of',
+  'cianobacterias': 'cyanobacteria',
+  'en embalses': 'in reservoirs',
+  'Reconstrucción histórica y monitorización en tiempo casi real de la proliferación de cianobacterias en embalses españoles mediante teledetección Sentinel-2.':
+    'Historical reconstruction and near-real-time monitoring of cyanobacterial blooms in Spanish reservoirs using Sentinel-2 remote sensing.',
+  '31 embalses por defecto': '31 reservoirs by default',
+  'Desde 2017': 'Since 2017',
+  'Calibración con datos in situ': 'Calibration with in situ data',
+  'Abrir el visor →': 'Open the viewer →',
+  'Flujo de datos · del satélite a la alerta': 'Data flow · from satellite to alert',
+  'Reconstrucción histórica y estado actual de la proliferación de cianobacterias en embalses españoles:':
+    'Historical reconstruction and current status of cyanobacterial blooms in Spanish reservoirs:',
+  'Plan Nacional de Adaptación al Cambio Climático 2021–2030': 'National Climate Change Adaptation Plan 2021–2030',
+  'DMA': 'WFD',
+  'Directiva Marco del Agua 2000/60/CE': 'Water Framework Directive 2000/60/EC',
+  'ODS 6': 'SDG 6',
+  'Agua limpia y saneamiento': 'Clean water and sanitation',
+  'Justificación': 'Rationale',
+  'La proliferación de cianobacterias en embalses es una preocupación ambiental y de salud pública. HIBLOOMS evalúa la evolución histórica y actual de estos eventos en los embalses de España, contribuyendo a:':
+    'Cyanobacterial blooms in reservoirs are an environmental and public health concern. HIBLOOMS assesses the historical and current evolution of these events in Spanish reservoirs, helping to:',
+  'Monitorizar parámetros clave del cambio climático y sus efectos en los ecosistemas acuáticos.': 'Monitor key climate change parameters and their effects on aquatic ecosystems.',
+  'Identificar los factores ambientales y de contaminación que influyen en las floraciones.': 'Identify the environmental and pollution drivers that influence blooms.',
+  'Generar información para mejorar la gestión y la calidad del agua.': 'Generate information to improve water management and quality.',
+  'Hipótesis y relevancia': 'Hypothesis and relevance',
+  'Se estima que el': 'An estimated',
+  '40 % de los embalses españoles': '40% of Spanish reservoirs',
+  'son susceptibles a episodios de proliferación de cianobacterias. Con el aumento de temperaturas y de la eutrofización, el riesgo de floraciones tóxicas es mayor.':
+    'are susceptible to cyanobacterial bloom episodes. With rising temperatures and eutrophication, the risk of toxic blooms is increasing.',
+  'Teledetección satelital': 'Satellite remote sensing',
+  'para el seguimiento continuo.': 'for continuous monitoring.',
+  'Análisis ambiental avanzado': 'Advanced environmental analysis',
+  'de causas y patrones.': 'of drivers and patterns.',
+  'para anticipar episodios y sus impactos.': 'to anticipate episodes and their impacts.',
+  'Impacto esperado': 'Expected impact',
+  'Herramientas para una gestión sostenible de los embalses:': 'Tools for sustainable reservoir management:',
+  'Evaluar la': 'Assess',
+  'calidad del agua': 'water quality',
+  'con técnicas avanzadas.': 'with advanced techniques.',
+  'Diseñar estrategias para': 'Design strategies to',
+  'minimizar el riesgo de toxicidad': 'minimise toxicity risk',
+  'Apoyar a las administraciones en la': 'Support public authorities in',
+  'toma de decisiones basada en datos': 'data-driven decision-making',
+  'HIBLOOMS no solo estudia el presente: reconstruye el pasado para entender el futuro de la calidad del agua en España.':
+    'HIBLOOMS does not only study the present: it reconstructs the past to understand the future of water quality in Spain.',
+  'Ministerio de Ciencia, Innovación y Universidades': 'Spanish Ministry of Science, Innovation and Universities',
+  'Instituto BIOMA · Universidad de Navarra': 'BIOMA Institute · University of Navarra',
+  'Confederación Hidrográfica del Ebro': 'Ebro River Basin Authority',
+  'Confederación Hidrográfica del Júcar': 'Júcar River Basin Authority',
+  'Equipo de investigación': 'Research team',
+  'Equipo de trabajo': 'Work team',
+  // team roles / orgs
+  'Calidad del agua, QA/QC y biogeoquímica': 'Water quality, QA/QC and biogeochemistry',
+  'Geoquímica isotópica y geocronología con ²¹⁰Pb': 'Isotope geochemistry and ²¹⁰Pb geochronology',
+  'Técnicas analíticas y calidad del agua': 'Analytical techniques and water quality',
+  'Calidad del agua y técnicas analíticas': 'Water quality and analytical techniques',
+  'Análisis toxicológico': 'Toxicological analysis',
+  'SIG y teledetección, datos FAIR, digitalización': 'GIS and remote sensing, FAIR data, digitalisation',
+  'Taxonomía de cianobacterias e identificación de toxinas': 'Cyanobacterial taxonomy and toxin identification',
+  'Lab. de Radioecología/IAEA': 'Radioecology Lab./IAEA',
+  'Geocronología con ²¹⁰Pb': '²¹⁰Pb geochronology',
+  'Geoquímica isotópica y calidad del agua': 'Isotope geochemistry and water quality',
+  'Taxonomía de fitoplancton y algas': 'Phytoplankton and algal taxonomy',
+  'Taxonomía de cianobacterias y ecología acuática': 'Cyanobacterial taxonomy and aquatic ecology',
+  'Técnicas analíticas y muestreo de campo': 'Analytical techniques and field sampling',
+  'Técnicas analíticas': 'Analytical techniques',
+  'Análisis de datos': 'Data analysis',
+  'Calidad del agua': 'Water quality',
+  // data flow
+  'Imagen cada 2–5 días, 10–20 m': 'Image every 2–5 days, 10–20 m',
+  'Filtrado de nubes y máscara de agua': 'Cloud filtering and water mask',
+  'Índices espectrales': 'Spectral indices',
+  'PCI · NDCI · MCI y calibraciones in situ': 'PCI · NDCI · MCI and in situ calibrations',
+  'Mapas y series': 'Maps and time series',
+  'Concentración por píxel, puntos y embalse': 'Concentration per pixel, point and reservoir',
+  'Posible floración': 'Potential bloom',
+  'Detección temprana y seguimiento': 'Early detection and tracking',
+}

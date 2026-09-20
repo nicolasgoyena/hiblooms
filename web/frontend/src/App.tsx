@@ -1,21 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ComposedChart, Area, Line, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import MapView, { Basemap } from './MapView'
+import { CalibrationForm, CalibrationResult } from './Calibration'
+import ProjectPage from './ProjectPage'
+import { MonitorForm, MonitorResult } from './Monitor'
+import Climatology from './Climatology'
 import {
-  api, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
+  api, CalResult, ClimResp, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
   parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
 } from './api'
+import { locale, t, useLang } from './i18n'
+import LangToggle from './LangToggle'
+
+// Estado inicial de la URL: se lee una sola vez, antes de que nada la reescriba.
+const INITIAL_HASH = new URLSearchParams(location.hash.slice(1))
 
 const today = new Date()
 const iso = (d: Date) => d.toISOString().slice(0, 10)
 const monthsAgo = (n: number) => { const d = new Date(today); d.setMonth(d.getMonth() - n); return d }
-const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-const short = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
+const short = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short' })
 const niceMax = (v: number) => { const p = Math.pow(10, Math.floor(Math.log10(v || 1))); return Math.ceil(v / p) * p }
 
-type Tab = 'serie' | 'tabla' | 'clases'
+type Tab = 'serie' | 'tabla' | 'clases' | 'clima'
 
-export default function App() {
+export default function App({ user, onLogout }: { user?: string | null; onLogout?: () => void }) {
+  const [lang, setLang] = useLang()
   const [mode, setMode] = useState<'gee' | 'demo' | null>(null)
   const [reservoirs, setReservoirs] = useState<GeoJSON.FeatureCollection | null>(null)
   const [indices, setIndices] = useState<IndexMeta[]>([])
@@ -25,6 +35,7 @@ export default function App() {
   const [start, setStart] = useState(iso(monthsAgo(3)))
   const [end, setEnd] = useState(iso(today))
   const [maxCloud, setMaxCloud] = useState(30)
+  const [waterOnly, setWaterOnly] = useState(true)
   const [indexId, setIndexId] = useState('PC_Val_cal')
 
   const [pois, setPois] = useState<Poi[]>([])
@@ -45,22 +56,134 @@ export default function App() {
   const [classes, setClasses] = useState<{ date: string; index: string; rows: ClassRow[] } | null>(null)
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [clim, setClim] = useState<ClimResp | null>(null)
+  const [loadingClim, setLoadingClim] = useState(false)
+  const CLIM_OK = ['NDCI_ind', 'PCI_B5/B4']
+  const runClim = async (idx = indexId) => {
+    if (!reservoir) return
+    setPanelOpen(true); setTab('clima')
+    if (!CLIM_OK.includes(idx)) { setClim(null); return }
+    if (clim && clim.index === idx) return
+    setLoadingClim(true); setError(null)
+    try { setClim(await api.climatology({ reservoir, index: idx, water_only: waterOnly }, j => setProg(j))) }
+    catch (e: any) { setError(e.message) } finally { setLoadingClim(false); setProg(null) }
+  }
+  useEffect(() => { setClim(null) }, [reservoir])
+  useEffect(() => { if (panelOpen && tab === 'clima') runClim(indexId) }, [indexId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [appMode, setAppMode] = useState<'visor' | 'cal' | 'info' | 'mon'>('info')
+  const [monDays, setMonDays] = useState(30)
+  const [monCloud, setMonCloud] = useState(60)
+  const [mon, setMon] = useState<MonitorResp | null>(null)
+  const [monRunning, setMonRunning] = useState(false)
+  const runMonitor = async () => {
+    setMonRunning(true); setError(null)
+    try { setMon(await api.monitor({ days: monDays, max_cloud: monCloud }, j => setProg(j))) }
+    catch (e: any) { setError(e.message) } finally { setMonRunning(false); setProg(null) }
+  }
+  const openFromMonitor = (id: string, day: string | null) => {
+    setAppMode('visor'); pickReservoir(id)
+    if (day) { setStart(day); setEnd(iso(today)); setTimeout(() => searchFrom(id, day), 60) }
+  }
+  const [calRes, setCalRes] = useState<{ r: CalResult; unit: string; target: string } | null>(null)
+  const [calRunning, setCalRunning] = useState(false)
+  const [prog, setProg] = useState<{ progress: number; step: string } | null>(null)
+  const useCalibration = async (id: string) => {
+    const r = await api.indices(); setIndices(r.indices)
+    setAppMode('visor'); setCalRes(null)
+    changeIndex(id)
+  }
+
+  // ── Comparador de dos fechas ──
+  const [cmpDate, setCmpDate] = useState<string | null>(null)
+  const [cmpImg, setCmpImg] = useState<ImageResult | null>(null)
+  const [swipe, setSwipe] = useState(0.5)
+  const pickCompare = async (d: string | null) => {
+    setCmpDate(d); setCmpImg(null)
+    if (!d || !reservoir) return
+    try { setCmpImg(await api.image({ reservoir, date: d, index: indexId, max_cloud: maxCloud, points: [], water_only: waterOnly })) }
+    catch (e: any) { setError(e.message); setCmpDate(null) }
+  }
+  useEffect(() => { if (cmpDate) pickCompare(cmpDate) }, [indexId, waterOnly]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [copied, setCopied] = useState(false)
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(location.href) } catch { /* sin permiso: la URL ya está en la barra */ }
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
 
   const [basemap, setBasemap] = useState<Basemap>('satellite')
   const [showRgb, setShowRgb] = useState(false)
   const [opacity, setOpacity] = useState(0.9)
 
+  // ── Enlace permanente: el estado va en la URL (#e=EMBALSE&d=FECHA&i=INDICE) ──
+  const booted = useRef(false)
   useEffect(() => {
-    api.health().then(h => setMode(h.mode)).catch(() => setError('No se puede conectar con el backend (¿está arrancado en :8000?)'))
+    const q = INITIAL_HASH
+    const e = q.get('e'), d = q.get('d'), i = q.get('i'), m = q.get('m')
+    if (m === 'visor' || m === 'cal' || m === 'mon' || m === 'info') setAppMode(m)
+    if (i) setIndexId(i)
+    if (e) {
+      setAppMode(m === 'cal' || m === 'mon' ? (m as any) : 'visor')
+      setReservoir(e)
+      api.pois(e).then(r => setPois(r.points)).catch(() => {})
+      if (d) { setStart(d); setTimeout(() => searchFrom(e, d), 200) }
+    }
+    booted.current = true
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!booted.current) return
+    const q = new URLSearchParams()
+    q.set('m', appMode)
+    if (reservoir) q.set('e', reservoir)
+    if (activeDate) q.set('d', activeDate)
+    if (indexId) q.set('i', indexId)
+    history.replaceState(null, '', '#' + q.toString())
+  }, [appMode, reservoir, activeDate, indexId])
+
+  useEffect(() => {
+    api.health().then(h => setMode(h.mode)).catch(() => setError(t('No se puede conectar con el backend (¿está arrancado en :8000?)')))
     api.reservoirs().then(setReservoirs).catch(() => {})
     api.indices().then(r => { setIndices(r.indices); setPalette(r.palette) }).catch(() => {})
   }, [])
 
   const meta = indices.find(i => i.id === indexId)
-  const names = useMemo(() => (reservoirs?.features ?? []).map(f => String(f.properties?.NOMBRE)).sort((a, b) => niceName(a).localeCompare(niceName(b))), [reservoirs])
+  const labels = useMemo(() => {
+    const m: Record<string, string> = {}
+    ;(reservoirs?.features ?? []).forEach(f => { const id = String(f.properties?.NOMBRE); m[id] = f.properties?.LABEL ?? niceName(id) })
+    return m
+  }, [reservoirs])
+  const labelOf = (id: string) => labels[id] ?? niceName(id)
+  const names = useMemo(() => (reservoirs?.features ?? []).filter(f => !f.properties?.CUSTOM).map(f => String(f.properties?.NOMBRE)).sort((a, b) => labelOf(a).localeCompare(labelOf(b))), [reservoirs]) // eslint-disable-line react-hooks/exhaustive-deps
+  const customNames = useMemo(() => (reservoirs?.features ?? []).filter(f => f.properties?.CUSTOM).map(f => String(f.properties?.NOMBRE)), [reservoirs])
+  const shpRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const onShapefile = async (f: File | undefined) => {
+    if (!f) return
+    setUploading(true); setError(null)
+    try {
+      const r = await api.uploadShapefile(f)
+      setReservoirs(prev => ({ type: 'FeatureCollection', features: [...(prev?.features ?? []), ...r.geojson.features] }))
+      const first = String(r.geojson.features[0].properties?.NOMBRE)
+      setTimeout(() => pickReservoir(first), 50)
+    } catch (e: any) { setError(e.message) } finally {
+      setUploading(false); if (shpRef.current) shpRef.current.value = ''
+    }
+  }
+  const removeUpload = async (resId: string) => {
+    const uid = resId.split(':')[1]
+    const n = (reservoirs?.features ?? []).filter(f => String(f.properties?.NOMBRE).startsWith(`u:${uid}:`)).length
+    if (!window.confirm(t('¿Quitar este shapefile ({n} polígonos) de tus embalses?', { n }))) return
+    try {
+      await api.deleteUpload(uid)
+      setReservoirs(prev => prev && ({ ...prev, features: prev.features.filter(f => !String(f.properties?.NOMBRE).startsWith(`u:${uid}:`)) }))
+      setReservoir(null); resetResults(); setPois([])
+    } catch (e: any) { setError(e.message) }
+  }
   const groups = useMemo(() => Array.from(new Set(indices.map(i => i.group))), [indices])
 
-  const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null) }
+  const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null); setCmpDate(null); setCmpImg(null) }
 
   const pickReservoir = (n: string) => {
     if (n === reservoir) return // clic de nuevo en el mismo embalse: no borrar resultados
@@ -79,13 +202,14 @@ export default function App() {
     if (!f) return
     try {
       const pts = parsePoisCsv(await f.text())
-      if (!pts.length) throw new Error('No se encontraron puntos válidos en el CSV')
+      if (!pts.length) throw new Error(t('No se encontraron puntos válidos en el CSV'))
       setPois(ps => [...ps.filter(p => !pts.some(q => q.name === p.name)), ...pts]); setSeries(null)
     } catch (e: any) { setError(e.message) }
     if (fileRef.current) fileRef.current.value = ''
   }
   // recargar valores en puntos cuando cambian
-  useEffect(() => { if (activeDate) loadDate(activeDate) }, [pois]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (activeDate) loadDate(activeDate) }, [pois])
+  useEffect(() => { if (activeDate) { setSeries(null); setClasses(null); loadDate(activeDate) } }, [waterOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── búsqueda e imagen ──────────────────────
   const search = async () => {
@@ -98,10 +222,25 @@ export default function App() {
     } catch (e: any) { setError(e.message) } finally { setSearching(false) }
   }
 
+  /** Búsqueda para un embalse concreto (desde el monitor, sin esperar al estado). */
+  const searchFrom = async (res: string, from: string) => {
+    setSearching(true); setError(null)
+    try {
+      const r = await api.search({ reservoir: res, start: from, end: iso(today), max_cloud: maxCloud })
+      setHits(r.dates)
+      if (r.dates.length) {
+        const d = r.dates[r.dates.length - 1].date
+        setActiveDate(d); setLoadingImg(true)
+        try { setImg(await api.image({ reservoir: res, date: d, index: indexId, max_cloud: maxCloud, points: [], water_only: waterOnly })) }
+        finally { setLoadingImg(false) }
+      }
+    } catch (e: any) { setError(e.message) } finally { setSearching(false) }
+  }
+
   const loadDate = async (d: string, idx = indexId) => {
     if (!reservoir) return
     setActiveDate(d); setLoadingImg(true); setError(null)
-    try { setImg(await api.image({ reservoir, date: d, index: idx, max_cloud: maxCloud, points: pois })) }
+    try { setImg(await api.image({ reservoir, date: d, index: idx, max_cloud: maxCloud, points: pois, water_only: waterOnly })) }
     catch (e: any) { setImg(null); setError(e.message) } finally { setLoadingImg(false) }
   }
 
@@ -116,7 +255,7 @@ export default function App() {
     setPanelOpen(true); setTab(t => (t === 'clases' ? 'serie' : t))
     if (series) return
     setLoadingSeries(true); setError(null)
-    try { setSeries((await api.timeseries({ reservoir, index: indexId, dates: hits.map(h => h.date), max_cloud: maxCloud, points: pois })).series) }
+    try { setSeries((await api.timeseries({ reservoir, index: indexId, dates: hits.map(h => h.date), max_cloud: maxCloud, points: pois, water_only: waterOnly })).series) }
     catch (e: any) { setError(e.message) } finally { setLoadingSeries(false) }
   }
 
@@ -125,7 +264,7 @@ export default function App() {
     setPanelOpen(true); setTab('clases')
     if (classes && classes.date === activeDate && classes.index === indexId) return
     setLoadingClasses(true); setError(null)
-    try { setClasses({ date: activeDate, index: indexId, rows: (await api.classes({ reservoir, date: activeDate, index: indexId, max_cloud: maxCloud })).classes }) }
+    try { setClasses({ date: activeDate, index: indexId, rows: (await api.classes({ reservoir, date: activeDate, index: indexId, max_cloud: maxCloud, water_only: waterOnly })).classes }) }
     catch (e: any) { setError(e.message) } finally { setLoadingClasses(false) }
   }
   useEffect(() => { if (panelOpen && tab === 'clases') runClasses() }, [activeDate, indexId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -140,13 +279,14 @@ export default function App() {
     } catch (e: any) { setError(e.message) } finally { setDownloading(null) }
   }
 
+  const safeName = reservoir ? labelOf(reservoir).replace(/[^\w-]+/g, '_') : ''
   const csvDate = () => {
     if (!reservoir || !activeDate || !img || !meta) return
     const rows = [
-      { embalse: reservoir, fecha: activeDate, pasada_utc: img.datetime, indice: indexId, ubicacion: 'Media_Embalse', lat: '', lon: '', valor: img.mean, nubes_pct: img.cloud, cobertura_pct: img.coverage },
-      ...pois.map(p => ({ embalse: reservoir, fecha: activeDate, pasada_utc: img.datetime, indice: indexId, ubicacion: p.name, lat: p.lat, lon: p.lon, valor: img.points?.[p.name] ?? null, nubes_pct: img.cloud, cobertura_pct: img.coverage })),
+      { embalse: labelOf(reservoir), fecha: activeDate, pasada_utc: img.datetime, indice: indexId, ubicacion: 'Media_Embalse', lat: '', lon: '', valor: img.mean, nubes_pct: img.cloud, cobertura_pct: img.coverage },
+      ...pois.map(p => ({ embalse: labelOf(reservoir), fecha: activeDate, pasada_utc: img.datetime, indice: indexId, ubicacion: p.name, lat: p.lat, lon: p.lon, valor: img.points?.[p.name] ?? null, nubes_pct: img.cloud, cobertura_pct: img.coverage })),
     ]
-    downloadText(`hiblooms_${reservoir}_${activeDate}_${indexId.replace('/', '-')}.csv`, toCsv(rows))
+    downloadText(`hiblooms_${safeName}_${activeDate}_${indexId.replace('/', '-')}.csv`, toCsv(rows))
   }
 
   const csvSeries = () => {
@@ -156,7 +296,7 @@ export default function App() {
       pois.forEach(p => { o[p.name] = r[p.name] ?? null })
       return o
     })
-    downloadText(`hiblooms_${reservoir}_serie_${indexId.replace('/', '-')}.csv`, toCsv(rows))
+    downloadText(`hiblooms_${safeName}_serie_${indexId.replace('/', '-')}.csv`, toCsv(rows))
   }
 
   const demoFill = mode === 'demo' && img && meta && img.mean !== null ? colorAt(palette, (img.mean - meta.min) / (meta.max - meta.min)) : null
@@ -165,79 +305,145 @@ export default function App() {
 
   return (
     <div className="app">
-      <MapView
+      <MapView lang={lang}
         reservoirs={reservoirs} selected={reservoir} onSelect={pickReservoir} basemap={basemap}
         indexTileUrl={img?.tile_url ?? null} rgbTileUrl={img?.rgb_tile_url ?? null}
         showRgb={showRgb} opacity={opacity} demoFill={demoFill}
         points={pois} addingPoint={adding} onMapClick={addPoint}
         onPoiClick={() => { if (hits && hits.length > 1) { setTab('serie'); runSeries() } }}
+        compareTileUrl={cmpImg?.tile_url ?? null} swipe={swipe}
       />
 
       {/* ── Panel de búsqueda ─────────────────────────── */}
       <aside className="panel">
         <header className="brand">
           <img src="/logo_hiblooms.png" alt="HIBLOOMS" />
-          <div>
-            <h1>Visor satelital</h1>
-            <p>Sentinel-2 · cianobacterias en embalses</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1>{t('Visor satelital')}</h1>
+            <p>{t('Sentinel-2 · floraciones algales en embalses')}</p>
           </div>
+          <LangToggle lang={lang} setLang={setLang} />
         </header>
+        {onLogout && (
+          <div className="userbar">
+            <span>👤 {user}</span>
+            <button className="link" onClick={onLogout}>{t('Cerrar sesión')}</button>
+          </div>
+        )}
 
-        {mode === 'demo' && <div className="badge warn">Modo demo · datos simulados (sin credenciales GEE)</div>}
+        {mode === 'demo' && <div className="badge warn">{t('Modo demo · datos simulados (sin credenciales GEE)')}</div>}
 
+        <div className="seg dark big">
+          <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}>ℹ️ {t('Proyecto')}</button>
+          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
+          <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Monitor')}</button>
+          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')}>🧪 {t('Calibración')}</button>
+        </div>
+
+        {appMode !== 'info' && appMode !== 'mon' && (
         <section>
-          <label className="lbl">Embalse</label>
-          <select value={reservoir ?? ''} onChange={e => pickReservoir(e.target.value)}>
-            <option value="" disabled>Elige uno o haz clic en el mapa…</option>
-            {names.map(n => <option key={n} value={n}>{niceName(n)}</option>)}
-          </select>
-        </section>
+            <label className="lbl">{t('Embalse')}</label>
+            <select value={reservoir ?? ''} onChange={e => pickReservoir(e.target.value)}>
+              <option value="" disabled>{t('Elige uno o haz clic en el mapa…')}</option>
+              {customNames.length > 0 && (
+                <optgroup label={t('Tus embalses (shapefile)')}>
+                  {customNames.map(n => <option key={n} value={n}>{labelOf(n)}</option>)}
+                </optgroup>
+              )}
+              <optgroup label={t('Embalses HIBLOOMS')}>
+                {names.map(n => <option key={n} value={n}>{labelOf(n)}</option>)}
+              </optgroup>
+            </select>
+            <button className="link upl" onClick={() => shpRef.current?.click()} disabled={uploading}>
+              {uploading ? t('Subiendo shapefile…') : t('+ Subir shapefile propio (ZIP)')}
+            </button>
+            {reservoir?.startsWith('u:') && (
+              <button className="link upl del" onClick={() => removeUpload(reservoir)}>
+                🗑 {t('Quitar este shapefile')}
+              </button>
+            )}
+            <input ref={shpRef} className="file-in" type="file" accept=".zip,application/zip" onChange={e => onShapefile(e.target.files?.[0])} />
+          </section>
+        )}
 
+        {prog && (
+          <div className="prog">
+            <div className="prog-bar"><i style={{ width: `${Math.max(3, prog.progress)}%` }} /></div>
+            <small>{prog.step || t('Calculando…')} · {prog.progress}%</small>
+          </div>
+        )}
+
+        {appMode === 'info' ? (
+          <div className="pj-nav">
+            <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
+            <p>🛰️ <b>{t('Visor')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
+            <p>🧪 <b>{t('Calibración')}</b>: {t('sube tus medidas in situ y obtén un modelo validado que se pinta como índice en el mapa.')}</p>
+            <button className="primary" onClick={() => setAppMode('visor')}>{t('Empezar')}</button>
+          </div>
+        ) : appMode === 'mon' ? (
+          <>
+            <MonitorForm days={monDays} setDays={setMonDays} maxCloud={monCloud} setMaxCloud={setMonCloud}
+              onRun={runMonitor} running={monRunning} />
+            {error && <div className="badge err">{error}</div>}
+          </>
+        ) : appMode === 'cal' ? (
+          <>
+            <CalibrationForm reservoir={reservoir} reservoirLabel={reservoir ? labelOf(reservoir) : ''}
+              onResult={(r, unit, target) => setCalRes({ r, unit, target })} onError={setError}
+              running={calRunning} setRunning={setCalRunning} onProgress={setProg} />
+            {error && <div className="badge err">{error}</div>}
+          </>
+        ) : (<>
         <section className="row2">
-          <div><label className="lbl">Desde</label><input type="date" value={start} max={end} onChange={e => setStart(e.target.value)} /></div>
-          <div><label className="lbl">Hasta</label><input type="date" value={end} min={start} max={iso(today)} onChange={e => setEnd(e.target.value)} /></div>
+          <div><label className="lbl">{t('Desde')}</label><input type="date" value={start} max={end} onChange={e => setStart(e.target.value)} /></div>
+          <div><label className="lbl">{t('Hasta')}</label><input type="date" value={end} min={start} max={iso(today)} onChange={e => setEnd(e.target.value)} /></div>
         </section>
         <div className="chips">
-          {[1, 3, 6, 12].map(m => <button key={m} className="chip" onClick={() => { setStart(iso(monthsAgo(m))); setEnd(iso(today)) }}>{m === 12 ? '1 año' : `${m} m`}</button>)}
+          {[1, 3, 6, 12].map(m => <button key={m} className="chip" onClick={() => { setStart(iso(monthsAgo(m))); setEnd(iso(today)) }}>{m === 12 ? t('1 año') : t('{m} m', { m })}</button>)}
         </div>
 
         <section>
-          <label className="lbl">Nubosidad máxima <b>{maxCloud}%</b></label>
+          <label className="lbl">{t('Nubosidad máxima')} <b>{maxCloud}%</b></label>
           <input type="range" min={0} max={100} step={5} value={maxCloud} onChange={e => setMaxCloud(+e.target.value)} />
         </section>
 
+        <label className="switch" title={t('Detecta el agua en cada imagen (MNDWI/NDWI) y descarta 20 m de borde, para que las orillas secas no se cuenten como floración.')}>
+          <input type="checkbox" checked={waterOnly} onChange={e => setWaterOnly(e.target.checked)} />
+          <span>{t('Solo lámina de agua')}<small>{t('quita orillas y píxeles de borde')}</small></span>
+        </label>
+
         <section>
-          <label className="lbl">Índice</label>
+          <label className="lbl">{t('Índice')}</label>
           <select value={indexId} onChange={e => changeIndex(e.target.value)}>
-            {groups.map(g => <optgroup key={g} label={g}>{indices.filter(i => i.group === g).map(i => <option key={i.id} value={i.id}>{i.label}</option>)}</optgroup>)}
+            {groups.map(g => <optgroup key={g} label={t(g)}>{indices.filter(i => i.group === g).map(i => <option key={i.id} value={i.id}>{t(i.label)}</option>)}</optgroup>)}
           </select>
         </section>
 
         {reservoir && (
           <section className="pois">
-            <label className="lbl">Puntos de interés <b>{pois.length || ''}</b></label>
+            <label className="lbl">{t('Puntos de interés')} <b>{pois.length || ''}</b></label>
             {pois.length > 0 && (
               <div className="poi-list">
                 {pois.map((p, i) => (
                   <span key={p.name} className="poi-chip" title={`${p.lat}, ${p.lon}`}>
                     <i style={{ background: poiColor(i) }} />{p.name}
-                    <button onClick={() => removePoint(p.name)} aria-label={`Quitar ${p.name}`}>×</button>
+                    <button onClick={() => removePoint(p.name)} aria-label={t('Quitar {name}', { name: p.name })}>×</button>
                   </span>
                 ))}
               </div>
             )}
             <div className="poi-actions">
               <button className={'ghost' + (adding ? ' on' : '')} onClick={() => setAdding(a => !a)}>
-                {adding ? 'Haz clic en el mapa…' : '+ Añadir en el mapa'}
+                {adding ? t('Haz clic en el mapa…') : t('+ Añadir en el mapa')}
               </button>
-              <button className="ghost" onClick={() => fileRef.current?.click()}>Subir CSV</button>
+              <button className="ghost" onClick={() => fileRef.current?.click()}>{t('Subir CSV')}</button>
               <input ref={fileRef} className="file-in" type="file" accept=".csv,text/csv" onChange={e => onCsv(e.target.files?.[0])} />
             </div>
           </section>
         )}
 
         <button className="primary" disabled={!reservoir || searching} onClick={search}>
-          {searching ? <><span className="spin" /> Buscando imágenes…</> : 'Buscar imágenes'}
+          {searching ? <><span className="spin" /> {t('Buscando imágenes…')}</> : t('Buscar imágenes')}
         </button>
 
         {error && <div className="badge err">{error}</div>}
@@ -245,18 +451,38 @@ export default function App() {
         {hits && (
           <section className="results">
             <div className="res-head">
-              <span><b>{hits.length}</b> fechas válidas</span>
+              <span><b>{hits.length}</b> {t('fechas válidas')}</span>
             </div>
             {hits.length > 0 && (
               <div className="poi-actions">
                 <button className="ghost solid" onClick={() => { setTab('serie'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>
-                  {loadingSeries ? 'Calculando…' : '📈 Serie temporal'}
+                  {loadingSeries ? t('Calculando…') : '📈 ' + t('Serie temporal')}
                 </button>
-                <button className="ghost solid" onClick={() => { setTab('tabla'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>Tabla</button>
-                <button className="ghost solid" onClick={runClasses} disabled={!img}>Clases</button>
+                <button className="ghost solid" onClick={() => { setTab('tabla'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>{t('Tabla')}</button>
+                <button className="ghost solid" onClick={runClasses} disabled={!img}>{t('Clases')}</button>
+                <button className="ghost solid" onClick={() => runClim()}>📊 {t('Climatología')}</button>
+                <button className="ghost solid" onClick={copyLink}>{copied ? '✓ ' + t('Enlace copiado') : '🔗 ' + t('Copiar enlace')}</button>
               </div>
             )}
-            {hits.length === 0 && <p className="muted">Sin imágenes con esos filtros. Prueba a subir la nubosidad o ampliar el rango.</p>}
+            {hits.length === 0 && <p className="muted">{t('Sin imágenes con esos filtros. Prueba a subir la nubosidad o ampliar el rango.')}</p>}
+            {hits.length > 1 && (
+              <section className="cmp">
+                <label className="lbl">{t('Comparar con otra fecha')}</label>
+                <select value={cmpDate ?? ''} onChange={e => pickCompare(e.target.value || null)}>
+                  <option value="">{t('Sin comparación')}</option>
+                  {hits.slice().reverse().filter(h => h.date !== activeDate).map(h => (
+                    <option key={h.date} value={h.date}>{fmtDate(h.date)}</option>
+                  ))}
+                </select>
+                {cmpDate && (
+                  <>
+                    <input type="range" min={0} max={100} value={Math.round(swipe * 100)}
+                      onChange={e => setSwipe(+e.target.value / 100)} />
+                    <p className="muted small">{t('Izquierda')}: {activeDate ? fmtDate(activeDate) : '—'} · {t('derecha')}: {fmtDate(cmpDate)}</p>
+                  </>
+                )}
+              </section>
+            )}
             <div className="dates">
               {hits.slice().reverse().map(h => (
                 <button key={h.date} className={'date' + (h.date === activeDate ? ' on' : '')} onClick={() => loadDate(h.date)}>
@@ -266,33 +492,47 @@ export default function App() {
             </div>
           </section>
         )}
+        </>)}
       </aside>
+
+      {cmpImg?.tile_url && (
+        <div className="swipe-handle" style={{ left: `calc(${swipe * 100}%)` }} aria-hidden>
+          <span>{activeDate ? short(activeDate) : ''}</span><i />
+          <span>{cmpDate ? short(cmpDate) : ''}</span>
+        </div>
+      )}
 
       {/* ── Controles de capas ───────────────────────── */}
       <div className="layers">
         <div className="seg">
-          <button className={basemap === 'satellite' ? 'on' : ''} onClick={() => setBasemap('satellite')}>Satélite</button>
-          <button className={basemap === 'light' ? 'on' : ''} onClick={() => setBasemap('light')}>Mapa</button>
+          <button className={basemap === 'satellite' ? 'on' : ''} onClick={() => setBasemap('satellite')}>{t('Satélite')}</button>
+          <button className={basemap === 'light' ? 'on' : ''} onClick={() => setBasemap('light')}>{t('Mapa')}</button>
         </div>
         {img?.rgb_tile_url && <label className="tog"><input type="checkbox" checked={showRgb} onChange={e => setShowRgb(e.target.checked)} /> RGB Sentinel-2</label>}
-        {img?.tile_url && <label className="tog">Opacidad <input type="range" min={0} max={1} step={0.05} value={opacity} onChange={e => setOpacity(+e.target.value)} /></label>}
+        {img?.tile_url && <label className="tog">{t('Opacidad')} <input type="range" min={0} max={1} step={0.05} value={opacity} onChange={e => setOpacity(+e.target.value)} /></label>}
       </div>
 
       {/* ── Tarjeta de imagen ────────────────────────── */}
-      {activeDate && meta && (
+      {appMode === 'visor' && activeDate && meta && (
         <div className="card info">
           <div className="info-top">
             <div>
-              <p className="eyebrow">{niceName(reservoir!)}</p>
+              <p className="eyebrow">{labelOf(reservoir!)}</p>
               <h2>{fmtDate(activeDate)}</h2>
             </div>
             {loadingImg && <span className="spin dark" />}
           </div>
           <div className="kpis">
-            <div><span>Media embalse</span><b>{fmt(img?.mean)}</b><em>{meta.unit}</em></div>
-            <div><span>Nubes</span><b>{fmt(img?.cloud, 1)}</b><em>%</em></div>
-            <div><span>Cobertura</span><b>{fmt(img?.coverage, 0)}</b><em>%</em></div>
+            <div><span>{t('Media embalse')}</span><b>{fmt(img?.mean)}</b><em>{meta.unit}</em></div>
+            <div><span>{t('Nubes')}</span><b>{fmt(img?.cloud, 1)}</b><em>%</em></div>
+            <div><span>{t('Cobertura')}</span><b>{fmt(img?.coverage, 0)}</b><em>%</em></div>
           </div>
+          {img?.interval80 && meta && img.mean != null && (
+            <p className="muted small" style={{ margin: 0 }}>{t('Rango probable (80 %): {lo} – {hi} {unit}', { lo: fmt(img.interval80[0], 1), hi: fmt(img.interval80[1], 1), unit: meta.unit })}</p>
+          )}
+          {img?.extrapolation_pct != null && img.extrapolation_pct > 5 && (
+            <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}>⚠️ {t('{pct} % del embalse está fuera del rango de índices con el que se calibró: esos valores son extrapolación.', { pct: fmt(img.extrapolation_pct, 0) })}</div>
+          )}
           {pois.length > 0 && (
             <div className="pt-vals">
               {pois.map((p, i) => (
@@ -301,40 +541,41 @@ export default function App() {
             </div>
           )}
           <div className="legend">
-            <p>{meta.label}{meta.unit && ` (${meta.unit})`}</p>
+            <p>{t(meta.label)}{meta.unit && ` (${meta.unit})`}</p>
             <div className="ramp" style={{ background: `linear-gradient(90deg, ${palette.join(',')})` }} />
-            <div className="ticks"><span>{meta.min}</span><span>{(meta.min + meta.max) / 2}</span><span>≥ {meta.max}</span></div>
+            <div className="ticks"><span>{fmt(meta.min)}</span><span>{fmt((meta.min + meta.max) / 2)}</span><span>≥ {fmt(meta.max)}</span></div>
           </div>
           <div className="dl">
-            <button onClick={runClasses} disabled={!img}>Clases</button>
+            <button onClick={runClasses} disabled={!img}>{t('Clases')}</button>
             <button onClick={csvDate} disabled={!img}>CSV</button>
-            <button onClick={() => geotiff(false)} disabled={!img || !!downloading || mode === 'demo'} title="GeoTIFF del índice actual">
+            <button onClick={() => geotiff(false)} disabled={!img || !!downloading || mode === 'demo'} title={t('GeoTIFF del índice actual')}>
               {downloading === 'one' ? '…' : 'GeoTIFF'}
             </button>
-            <button onClick={() => geotiff(true)} disabled={!img || !!downloading || mode === 'demo'} title="GeoTIFF multibanda con todos los índices">
-              {downloading === 'all' ? '…' : 'Todos'}
+            <button onClick={() => geotiff(true)} disabled={!img || !!downloading || mode === 'demo'} title={t('GeoTIFF multibanda con todos los índices')}>
+              {downloading === 'all' ? '…' : t('Todos')}
             </button>
           </div>
-          {img?.datetime && <p className="muted small">Pasada: {img.datetime} UTC</p>}
+          {img?.datetime && <p className="muted small">{t('Pasada: {dt} UTC', { dt: img.datetime })}</p>}
         </div>
       )}
 
       {/* ── Panel de análisis ────────────────────────── */}
-      {panelOpen && meta && (
+      {appMode === 'visor' && panelOpen && meta && (
         <div className="card series">
           <div className="series-head">
             <div className="tabs">
-              <button className={tab === 'serie' ? 'on' : ''} onClick={() => { setTab('serie'); runSeries() }}>Serie temporal</button>
-              <button className={tab === 'tabla' ? 'on' : ''} onClick={() => { setTab('tabla'); runSeries() }}>Tabla</button>
-              <button className={tab === 'clases' ? 'on' : ''} onClick={runClasses} disabled={!activeDate}>Clases</button>
+              <button className={tab === 'serie' ? 'on' : ''} onClick={() => { setTab('serie'); runSeries() }}>{t('Serie temporal')}</button>
+              <button className={tab === 'tabla' ? 'on' : ''} onClick={() => { setTab('tabla'); runSeries() }}>{t('Tabla')}</button>
+              <button className={tab === 'clases' ? 'on' : ''} onClick={runClasses} disabled={!activeDate}>{t('Clases')}</button>
+              <button className={tab === 'clima' ? 'on' : ''} onClick={() => runClim()}>{t('Climatología')}</button>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {tab !== 'clases' && series && <button className="link dark" onClick={csvSeries}>Descargar CSV</button>}
-              <button className="x" onClick={() => setPanelOpen(false)} aria-label="Cerrar">×</button>
+              {(tab === 'serie' || tab === 'tabla') && series && <button className="link dark" onClick={csvSeries}>{t('Descargar CSV')}</button>}
+              <button className="x" onClick={() => setPanelOpen(false)} aria-label={t('Cerrar')}>×</button>
             </div>
           </div>
 
-          {tab !== 'clases' && loadingSeries && <p className="muted an-empty"><span className="spin dark" /> Calculando serie… (con GEE tarda ~5–10 s por fecha)</p>}
+          {tab !== 'clases' && loadingSeries && <p className="muted an-empty"><span className="spin dark" /> {t('Calculando serie… (con GEE tarda ~5–10 s por fecha)')}</p>}
 
           {tab === 'serie' && series && (
             <>
@@ -353,20 +594,20 @@ export default function App() {
                   <Tooltip labelFormatter={(l: any) => fmtDate(String(l))} formatter={(v: any, n: any) => [`${fmt(v)} ${meta.unit}`, n]} />
                   {pois.length > 0 && <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />}
                   {activeDate && <ReferenceLine x={activeDate} stroke="#C8561B" strokeDasharray="4 3" />}
-                  <Area name="Media embalse" type="monotone" dataKey="mean" stroke="#0F8A78" strokeWidth={2.5} fill="url(#g)" connectNulls dot={{ r: 3, fill: '#0F8A78' }} activeDot={{ r: 5 }} />
+                  <Area name={t('Media embalse')} type="monotone" dataKey="mean" stroke="#0F8A78" strokeWidth={2.5} fill="url(#g)" connectNulls dot={{ r: 3, fill: '#0F8A78' }} activeDot={{ r: 5 }} />
                   {pois.map((p, i) => (
                     <Line key={p.name} name={p.name} type="monotone" dataKey={p.name} stroke={poiColor(i)} strokeWidth={1.8} dot={{ r: 2.5 }} connectNulls />
                   ))}
                 </ComposedChart>
               </ResponsiveContainer>
-              <p className="muted small">Haz clic en un punto de la gráfica para ver su mapa.</p>
+              <p className="muted small">{t('Haz clic en un punto de la gráfica para ver su mapa.')}</p>
             </>
           )}
 
           {tab === 'tabla' && series && (
             <div className="tbl-wrap">
               <table className="tbl">
-                <thead><tr><th>Fecha</th><th>Media embalse</th>{pois.map(p => <th key={p.name}>{p.name}</th>)}</tr></thead>
+                <thead><tr><th>{t('Fecha')}</th><th>{t('Media embalse')}</th>{pois.map(p => <th key={p.name}>{p.name}</th>)}</tr></thead>
                 <tbody>
                   {series.slice().reverse().map(r => (
                     <tr key={r.date} onClick={() => loadDate(r.date)} style={{ cursor: 'pointer', background: r.date === activeDate ? '#E6F1EE' : undefined }}>
@@ -379,11 +620,20 @@ export default function App() {
             </div>
           )}
 
+          {tab === 'clima' && (loadingClim
+            ? <p className="muted an-empty"><span className="spin dark" /> {prog?.step || t('Calculando la climatología…')} {prog ? `· ${prog.progress}%` : ''}</p>
+            : !CLIM_OK.includes(indexId)
+              ? <div className="an-empty">
+                  <p className="muted">{t('La climatología compara con años anteriores, así que solo tiene sentido con índices comparables entre embalses. Elige NDCI o PCI.')}</p>
+                  <button className="ghost solid" style={{ maxWidth: 200, margin: '10px auto 0' }}
+                    onClick={() => { changeIndex('NDCI_ind'); runClim('NDCI_ind') }}>{t('Ver con NDCI')}</button>
+                </div>
+              : clim ? <Climatology data={clim} /> : null)}
           {tab === 'clases' && (
-            loadingClasses ? <p className="muted an-empty"><span className="spin dark" /> Calculando superficie por clases…</p>
+            loadingClasses ? <p className="muted an-empty"><span className="spin dark" /> {t('Calculando superficie por clases…')}</p>
             : classes && (
               <>
-                <p className="muted small" style={{ marginBottom: 10 }}>Superficie de agua por rangos de <b>{meta.label}</b> · {fmtDate(classes.date)}</p>
+                <p className="muted small" style={{ marginBottom: 10 }}>{t('Superficie de agua por rangos de')} <b>{t(meta.label)}</b> · {fmtDate(classes.date)}</p>
                 <div className="bars">
                   {classes.rows.map((c, i) => (
                     <div className="bar" key={i}>
@@ -399,10 +649,22 @@ export default function App() {
         </div>
       )}
 
-      {!reservoir && mode && (
-        <div className="hint">Selecciona un embalse en el mapa o en el panel para empezar</div>
+      {appMode === 'cal' && calRes && (
+        <CalibrationResult r={calRes.r} unit={calRes.unit} target={calRes.target} reservoirLabel={reservoir ? labelOf(reservoir) : ''}
+          onUse={useCalibration} onClose={() => setCalRes(null)} />
       )}
-      {adding && <div className="hint">Haz clic en el embalse para añadir un punto · Esc para cancelar</div>}
+      {appMode === 'cal' && calRunning && <div className="hint">{prog?.step || t('Extrayendo índices de Sentinel-2 y ajustando modelos…')}</div>}
+
+      {appMode === 'mon' && mon && (
+        <MonitorResult data={mon} onOpen={openFromMonitor} onClose={() => setAppMode('visor')} />
+      )}
+      {appMode === 'mon' && monRunning && !mon && <div className="hint">{prog?.step || t('Consultando Sentinel-2 en todos los embalses…')}</div>}
+      {appMode === 'info' && <ProjectPage lang={lang} setLang={setLang} onClose={() => setAppMode('visor')} onStart={() => setAppMode('visor')} />}
+
+      {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && (
+        <div className="hint">{t('Selecciona un embalse en el mapa o en el panel para empezar')}</div>
+      )}
+      {adding && <div className="hint">{t('Haz clic en el embalse para añadir un punto · Esc para cancelar')}</div>}
       <EscListener onEsc={() => setAdding(false)} />
     </div>
   )

@@ -1,31 +1,30 @@
+# Despliegue del visor HIBLOOMS (React + FastAPI en un solo contenedor).
+# Un único servicio sirve la web y la API, así que solo hay un enlace público.
 services:
   - type: web
-    name: hiblooms-api
-    runtime: python
-    pythonVersion: "3.11.9"
-    buildCommand: pip install -r requirements_api.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    name: hiblooms
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free              # se duerme a los 15 min sin visitas (~1 min en despertar)
+    healthCheckPath: /api/health
     envVars:
+      # JSON completo de la cuenta de servicio de Google Earth Engine.
+      # Sin esto, el servicio arranca en modo demo con datos simulados.
       - key: GEE_SERVICE_ACCOUNT_JSON
         sync: false
-      # Conexión a PostgreSQL donde se persisten los jobs.
-      # Formato: postgresql+psycopg2://usuario:password@host:5432/dbname
-      - key: DATABASE_URL
+      # Usuarios de la web: "usuario:contraseña,otro:otra". Si falta, queda abierta.
+      - key: HIBLOOMS_USERS
         sync: false
-      # Token compartido con la app. Debe coincidir con api_token en
-      # .streamlit/secrets.toml del servicio hiblooms-app.
-      - key: HIBLOOMS_API_TOKEN
-        sync: false
-      # Origen permitido por CORS (el dominio público de la app Streamlit).
-      - key: APP_ORIGIN
-        value: https://hiblooms-app.onrender.com
+      # Texto largo al azar para firmar las sesiones.
+      - key: HIBLOOMS_SECRET
+        generateValue: true
+      # Carpeta de datos de la instancia (efímera en el plan gratuito).
+      - key: HIBLOOMS_DATA_DIR
+        value: /data
 
-  - type: web
-    name: hiblooms-app
-    runtime: python
-    pythonVersion: "3.11.9"
-    buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
-    envVars:
-      - key: api_url
-        value: https://hiblooms-api.onrender.com   # ← URL pública de la API
+# ── La app Streamlit anterior, por si se quiere mantener en paralelo ──────────
+#  - type: web
+#    name: hiblooms-app
+#    runtime: python
+#    buildCommand: pip install -r requirements.txt
+#    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
