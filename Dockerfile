@@ -31,6 +31,7 @@ COPY --from=front /app/dist web/frontend/dist
 ENV HIBLOOMS_DATA_DIR=/data
 RUN mkdir -p /data && chmod 777 /data
 
-ENV PORT=7860        # Hugging Face usa 7860; Render inyecta su propio PORT
+# Puerto por defecto; Render inyecta el suyo en PORT
+ENV PORT=7860
 EXPOSE 7860
 CMD ["sh", "-c", "uvicorn web.backend.server:app --host 0.0.0.0 --port ${PORT:-7860}"]
