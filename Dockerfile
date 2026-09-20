@@ -14,6 +14,7 @@ RUN npm run build
 # 2) Backend + web compilada
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ENV MPLBACKEND=Agg
 
 WORKDIR /app
 COPY web/backend/requirements.txt web/backend/requirements.txt

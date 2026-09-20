@@ -11,3 +11,4 @@ scikit-learn>=1.4
 joblib
 requests
 tomli; python_version < "3.11"
+matplotlib>=3.7
