@@ -169,7 +169,23 @@ def _load_real() -> dict:
                       FROM reservoirs_spain r JOIN extraction_points ep ON ep.reservoir_id = r.reservoir_id""")
     sources = q("SELECT source_code, name, provider, licence, citation FROM data_sources")
     matrices = q("SELECT matrix_code, name FROM matrices")
-    return _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices)
+    # Visitas: qué se tomó en cada extracción (incluye tablas que el visor aún no dibuja)
+    samples = q("""
+      SELECT s.extraction_point_id, MIN(s.sample_date) AS date, MIN(s.sample_time)::text AS time,
+             split_part(s.extraction_id, '_' || s.extraction_point_id || '_', 1) AS source_table,
+             COUNT(*) AS n_samples
+      FROM samples s GROUP BY 1, 4
+      UNION ALL
+      SELECT ls.extraction_point_id, MIN(ls.sample_date), MIN(ls.sample_time)::text,
+             'lab:' || COALESCE(ls.matrix_code, 'water'), COUNT(*)
+      FROM lab_samples ls GROUP BY 1, 4
+      UNION ALL
+      SELECT ls.extraction_point_id, MIN(ls.sample_date), NULL, 'phytoplankton', COUNT(DISTINCT p.lab_sample_id)
+      FROM phytoplankton_counts p JOIN lab_samples ls ON ls.lab_sample_id = p.lab_sample_id GROUP BY 1""")
+    campaigns = q("SELECT campaign_id, campaign_code, water_body_name, start_date, end_date FROM campaigns")
+    out = _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices)
+    out["samples"], out["campaigns"] = samples, campaigns
+    return out
 
 
 # Caja aproximada de España (península, Baleares y Canarias) en grados
@@ -432,6 +448,92 @@ def sites(water_body: Optional[str] = None) -> dict:
     bodies = (p.groupby("water_body_name")["site"].nunique().reset_index()
               .rename(columns={"water_body_name": "name", "site": "n_sites"}).sort_values("name"))
     return {"sites": _jsonable(s.sort_values(["water_body", "code"])), "water_bodies": _jsonable(bodies)}
+
+
+# Qué se tomó en una visita, a partir de la tabla de origen
+KINDS = [  # (clave, etiqueta, tablas de origen)
+    ("field", "Campo", ("insitu_sampling",)),
+    ("probe", "Sonda multiparamétrica", ("insitu_determinations",)),
+    ("fluoro", "FluoroProbe", ("profiles_data",)),
+    ("lab", "Laboratorio (agua)", ("lab:water", "lab_measurements")),
+    ("phyto", "Fitoplancton", ("phytoplankton", "phytoplankton_counts")),
+    ("sed", "Sedimento superficial", ("lab:surface_sediment",)),
+    ("core", "Testigo de sedimento", ("lab:sediment_core",)),
+]
+_KIND_OF = {src: k for k, _, srcs in KINDS for src in srcs}
+
+
+def campaigns(water_body: Optional[str] = None) -> dict:
+    """Campañas → visitas (una por punto y extracción) con lo que se tomó en cada una."""
+    d = data()
+    p = d["points"].copy()
+    if water_body:
+        p = p[p["water_body_name"] == water_body]
+    o = d["obs"]
+    o = o[o["extraction_point_id"].isin(p["extraction_point_id"])]
+    # Origen de cada visita: tabla samples/lab_samples si existe; si no, las observaciones
+    smp = d.get("samples")
+    if smp is not None and len(smp):
+        smp = smp[smp["extraction_point_id"].isin(p["extraction_point_id"])].copy()
+        smp["date"] = pd.to_datetime(smp["date"], errors="coerce")
+    else:
+        smp = (o.assign(source_table=o["source_table"].where(o["matrix_code"] == "water",
+                                                             "lab:" + o["matrix_code"].astype(str)))
+               .groupby(["extraction_point_id", "source_table"]).agg(date=("date", "min")).reset_index())
+        smp["time"], smp["n_samples"] = None, 1
+    smp["kind"] = smp["source_table"].map(_KIND_OF).fillna("other")
+    kinds_ep = smp.groupby("extraction_point_id")["kind"].agg(lambda x: sorted(set(x)))
+    date_ep = smp.groupby("extraction_point_id")["date"].min()
+    time_ep = smp.dropna(subset=["time"]).groupby("extraction_point_id")["time"].min() if "time" in smp else pd.Series(dtype=str)
+    nobs = o.groupby("extraction_point_id").agg(n_obs=("value", "size"), n_params=("parameter_code", "nunique"))
+
+    p["date"] = p["extraction_point_id"].map(date_ep)
+    if "campaign_start" in p:
+        p["date"] = p["date"].fillna(pd.to_datetime(p["campaign_start"], errors="coerce"))
+    p["time"] = p["extraction_point_id"].map(time_ep)
+    p["kinds"] = p["extraction_point_id"].map(kinds_ep)
+    p["kinds"] = p["kinds"].apply(lambda v: v if isinstance(v, list) else [])
+    p = p.join(nobs, on="extraction_point_id")
+    p[["n_obs", "n_params"]] = p[["n_obs", "n_params"]].fillna(0).astype(int)
+    p["time"] = p["time"].astype(str).str[:5].where(p["time"].notna(), None)
+
+    camp = d.get("campaigns")
+    cinfo = camp.set_index("campaign_id") if camp is not None and len(camp) else None
+    out = []
+    for cid, g in p.groupby(p["campaign_id"].fillna(-1)):
+        g = g.sort_values(["date", "site_code"])
+        code = g["campaign_code"].dropna().iloc[0] if g["campaign_code"].notna().any() else None
+        start, end = g["date"].min(), g["date"].max()
+        if cinfo is not None and cid in cinfo.index:
+            ci = cinfo.loc[cid]
+            code = code or ci["campaign_code"]
+            start = pd.to_datetime(ci["start_date"], errors="coerce") if pd.notna(ci["start_date"]) else start
+            e2 = pd.to_datetime(ci["end_date"], errors="coerce")
+            end = e2 if pd.notna(e2) else end
+        visits = [{
+            "extraction_point_id": int(r.extraction_point_id), "site": r.site, "code": str(r.site_code),
+            "date": r.date.strftime("%Y-%m-%d") if pd.notna(r.date) else None, "time": r.time if isinstance(r.time, str) and r.time not in ("nan", "None") else None,
+            "kinds": r.kinds, "n_obs": int(r.n_obs), "n_params": int(r.n_params),
+            "lat": None if pd.isna(r.site_lat) else float(r.site_lat),
+            "lon": None if pd.isna(r.site_lon) else float(r.site_lon),
+        } for r in g.itertuples()]
+        out.append({
+            "campaign_id": None if cid == -1 else int(cid), "code": code or t_nocode(),
+            "water_body": g["water_body_name"].dropna().iloc[0] if g["water_body_name"].notna().any() else None,
+            "start": start.strftime("%Y-%m-%d") if pd.notna(start) else None,
+            "end": end.strftime("%Y-%m-%d") if pd.notna(end) else None,
+            "n_visits": len(visits), "n_sites": int(g["site"].nunique()),
+            "n_obs": int(g["n_obs"].sum()),
+            "kinds": sorted({k for v in visits for k in v["kinds"]}),
+            "visits": visits,
+        })
+    out.sort(key=lambda c: (c["start"] or "", c["code"] or ""), reverse=True)
+    return {"campaigns": out, "kinds": [{"key": k, "label": lbl} for k, lbl, _ in KINDS]
+            + [{"key": "other", "label": "Otros"}]}
+
+
+def t_nocode() -> str:
+    return "Sin campaña"
 
 
 def _depth_filter(o: pd.DataFrame, depth: str) -> pd.DataFrame:

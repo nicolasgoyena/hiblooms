@@ -1479,6 +1479,12 @@ def db_sources():
     return _pdb(pdb.sources)
 
 
+@app.get("/api/db/campaigns")
+def db_campaigns(water_body: Optional[str] = None):
+    """Campañas y visitas de muestreo, con lo que se tomó en cada visita."""
+    return _pdb(pdb.campaigns, water_body)
+
+
 @app.post("/api/db/reload")
 def db_reload():
     """Vuelve a leer la base de datos (tras cargar datos nuevos)."""

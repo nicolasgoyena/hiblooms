@@ -32,6 +32,9 @@ export type DbRow = { date: string; site: string; site_code: string; water_body:
 export type DbSeries = { parameter: string; name: string; unit: string | null; group: string | null; rows: DbRow[]; qc: DbQc[]; n_dates: number; depth: DbDepth
   summary: { site_code: string; n: number; n_dates: number; min: number; median: number; max: number; last_date: string; last_value: number }[] }
 export type DbDepth = 'surface' | 'bottom' | 'all'
+export type DbVisit = { extraction_point_id: number; site: string; code: string; date: string | null; time: string | null; kinds: string[]; n_obs: number; n_params: number; lat: number | null; lon: number | null }
+export type DbCampaign = { campaign_id: number | null; code: string; water_body: string | null; start: string | null; end: string | null; n_visits: number; n_sites: number; n_obs: number; kinds: string[]; visits: DbVisit[] }
+export type DbKind = { key: string; label: string }
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
@@ -115,6 +118,7 @@ export const api = {
     if (b.sites?.length) q.set('sites', b.sites.join(','))
     return req<DbSeries>(`/api/db/series?${q}`)
   },
+  dbCampaigns: (wb?: string) => req<{ campaigns: DbCampaign[]; kinds: DbKind[] }>(`/api/db/campaigns${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
   dbExportUrl: (parameter?: string, wb?: string) => {
     const q = new URLSearchParams()
     if (parameter) q.set('parameter', parameter)

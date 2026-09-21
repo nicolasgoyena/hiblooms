@@ -6,10 +6,12 @@ import ProjectPage from './ProjectPage'
 import { MonitorForm, MonitorResult } from './Monitor'
 import Climatology from './Climatology'
 import { DataForm, DataResult } from './DataTab'
+import { CampaignsResult } from './Campaigns'
 import ErrorBoundary from './ErrorBoundary'
 import {
   api, CalResult, ClimResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
   parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
+  DbCampaign, DbKind,
 } from './api'
 import { locale, t, useLang } from './i18n'
 import LangToggle from './LangToggle'
@@ -85,6 +87,13 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [dbSel, setDbSel] = useState<string[]>([])
   const [dbSeries, setDbSeries] = useState<DbSeries | null>(null)
   const [dbShow, setDbShow] = useState(true)
+  const [dbView, setDbView] = useState<'measures' | 'campaigns'>('measures')
+  const [dbCamps, setDbCamps] = useState<{ campaigns: DbCampaign[]; kinds: DbKind[] } | null>(null)
+  useEffect(() => {
+    if (appMode !== 'db' || dbView !== 'campaigns') return
+    setDbCamps(null)
+    api.dbCampaigns(dbBody || undefined).then(r => { setDbCamps(r); setDbShow(true) }).catch(e => setError(e.message))
+  }, [appMode, dbView, dbBody]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (appMode !== 'db' || dbStatus) return
     api.dbStatus().then(setDbStatus).catch(e => setDbStatus({ ok: false, mode: 'error', detail: e.message }))
@@ -445,8 +454,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <ErrorBoundary label="Datos"><DataForm status={dbStatus} bodies={dbBodies} body={dbBody} setBody={setDbBody}
               params={dbParams} param={dbParam} setParam={setDbParam} depth={dbDepth} setDepth={setDbDepth}
               sites={dbSites} selSites={dbSel} toggleSite={toggleDbSite} clearSites={() => setDbSel([])}
-              exportUrl={api.dbExportUrl(dbParam || undefined, dbBody || undefined)} /></ErrorBoundary>
-            {!dbShow && dbSeries && <button className="primary" onClick={() => setDbShow(true)}>{t('Ver gráfico')}</button>}
+              exportUrl={api.dbExportUrl(dbParam || undefined, dbBody || undefined)}
+              view={dbView} setView={v => { setDbView(v); setDbShow(true) }} /></ErrorBoundary>
+            {dbView === 'campaigns' && !dbCamps && !error && <div className="hint-inline muted small"><span className="spin" /> {t('Cargando campañas…')}</div>}
+            {!dbShow && (dbView === 'campaigns' ? dbCamps : dbSeries) && <button className="primary" onClick={() => setDbShow(true)}>{t('Ver gráfico')}</button>}
             {error && <div className="badge err">{error}</div>}
           </>
         ) : appMode === 'mon' ? (
@@ -728,7 +739,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       )}
       {appMode === 'cal' && calRunning && <div className="hint">{prog?.step || t('Extrayendo índices de Sentinel-2 y ajustando modelos…')}</div>}
 
-      {appMode === 'db' && dbShow && dbSeries && (
+      {appMode === 'db' && dbView === 'campaigns' && dbShow && dbCamps && (
+        <ErrorBoundary label="Datos"><CampaignsResult data={dbCamps} onClose={() => setDbShow(false)}
+          onOpenSite={(site, wb) => { if (wb) setDbBody(wb); setDbView('measures'); setTimeout(() => setDbSel([site]), 400); setDbShow(true) }} /></ErrorBoundary>
+      )}
+      {appMode === 'db' && dbView === 'measures' && dbShow && dbSeries && (
         <ErrorBoundary label="Datos"><DataResult data={dbSeries} sites={dbSites} onClose={() => setDbShow(false)} /></ErrorBoundary>
       )}
       {appMode === 'mon' && mon && (

@@ -15,6 +15,7 @@ export function DataForm(p: {
   depth: DbDepth; setDepth: (d: DbDepth) => void
   sites: DbSite[]; selSites: string[]; toggleSite: (s: string) => void; clearSites: () => void
   exportUrl: string
+  view: 'measures' | 'campaigns'; setView: (v: 'measures' | 'campaigns') => void
 }) {
   const groups = useMemo(() => Array.from(new Set(p.params.map(x => x.group))), [p.params])
   const s = p.status
@@ -29,6 +30,11 @@ export function DataForm(p: {
         </p>
       )}
 
+      <div className="seg dark depth-seg">
+        <button className={p.view === 'measures' ? 'on' : ''} onClick={() => p.setView('measures')}>📈 {t('Medidas')}</button>
+        <button className={p.view === 'campaigns' ? 'on' : ''} onClick={() => p.setView('campaigns')}>🗓️ {t('Campañas y visitas')}</button>
+      </div>
+
       <section>
         <label className="lbl">{t('Masa de agua')}</label>
         <select value={p.body} onChange={e => p.setBody(e.target.value)}>
@@ -37,6 +43,9 @@ export function DataForm(p: {
         </select>
       </section>
 
+      {p.view === 'campaigns' ? (
+        <p className="muted small">{t('Calendario de muestreos: qué puntos se visitaron en cada campaña y qué se tomó en cada visita. Pulsa una campaña para ver sus visitas.')}</p>
+      ) : <>
       <section>
         <label className="lbl">{t('Parámetro')}</label>
         <select value={p.param} onChange={e => p.setParam(e.target.value)} disabled={!p.params.length}>
@@ -86,6 +95,7 @@ export function DataForm(p: {
       <a className="ghost solid wide dl-link" href={p.exportUrl} download>
         ⬇ {p.param ? t('Descargar este parámetro (CSV)') : t('Descargar datos (CSV)')}
       </a>
+      </>}
     </>
   )
 }
