@@ -29,9 +29,10 @@ const BASEMAPS: Record<Basemap, { tiles: string[]; attribution: string }> = {
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
     attribution: 'Imagery © Esri',
   },
+  // Esri World Light Gray Canvas: sin clave de API (CARTO ahora la exige fuera de su lista blanca)
   light: {
-    tiles: ['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', 'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
-    attribution: '© OpenStreetMap · © CARTO',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
+    attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors',
   },
 }
 
@@ -93,8 +94,12 @@ export default function MapView(p: Props) {
 
   // basemap
   useEffect(() => whenReady(m => {
-    const src = m.getSource('base') as maplibregl.RasterTileSource
-    src?.setTiles(BASEMAPS[p.basemap].tiles)
+    const b = BASEMAPS[p.basemap]
+    if (m.getLayer('base')) m.removeLayer('base')
+    if (m.getSource('base')) m.removeSource('base')
+    m.addSource('base', { type: 'raster', tiles: b.tiles, tileSize: 256, attribution: b.attribution, maxzoom: 19 })
+    const first = m.getStyle().layers?.[0]?.id
+    m.addLayer({ id: 'base', type: 'raster', source: 'base' }, first)
   }), [p.basemap])
 
   // reservoirs

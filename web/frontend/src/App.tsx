@@ -518,7 +518,6 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <button className={showRgb ? 'on' : ''} onClick={() => setShowRgb(true)}>{t('Color real')}</button>
           </div>
         )}
-        {img?.tile_url && !showRgb && <label className="tog">{t('Opacidad')} <input type="range" min={0} max={1} step={0.05} value={opacity} onChange={e => setOpacity(+e.target.value)} /></label>}
       </div>
 
       {/* ── Tarjeta de imagen ────────────────────────── */}
