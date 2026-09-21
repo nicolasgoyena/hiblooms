@@ -46,6 +46,9 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  '— Ningún embalse —': '— No reservoir —',
+  'Color real': 'True colour',
+
   'Rango habitual de {a}–{b} (mitad central de los años anteriores) frente a {y}, por quincenas.': 'Usual range for {a}–{b} (middle half of previous years) against {y}, by fortnight.',
   'Este año va por encima de lo normal en {n} de {m} quincenas comparables.': 'This year is above normal in {n} of {m} comparable fortnights.',
   'Este año va por debajo de lo normal en {n} de {m} quincenas comparables.': 'This year is below normal in {n} of {m} comparable fortnights.',

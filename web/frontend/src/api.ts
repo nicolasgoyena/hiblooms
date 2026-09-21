@@ -1,6 +1,6 @@
 import { locale, t } from './i18n'
 
-export type IndexMeta = { id: string; label: string; unit: string; min: number; max: number; group: string }
+export type IndexMeta = { id: string; label: string; unit: string; min: number; max: number; group: string; reservoir?: string | null }
 export type DateHit = { date: string; cloud: number | null }
 export type ImageResult = {
   mode: 'gee' | 'demo'

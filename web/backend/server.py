@@ -52,10 +52,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # ── Catálogo de índices ──────────────────────────────────────────────────────
 INDICES = [
-    {"id": "PC_Val_cal", "label": "Ficocianina calibrada · El Val", "unit": "µg/L", "min": 0, "max": 100, "group": "Calibrados"},
-    {"id": "Chla_Val_cal", "label": "Clorofila-a calibrada · El Val", "unit": "µg/L", "min": 0, "max": 150, "group": "Calibrados"},
-    {"id": "PC_Bellus_cal", "label": "Ficocianina calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 800, "group": "Calibrados"},
-    {"id": "Chla_Bellus_cal", "label": "Clorofila-a calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 80, "group": "Calibrados"},
+    {"id": "PC_Val_cal", "label": "Ficocianina calibrada · El Val", "unit": "µg/L", "min": 0, "max": 100, "group": "Calibrados", "reservoir": "VAL"},
+    {"id": "Chla_Val_cal", "label": "Clorofila-a calibrada · El Val", "unit": "µg/L", "min": 0, "max": 150, "group": "Calibrados", "reservoir": "VAL"},
+    {"id": "PC_Bellus_cal", "label": "Ficocianina calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 800, "group": "Calibrados", "reservoir": "BELLUS"},
+    {"id": "Chla_Bellus_cal", "label": "Clorofila-a calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 80, "group": "Calibrados", "reservoir": "BELLUS"},
     {"id": "UV_PC_Gral_cal", "label": "Ficocianina general (UV)", "unit": "µg/L", "min": 0, "max": 100, "group": "Calibrados"},
     {"id": "PCI_B5/B4", "label": "PCI (B5/B4)", "unit": "", "min": 0.5, "max": 3, "group": "Espectrales"},
     {"id": "NDCI_ind", "label": "NDCI", "unit": "", "min": -0.2, "max": 0.5, "group": "Espectrales"},
@@ -932,7 +932,7 @@ def _do_calibrate(req: CalibrateReq, prog):
         ns = len(sm.get("sites") or [])
         where = f"{ns} puntos" if ns > 1 else ((req.point.name or "punto") if req.point else "embalse")
         label = f"{req.value_col} · {sm['model_label']} ({_label_of(req.reservoir)}, {where})"
-        meta = {"id": cal_id, "label": label, "unit": req.unit, "group": "Tus calibraciones",
+        meta = {"id": cal_id, "label": label, "unit": req.unit, "group": "Tus calibraciones", "reservoir": req.reservoir,
                 "min": round(float(max(0.0, np.nanpercentile(y, 2))), 2), "max": round(float(np.nanpercentile(y, 98)), 2) or 1.0}
         entry = {"meta": meta, "raster": cal.clean(raster), "summary": cal.clean({**sm, "honest": out["honest"]})}
         CALS[cal_id] = entry

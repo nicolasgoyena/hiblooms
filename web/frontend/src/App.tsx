@@ -181,12 +181,20 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       setReservoir(null); resetResults(); setPois([])
     } catch (e: any) { setError(e.message) }
   }
-  const groups = useMemo(() => Array.from(new Set(indices.map(i => i.group))), [indices])
+  // Los índices calibrados para un embalse concreto solo se ofrecen en ese embalse
+  // (o cuando aún no hay ninguno elegido, para que se vea que existen).
+  const allowed = useMemo(() => indices.filter(i => !i.reservoir || !reservoir || i.reservoir === reservoir), [indices, reservoir])
+  const groups = useMemo(() => Array.from(new Set(allowed.map(i => i.group))), [allowed])
+  useEffect(() => {
+    if (!indices.length || allowed.some(i => i.id === indexId)) return
+    changeIndex(allowed.find(i => i.id === 'NDCI_ind')?.id ?? allowed[0]?.id)
+  }, [allowed]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null); setCmpDate(null); setCmpImg(null) }
 
   const pickReservoir = (n: string) => {
     if (n === reservoir) return // clic de nuevo en el mismo embalse: no borrar resultados
+    if (!n) { setReservoir(null); resetResults(); setAdding(false); setPois([]); return }
     setReservoir(n); resetResults(); setAdding(false); setPois([])
     api.pois(n).then(r => setPois(r.points)).catch(() => {})
   }
@@ -344,7 +352,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         <section>
             <label className="lbl">{t('Embalse')}</label>
             <select value={reservoir ?? ''} onChange={e => pickReservoir(e.target.value)}>
-              <option value="" disabled>{t('Elige uno o haz clic en el mapa…')}</option>
+              <option value="">{reservoir ? t('— Ningún embalse —') : t('Elige uno o haz clic en el mapa…')}</option>
               {customNames.length > 0 && (
                 <optgroup label={t('Tus embalses (shapefile)')}>
                   {customNames.map(n => <option key={n} value={n}>{labelOf(n)}</option>)}
@@ -407,15 +415,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           <input type="range" min={0} max={100} step={5} value={maxCloud} onChange={e => setMaxCloud(+e.target.value)} />
         </section>
 
-        <label className="switch" title={t('Detecta el agua en cada imagen (MNDWI/NDWI) y descarta 20 m de borde, para que las orillas secas no se cuenten como floración.')}>
-          <input type="checkbox" checked={waterOnly} onChange={e => setWaterOnly(e.target.checked)} />
-          <span>{t('Solo lámina de agua')}<small>{t('quita orillas y píxeles de borde')}</small></span>
-        </label>
 
         <section>
           <label className="lbl">{t('Índice')}</label>
           <select value={indexId} onChange={e => changeIndex(e.target.value)}>
-            {groups.map(g => <optgroup key={g} label={t(g)}>{indices.filter(i => i.group === g).map(i => <option key={i.id} value={i.id}>{t(i.label)}</option>)}</optgroup>)}
+            {groups.map(g => <optgroup key={g} label={t(g)}>{allowed.filter(i => i.group === g).map(i => <option key={i.id} value={i.id}>{t(i.label)}</option>)}</optgroup>)}
           </select>
         </section>
 
@@ -508,8 +512,13 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           <button className={basemap === 'satellite' ? 'on' : ''} onClick={() => setBasemap('satellite')}>{t('Satélite')}</button>
           <button className={basemap === 'light' ? 'on' : ''} onClick={() => setBasemap('light')}>{t('Mapa')}</button>
         </div>
-        {img?.rgb_tile_url && <label className="tog"><input type="checkbox" checked={showRgb} onChange={e => setShowRgb(e.target.checked)} /> RGB Sentinel-2</label>}
-        {img?.tile_url && <label className="tog">{t('Opacidad')} <input type="range" min={0} max={1} step={0.05} value={opacity} onChange={e => setOpacity(+e.target.value)} /></label>}
+        {img?.rgb_tile_url && (
+          <div className="seg">
+            <button className={!showRgb ? 'on' : ''} onClick={() => setShowRgb(false)}>{t('Índice')}</button>
+            <button className={showRgb ? 'on' : ''} onClick={() => setShowRgb(true)}>{t('Color real')}</button>
+          </div>
+        )}
+        {img?.tile_url && !showRgb && <label className="tog">{t('Opacidad')} <input type="range" min={0} max={1} step={0.05} value={opacity} onChange={e => setOpacity(+e.target.value)} /></label>}
       </div>
 
       {/* ── Tarjeta de imagen ────────────────────────── */}
@@ -527,6 +536,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <div><span>{t('Nubes')}</span><b>{fmt(img?.cloud, 1)}</b><em>%</em></div>
             <div><span>{t('Cobertura')}</span><b>{fmt(img?.coverage, 0)}</b><em>%</em></div>
           </div>
+          <label className="switch" title={t('Detecta el agua en cada imagen (MNDWI/NDWI) y descarta 20 m de borde, para que las orillas secas no se cuenten como floración.')}>
+            <input type="checkbox" checked={waterOnly} onChange={e => setWaterOnly(e.target.checked)} />
+            <span>{t('Solo lámina de agua')}<small>{t('quita orillas y píxeles de borde')}</small></span>
+          </label>
           {img?.interval80 && meta && img.mean != null && (
             <p className="muted small" style={{ margin: 0 }}>{t('Rango probable (80 %): {lo} – {hi} {unit}', { lo: fmt(img.interval80[0], 1), hi: fmt(img.interval80[1], 1), unit: meta.unit })}</p>
           )}

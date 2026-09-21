@@ -153,13 +153,20 @@ export default function MapView(p: Props) {
       m.addSource(id, { type: 'raster', tiles: [url], tileSize: 256, attribution: 'Contains modified Copernicus Sentinel data · Google Earth Engine' })
       m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': opacity } }, m.getLayer('res-line') ? 'res-line' : undefined)
     }
-    put('rgb', p.rgbTileUrl, p.showRgb, 1)
+    // Las dos capas se cargan siempre; el conmutador decide cuál se ve.
+    put('rgb', p.rgbTileUrl, true, 1)
     put('idx', p.indexTileUrl, true, p.opacity)
-  }), [p.indexTileUrl, p.rgbTileUrl, p.showRgb])
+    if (m.getLayer('idx')) m.setLayoutProperty('idx', 'visibility', p.showRgb ? 'none' : 'visible')
+  }), [p.indexTileUrl, p.rgbTileUrl])
 
   useEffect(() => whenReady(m => {
     if (m.getLayer('idx')) m.setPaintProperty('idx', 'raster-opacity', p.opacity)
   }), [p.opacity])
+
+  // Índice ↔ color real sin volver a pedir teselas
+  useEffect(() => whenReady(m => {
+    if (m.getLayer('idx')) m.setLayoutProperty('idx', 'visibility', p.showRgb ? 'none' : 'visible')
+  }), [p.showRgb])
 
   // puntos de interés (marcadores HTML: no necesitan glyphs)
   const markers = useRef<maplibregl.Marker[]>([])
