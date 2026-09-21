@@ -31,7 +31,7 @@ from typing import Optional
 
 import pandas as pd
 
-CACHE_TTL = 600  # s
+CACHE_TTL = 6 * 3600  # s: pasado este tiempo se refresca en segundo plano
 
 # Columnas numéricas de las tablas anchas que NO son parámetros
 NOT_PARAMS = {
@@ -39,7 +39,7 @@ NOT_PARAMS = {
 }
 
 _lock = threading.Lock()
-_cache: dict = {"t": 0.0, "data": None}
+_cache: dict = {"t": 0.0, "data": None, "refreshing": False}
 _engine = None
 
 
@@ -63,8 +63,17 @@ def engine():
         _engine = create_engine(
             url, pool_pre_ping=True, pool_size=2, max_overflow=2,
             # toda sesión en solo lectura, pase lo que pase con los permisos del rol
-            connect_args={"options": "-c default_transaction_read_only=on -c statement_timeout=30000"},
+            # (sin "options": el pooler de Neon no admite parámetros de arranque)
         )
+        from sqlalchemy import event
+
+        @event.listens_for(_engine, "connect")
+        def _ro(dbapi_conn, _rec):  # toda sesión en solo lectura, pase lo que pase con el rol
+            cur = dbapi_conn.cursor()
+            cur.execute("SET default_transaction_read_only = on")
+            cur.execute("SET statement_timeout = 120000")
+            cur.close()
+            dbapi_conn.commit()
     return _engine
 
 
@@ -348,12 +357,42 @@ def _load_mock() -> dict:
 
 # ── API interna ─────────────────────────────────────────────────────────────
 
+def _load() -> dict:
+    return _load_mock() if is_mock() else _load_real()
+
+
+def _refresh_bg() -> None:
+    """Relee la base sin bloquear: mientras tanto se sirven los datos anteriores."""
+    try:
+        d = _load()
+        with _lock:
+            _cache["data"], _cache["t"] = d, time.time()
+    except Exception as e:  # noqa: BLE001
+        print("[projectdb] refresco fallido:", e)
+    finally:
+        _cache["refreshing"] = False
+
+
 def data(force: bool = False) -> dict:
     with _lock:
-        if force or _cache["data"] is None or time.time() - _cache["t"] > CACHE_TTL:
-            _cache["data"] = _load_mock() if is_mock() else _load_real()
+        if force or _cache["data"] is None:
+            _cache["data"] = _load()
             _cache["t"] = time.time()
+        elif time.time() - _cache["t"] > CACHE_TTL and not _cache["refreshing"]:
+            _cache["refreshing"] = True
+            threading.Thread(target=_refresh_bg, daemon=True).start()
         return _cache["data"]
+
+
+def warm() -> None:
+    """Precarga en segundo plano al arrancar el servidor."""
+    def _go():
+        try:
+            data()
+            print("[projectdb] datos precargados")
+        except Exception as e:  # noqa: BLE001
+            print("[projectdb] precarga fallida:", e)
+    threading.Thread(target=_go, daemon=True).start()
 
 
 def _jsonable(df: pd.DataFrame) -> list:

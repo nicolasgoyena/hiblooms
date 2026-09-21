@@ -1428,6 +1428,11 @@ def _do_climatology(req: ClimReq, prog):
 
 # ── Base de datos del proyecto (pestaña «Datos», solo lectura) ───────────────
 import projectdb as pdb  # noqa: E402  (web/backend/projectdb.py)
+
+
+@app.on_event("startup")
+def _warm_db():
+    pdb.warm()  # lee la base al arrancar: el primer usuario ya no espera
 from fastapi.responses import PlainTextResponse  # noqa: E402
 
 
