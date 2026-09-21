@@ -18,6 +18,10 @@ services:
       # Texto largo al azar para firmar las sesiones.
       - key: HIBLOOMS_SECRET
         generateValue: true
+      # Base de datos del proyecto (usuario de SOLO LECTURA), ver BASE_DE_DATOS.md.
+      # Sin ella, la pestaña Datos muestra datos simulados.
+      - key: DATABASE_URL
+        sync: false
       # Carpeta de datos de la instancia (efímera en el plan gratuito).
       - key: HIBLOOMS_DATA_DIR
         value: /data

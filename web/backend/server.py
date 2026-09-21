@@ -1425,6 +1425,62 @@ def _do_climatology(req: ClimReq, prog):
     return out
 
 
+
+# ── Base de datos del proyecto (pestaña «Datos», solo lectura) ───────────────
+import projectdb as pdb  # noqa: E402  (web/backend/projectdb.py)
+from fastapi.responses import PlainTextResponse  # noqa: E402
+
+
+def _pdb(fn, *a, **k):
+    try:
+        return fn(*a, **k)
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"Error en la base de datos del proyecto: {e}")
+
+
+@app.get("/api/db/status")
+def db_status():
+    return pdb.status()
+
+
+@app.get("/api/db/sites")
+def db_sites(water_body: Optional[str] = None):
+    return _pdb(pdb.sites, water_body)
+
+
+@app.get("/api/db/parameters")
+def db_parameters(water_body: Optional[str] = None, depth: str = "surface"):
+    return _pdb(pdb.parameters, water_body, depth)
+
+
+@app.get("/api/db/series")
+def db_series(parameter: str, water_body: Optional[str] = None, sites: Optional[str] = None,
+              depth: str = "surface"):
+    return _pdb(pdb.series, parameter, water_body, sites.split(",") if sites else None, depth)
+
+
+@app.get("/api/db/export")
+def db_export(parameter: Optional[str] = None, water_body: Optional[str] = None):
+    csv = _pdb(pdb.export_csv, parameter, water_body)
+    name = "hiblooms_" + "_".join(x for x in (water_body, parameter) if x).replace(" ", "-") + ".csv"
+    return PlainTextResponse(csv, media_type="text/csv",
+                             headers={"Content-Disposition": f'attachment; filename="{name or "hiblooms_datos.csv"}"'})
+
+
+@app.get("/api/db/sources")
+def db_sources():
+    return _pdb(pdb.sources)
+
+
+@app.post("/api/db/reload")
+def db_reload():
+    """Vuelve a leer la base de datos (tras cargar datos nuevos)."""
+    _pdb(pdb.data, True)
+    return pdb.status()
+
+
 # ── Frontend estático (mismo servicio que la API, un solo enlace) ────────────
 # En el despliegue (Docker) el frontend compilado vive en web/frontend/dist.
 FRONT = Path(__file__).resolve().parents[1] / "frontend" / "dist"

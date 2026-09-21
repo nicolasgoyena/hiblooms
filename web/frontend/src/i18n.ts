@@ -39,6 +39,8 @@ export function useLang(): [Lang, (l: Lang) => void] {
 export const locale = () => (lang === 'es' ? 'es-ES' : 'en-GB')
 
 export function t(es: string, vars?: Record<string, string | number>): string {
+  if (es == null) return ''
+  es = String(es)
   let s = lang === 'en' ? (EN[es] ?? es) : es
   if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m))
   return s
@@ -46,6 +48,73 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  'Campo': 'Field',
+  'Nutrientes y carbono': 'Nutrients and carbon',
+  'Metales y elementos (ICP-MS)': 'Metals and elements (ICP-MS)',
+  'Isótopos estables': 'Stable isotopes',
+  'Análisis elemental': 'Elemental analysis',
+  'Radioisótopos': 'Radioisotopes',
+  'Física del sedimento': 'Sediment physics',
+  'Química del sedimento': 'Sediment chemistry',
+  'Materia orgánica': 'Organic matter',
+  'Material en suspensión': 'Suspended matter',
+  'Meteorología': 'Meteorology',
+  'Teledetección': 'Remote sensing',
+
+  'Perfil': 'Profile',
+  'Profundidad × tiempo': 'Depth × time',
+  'Profundidad (m)': 'Depth (m)',
+  'Este parámetro no tiene medidas a distintas profundidades.': 'This parameter has no measurements at different depths.',
+  'Todas las profundidades, sin promediar: perfiles y diagrama profundidad × tiempo.': 'All depths, not averaged: profiles and a depth × time diagram.',
+
+  'Profundidad': 'Depth',
+  'Superficie': 'Surface',
+  'Fondo': 'Bottom',
+  'Toda la columna': 'Whole column',
+  'Medidas a 1 m o menos.': 'Measurements at 1 m or shallower.',
+  'La medida más profunda de cada muestreo.': 'The deepest measurement of each sampling.',
+  'Todas las profundidades; el gráfico enseña la media de cada muestreo.': 'All depths; the chart shows the mean of each sampling.',
+  '{n} medidas en {m} muestreos · {s} puntos': '{n} measurements in {m} samplings · {s} points',
+  'media de {k} profundidades': 'mean of {k} depths',
+  'Muestreos': 'Samplings',
+  'Medidas': 'Measurements',
+
+  '{n} datos': '{n} values',
+
+  'Datos': 'Data',
+  'Datos de campo y laboratorio del proyecto': 'Field and laboratory data from the project',
+  'Masa de agua': 'Water body',
+  'Todas': 'All',
+  'puntos': 'points',
+  'Parámetro': 'Parameter',
+  'Sin datos': 'No data',
+  'Solo superficie (≤ 1 m)': 'Surface only (≤ 1 m)',
+  'para comparar muestreos equivalentes': 'to compare equivalent samplings',
+  'Muchas sondas miden a varias profundidades; así se comparan muestreos equivalentes.': 'Many probes measure at several depths; this compares equivalent samplings.',
+  'Puntos de muestreo': 'Sampling points',
+  'observaciones': 'observations',
+  'Ver todos los puntos': 'Show all points',
+  'Descargar este parámetro (CSV)': 'Download this parameter (CSV)',
+  'Descargar datos (CSV)': 'Download data (CSV)',
+  'No se puede leer la base de datos del proyecto': 'Cannot read the project database',
+  'Base de datos no conectada: se muestran datos simulados con la misma estructura.': 'Database not connected: showing simulated data with the same structure.',
+  '{n} observaciones en {s} puntos, de {a} a {b}.': '{n} observations at {s} points, from {a} to {b}.',
+  'Datos del proyecto': 'Project data',
+  '{n} observaciones en {s} puntos': '{n} observations at {s} points',
+  '{n} marcadas por control de calidad': '{n} flagged by quality control',
+  'No hay datos de este parámetro con estos filtros.': 'No data for this parameter with these filters.',
+  'Los puntos con aro rojo están marcados por control de calidad:': 'Points with a red ring are flagged by quality control:',
+  'Mín.': 'Min.',
+  'Mediana': 'Median',
+  'Máx.': 'Max.',
+  'Último': 'Latest',
+  'Ver gráfico': 'Show chart',
+  'Físico-química': 'Physico-chemistry',
+  'Óptica': 'Optics',
+  'Pigmentos': 'Pigments',
+  'Nutrientes': 'Nutrients',
+  'Toxinas': 'Toxins',
+
   '— Ningún embalse —': '— No reservoir —',
   'Color real': 'True colour',
 

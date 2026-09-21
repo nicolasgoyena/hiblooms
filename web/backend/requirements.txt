@@ -12,3 +12,5 @@ joblib
 requests
 tomli; python_version < "3.11"
 matplotlib>=3.7
+SQLAlchemy>=2.0
+psycopg2-binary

@@ -21,6 +21,7 @@ type Props = {
   onPoiClick: (name: string) => void
   lang?: Lang
   compareTileUrl?: string | null   // segunda fecha, para el comparador
+  focus?: [[number, number], [number, number]] | null  // encuadre forzado (p. ej. puntos de la pestaña Datos)
   swipe?: number                   // 0–1: posición de la cortinilla
 }
 
@@ -143,6 +144,15 @@ export default function MapView(p: Props) {
     if (f) m.fitBounds(bboxOf(f), { padding: { top: 80, bottom: 260, left: 440, right: 380 }, duration: 1200, maxZoom: 14 })
   }), [p.selected, p.reservoirs])
 
+  // encuadre externo
+  useEffect(() => whenReady(m => {
+    if (!p.focus) return
+    const [[x0, y0], [x1, y1]] = p.focus
+    if (![x0, y0, x1, y1].every(Number.isFinite) || Math.abs(y0) > 90 || Math.abs(y1) > 90) return
+    const pad = Math.max(0.01, (x1 - x0) * 0.15, (y1 - y0) * 0.15)
+    try { m.fitBounds([[x0 - pad, y0 - pad], [x1 + pad, y1 + pad]], { padding: { top: 70, bottom: Math.round(window.innerHeight * 0.6), left: 440, right: 60 }, duration: 1000, maxZoom: 14 }) } catch { /* encuadre imposible: se ignora */ }
+  }), [JSON.stringify(p.focus)]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // demo fill
   useEffect(() => whenReady(m => {
     if (!p.selected || !m.getSource('res')) return
@@ -177,7 +187,7 @@ export default function MapView(p: Props) {
   const markers = useRef<maplibregl.Marker[]>([])
   useEffect(() => whenReady(m => {
     markers.current.forEach(mk => mk.remove())
-    markers.current = p.points.map((pt, i) => {
+    markers.current = p.points.filter(pt => Number.isFinite(pt.lat) && Number.isFinite(pt.lon) && Math.abs(pt.lat) <= 90 && Math.abs(pt.lon) <= 180).map((pt, i) => {
       const el = document.createElement('div')
       el.className = 'poi'
       el.innerHTML = `<span class="poi-dot" style="background:${POI_COLORS[i % POI_COLORS.length]}"></span><span class="poi-lbl"></span>`

@@ -5,8 +5,10 @@ import { CalibrationForm, CalibrationResult } from './Calibration'
 import ProjectPage from './ProjectPage'
 import { MonitorForm, MonitorResult } from './Monitor'
 import Climatology from './Climatology'
+import { DataForm, DataResult } from './DataTab'
+import ErrorBoundary from './ErrorBoundary'
 import {
-  api, CalResult, ClimResp, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
+  api, CalResult, ClimResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
   parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
 } from './api'
 import { locale, t, useLang } from './i18n'
@@ -71,7 +73,51 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   useEffect(() => { setClim(null) }, [reservoir])
   useEffect(() => { if (panelOpen && tab === 'clima') runClim(indexId) }, [indexId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [appMode, setAppMode] = useState<'visor' | 'cal' | 'info' | 'mon'>('info')
+  const [appMode, setAppMode] = useState<'visor' | 'cal' | 'info' | 'mon' | 'db'>('info')
+  // ── Pestaña Datos (base de datos del proyecto) ──
+  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
+  const [dbBodies, setDbBodies] = useState<{ name: string; n_sites: number }[]>([])
+  const [dbBody, setDbBody] = useState('')
+  const [dbSites, setDbSites] = useState<DbSite[]>([])
+  const [dbParams, setDbParams] = useState<DbParam[]>([])
+  const [dbParam, setDbParam] = useState('')
+  const [dbDepth, setDbDepth] = useState<DbDepth>('surface')
+  const [dbSel, setDbSel] = useState<string[]>([])
+  const [dbSeries, setDbSeries] = useState<DbSeries | null>(null)
+  const [dbShow, setDbShow] = useState(true)
+  useEffect(() => {
+    if (appMode !== 'db' || dbStatus) return
+    api.dbStatus().then(setDbStatus).catch(e => setDbStatus({ ok: false, mode: 'error', detail: e.message }))
+  }, [appMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (appMode !== 'db') return
+    api.dbSites(dbBody || undefined).then(r => { setDbSites((r.sites ?? []).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon) && Math.abs(x.lat) <= 90 && Math.abs(x.lon) <= 180)); if (!dbBody) setDbBodies(r.water_bodies) }).catch(e => setError(e.message))
+    api.dbParameters(dbBody || undefined, dbDepth).then(r => {
+      setDbParams(r.parameters)
+      if (!r.parameters.some(p => p.parameter_code === dbParam)) {
+        const pref = ['CHLA', 'WTEMP', 'PH'].find(c => r.parameters.some(p => p.parameter_code === c))
+        setDbParam(pref ?? r.parameters[0]?.parameter_code ?? '')
+      }
+    }).catch(e => setError(e.message))
+  }, [appMode, dbBody, dbDepth]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setDbSel([]) }, [dbBody])
+  useEffect(() => {
+    if (appMode !== 'db' || !dbParam) return
+    api.dbSeries({ parameter: dbParam, water_body: dbBody || undefined, sites: dbSel, depth: dbDepth })
+      .then(r => { setDbSeries(r); setDbShow(true) }).catch(e => setError(e.message))
+  }, [appMode, dbParam, dbBody, dbDepth, dbSel])
+  const toggleDbSite = (site: string) => setDbSel(sel => {
+    const all = dbSites.map(s => s.site)
+    const cur = sel.length ? sel : all
+    const next = cur.includes(site) ? cur.filter(x => x !== site) : [...cur, site]
+    return next.length === all.length || next.length === 0 ? [] : next
+  })
+  const dbBounds = useMemo<[[number, number], [number, number]] | null>(() => {
+    if (appMode !== 'db' || !dbSites.length) return null
+    const xs = dbSites.map(s => s.lon), ys = dbSites.map(s => s.lat)
+    return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
+  }, [appMode, dbSites])
+
   const [monDays, setMonDays] = useState(30)
   const [monCloud, setMonCloud] = useState(60)
   const [mon, setMon] = useState<MonitorResp | null>(null)
@@ -317,8 +363,13 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         reservoirs={reservoirs} selected={reservoir} onSelect={pickReservoir} basemap={basemap}
         indexTileUrl={img?.tile_url ?? null} rgbTileUrl={img?.rgb_tile_url ?? null}
         showRgb={showRgb} opacity={opacity} demoFill={demoFill}
-        points={pois} addingPoint={adding} onMapClick={addPoint}
-        onPoiClick={() => { if (hits && hits.length > 1) { setTab('serie'); runSeries() } }}
+        points={appMode === 'db' ? dbSites.map(x => ({ name: x.code, lat: x.lat, lon: x.lon })) : pois}
+        addingPoint={adding} onMapClick={addPoint}
+        onPoiClick={(name) => {
+          if (appMode === 'db') { const x = dbSites.find(s => s.code === name); if (x) toggleDbSite(x.site); return }
+          if (hits && hits.length > 1) { setTab('serie'); runSeries() }
+        }}
+        focus={dbBounds}
         compareTileUrl={cmpImg?.tile_url ?? null} swipe={swipe}
       />
 
@@ -346,9 +397,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
           <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Monitor')}</button>
           <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')}>🧪 {t('Calibración')}</button>
+          <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos')}</button>
         </div>
 
-        {appMode !== 'info' && appMode !== 'mon' && (
+        {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && (
         <section>
             <label className="lbl">{t('Embalse')}</label>
             <select value={reservoir ?? ''} onChange={e => pickReservoir(e.target.value)}>
@@ -388,6 +440,15 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <p>🧪 <b>{t('Calibración')}</b>: {t('sube tus medidas in situ y obtén un modelo validado que se pinta como índice en el mapa.')}</p>
             <button className="primary" onClick={() => setAppMode('visor')}>{t('Empezar')}</button>
           </div>
+        ) : appMode === 'db' ? (
+          <>
+            <ErrorBoundary label="Datos"><DataForm status={dbStatus} bodies={dbBodies} body={dbBody} setBody={setDbBody}
+              params={dbParams} param={dbParam} setParam={setDbParam} depth={dbDepth} setDepth={setDbDepth}
+              sites={dbSites} selSites={dbSel} toggleSite={toggleDbSite} clearSites={() => setDbSel([])}
+              exportUrl={api.dbExportUrl(dbParam || undefined, dbBody || undefined)} /></ErrorBoundary>
+            {!dbShow && dbSeries && <button className="primary" onClick={() => setDbShow(true)}>{t('Ver gráfico')}</button>}
+            {error && <div className="badge err">{error}</div>}
+          </>
         ) : appMode === 'mon' ? (
           <>
             <MonitorForm days={monDays} setDays={setMonDays} maxCloud={monCloud} setMaxCloud={setMonCloud}
@@ -667,13 +728,16 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       )}
       {appMode === 'cal' && calRunning && <div className="hint">{prog?.step || t('Extrayendo índices de Sentinel-2 y ajustando modelos…')}</div>}
 
+      {appMode === 'db' && dbShow && dbSeries && (
+        <ErrorBoundary label="Datos"><DataResult data={dbSeries} sites={dbSites} onClose={() => setDbShow(false)} /></ErrorBoundary>
+      )}
       {appMode === 'mon' && mon && (
         <MonitorResult data={mon} onOpen={openFromMonitor} onClose={() => setAppMode('visor')} />
       )}
       {appMode === 'mon' && monRunning && !mon && <div className="hint">{prog?.step || t('Consultando Sentinel-2 en todos los embalses…')}</div>}
       {appMode === 'info' && <ProjectPage lang={lang} setLang={setLang} onClose={() => setAppMode('visor')} onStart={() => setAppMode('visor')} />}
 
-      {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && (
+      {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && (
         <div className="hint">{t('Selecciona un embalse en el mapa o en el panel para empezar')}</div>
       )}
       {adding && <div className="hint">{t('Haz clic en el embalse para añadir un punto · Esc para cancelar')}</div>}

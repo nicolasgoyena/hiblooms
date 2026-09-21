@@ -25,6 +25,14 @@ export type MonitorRow = {
 export type MonitorResp = { mode: string; start: string; end: string; days: number; rows: MonitorRow[] }
 export type ClimPoint = { date: string; q: number; year: number; value: number }
 export type ClimResp = { mode: string; index: string; unit: string; label: string; years: [number, number]; points: ClimPoint[] }
+export type DbSite = { site: string; code: string; water_body: string; lat: number; lon: number; n_campaigns: number; n_obs: number; first: string | null; last: string | null; n_dates: number | null }
+export type DbParam = { parameter_code: string; name: string; group: string; unit: string | null; unit_name: string | null; n: number; n_here: number; sites: number; first: string; last: string }
+export type DbQc = { qc_flag: number; label: string; description: string | null }
+export type DbRow = { date: string; site: string; site_code: string; water_body: string; depth_m: number | null; value: number; qc_flag: number | null; source_table: string; source_code: string | null }
+export type DbSeries = { parameter: string; name: string; unit: string | null; group: string | null; rows: DbRow[]; qc: DbQc[]; n_dates: number; depth: DbDepth
+  summary: { site_code: string; n: number; n_dates: number; min: number; median: number; max: number; last_date: string; last_value: number }[] }
+export type DbDepth = 'surface' | 'bottom' | 'all'
+export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
 export type ClassRow = { low: number; high: number | null; area_ha: number; pct: number }
@@ -94,6 +102,26 @@ export const api = {
   monitor: (b: { days: number; max_cloud: number }, onProgress?: Prog) => job<MonitorResp>('/api/monitor', b, onProgress),
   climatology: (b: { reservoir: string; index: string; years?: number; max_cloud?: number; water_only?: boolean }, onProgress?: Prog) =>
     job<ClimResp>('/api/climatology', b, onProgress),
+  dbStatus: () => req<DbStatus>('/api/db/status'),
+  dbSites: (wb?: string) => req<{ sites: DbSite[]; water_bodies: { name: string; n_sites: number }[] }>(`/api/db/sites${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
+  dbParameters: (wb?: string, depth: DbDepth = 'surface') => {
+    const q = new URLSearchParams({ depth })
+    if (wb) q.set('water_body', wb)
+    return req<{ parameters: DbParam[]; qc: DbQc[] }>(`/api/db/parameters?${q}`)
+  },
+  dbSeries: (b: { parameter: string; water_body?: string; sites?: string[]; depth: DbDepth }) => {
+    const q = new URLSearchParams({ parameter: b.parameter, depth: b.depth })
+    if (b.water_body) q.set('water_body', b.water_body)
+    if (b.sites?.length) q.set('sites', b.sites.join(','))
+    return req<DbSeries>(`/api/db/series?${q}`)
+  },
+  dbExportUrl: (parameter?: string, wb?: string) => {
+    const q = new URLSearchParams()
+    if (parameter) q.set('parameter', parameter)
+    if (wb) q.set('water_body', wb)
+    if (token) q.set('token', token)
+    return `${BASE}/api/db/export?${q}`
+  },
   calOptions: () => req<{ predictors: string[]; models: string[]; rasterizable: string[] }>('/api/calibration/options'),
   calPreview: (csv_text: string) => req<CsvPreview>('/api/calibration/preview', { csv_text }),
   calibrate: (b: CalibrateReq, onProgress?: Prog) => job<CalResult>('/api/calibrate', b, onProgress),
