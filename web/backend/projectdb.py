@@ -185,7 +185,56 @@ def _load_real() -> dict:
     campaigns = q("SELECT campaign_id, campaign_code, water_body_name, start_date, end_date FROM campaigns")
     out = _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices)
     out["samples"], out["campaigns"] = samples, campaigns
+    out.update(_load_extra_real())
     return out
+
+
+def _try(sql: str) -> Optional[pd.DataFrame]:
+    """Consulta opcional: si la tabla no existe o falla, se sigue sin ella."""
+    try:
+        return q(sql)
+    except Exception as e:  # noqa: BLE001
+        print("[projectdb] consulta opcional fallida:", str(e).splitlines()[0])
+        return None
+
+
+def _load_extra_real() -> dict:
+    phyto = _try("""
+      SELECT ls.extraction_point_id, ls.sample_date AS date, ls.depth_m, ls.lab_sample_id,
+             c.taxon_id, t.scientific_name, t.taxonomic_group, COALESCE(t.potentially_toxic, false) AS toxic,
+             c.cell_density_cells_ml AS density, c.biovolume_um3_ml AS biovolume, c.qc_flag, c.method_code
+      FROM phytoplankton_counts c
+      JOIN lab_samples ls ON ls.lab_sample_id = c.lab_sample_id
+      LEFT JOIN phytoplankton_taxa t ON t.taxon_id = c.taxon_id""")
+    cores = _try("""
+      SELECT sc.core_id, sc.core_code, sc.extraction_point_id, sc.sampling_date::text AS date,
+             sc.core_length_cm, sc.water_depth_m, sc.slicing_interval_cm, sc.notes
+      FROM sediment_cores sc""")
+    core_obs = _try("""
+      SELECT ls.core_id, ls.extraction_point_id, ls.sample_date AS date,
+             ls.section_top_cm, ls.section_bottom_cm, m.parameter_code, m.value::double precision AS value,
+             m.unit_code, m.qc_flag, COALESCE(m.below_lod, false) AS below_lod
+      FROM lab_measurements m JOIN lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
+      WHERE ls.matrix_code = 'sediment_core' AND m.value IS NOT NULL""")
+    # Sondas fijas: media diaria por metro de profundidad (solo datos no erróneos)
+    sensors = _try("""
+      SELECT reservoir_id, source_code, (date_time::timestamptz AT TIME ZONE 'Europe/Madrid')::date AS date,
+             COALESCE(FLOOR(depth), 0)::int AS dbin,
+             AVG(chlorophyll) AS chlorophyll, AVG(phycocyanin) AS phycocyanin, AVG(water_temp) AS water_temp,
+             AVG(ph) AS ph, AVG(turbidity) AS turbidity, COUNT(*) AS n
+      FROM sensor_data WHERE COALESCE(qc_flag, 0) < 2
+      GROUP BY 1, 2, 3, 4""")
+    sat = _try("""
+      SELECT reservoir_id, date::date AS date, phycocyanin_est, index_value, index_name, model_name,
+             r2_cv, rmse_cv, is_valid
+      FROM phycocyanin_estimates""")
+    idx = _try("SELECT reservoir_id, date::date AS date, pci, tbda, ci FROM indices_sentinel")
+    names = _try("""
+      SELECT r.reservoir_id, r.reservoir_name FROM reservoirs_spain r
+      WHERE r.reservoir_id IN (SELECT reservoir_id FROM sensor_data UNION SELECT reservoir_id FROM phycocyanin_estimates
+                               UNION SELECT reservoir_id FROM indices_sentinel)""")
+    return {"phyto": phyto, "cores": cores, "core_obs": core_obs, "sensors": sensors,
+            "sat": sat, "idx": idx, "res_names": names}
 
 
 # Caja aproximada de España (península, Baleares y Canarias) en grados
@@ -368,7 +417,65 @@ def _load_mock() -> dict:
     reservoirs = pd.DataFrame([(1, "EL VAL")], columns=["reservoir_id", "reservoir_name"])
     sources = pd.DataFrame([("HIBLOOMS", "Muestreos HIBLOOMS", "BIOMA-UNAV", "CC-BY 4.0", "HIBLOOMS (2026)")],
                            columns=["source_code", "name", "provider", "licence", "citation"])
-    return _assemble(points, obs, vocab, params, units, qc, reservoirs, sources)
+    out = _assemble(points, obs, vocab, params, units, qc, reservoirs, sources)
+    out.update(_load_extra_mock(points, rng))
+    return out
+
+
+def _load_extra_mock(points: pd.DataFrame, rng: random.Random) -> dict:
+    taxa = [("Microcystis aeruginosa", "Cyanobacteria", True), ("Dolichospermum sp.", "Cyanobacteria", True),
+            ("Aphanizomenon flos-aquae", "Cyanobacteria", True), ("Merismopedia sp.", "Cyanobacteria", False),
+            ("Scenedesmus sp.", "Chlorophyta", False), ("Monoraphidium sp.", "Chlorophyta", False),
+            ("Cyclotella sp.", "Bacillariophyta", False), ("Fragilaria crotonensis", "Bacillariophyta", False),
+            ("Cryptomonas sp.", "Cryptophyta", False), ("Ceratium hirundinella", "Dinophyta", False)]
+    ph = []
+    for r in points.itertuples():
+        if r.point_number != 1:
+            continue
+        d0 = date(2024, 4, 1) + timedelta(days=45 * (r.campaign_id - 1))
+        season = .5 + .5 * math.sin((d0.timetuple().tm_yday - 110) / 365 * 2 * math.pi)
+        for i, (n, g, tox) in enumerate(taxa):
+            if rng.random() < .25:
+                continue
+            base = (4000 * season if g == "Cyanobacteria" else 800) * rng.uniform(.2, 1.5)
+            ph.append(dict(extraction_point_id=r.extraction_point_id, date=d0, depth_m=0.5,
+                           lab_sample_id=f"L{r.extraction_point_id}", taxon_id=i, scientific_name=n,
+                           taxonomic_group=g, toxic=tox, density=base, biovolume=base * rng.uniform(20, 300),
+                           qc_flag=0, method_code="utermohl"))
+    ep = int(points.extraction_point_id.iloc[0])
+    cores = pd.DataFrame([(1, "HIB-VAL-1", ep, "2025-08-25", 35.0, 23.0, 1.0, "Seccionado a 1 cm"),
+                          (2, "HIB-VAL-2", ep, "2025-08-25", 30.0, 20.0, 2.0, None)],
+                         columns=["core_id", "core_code", "extraction_point_id", "date", "core_length_cm",
+                                  "water_depth_m", "slicing_interval_cm", "notes"])
+    co = []
+    for cid, L, step in ((1, 35, 1), (2, 30, 2)):
+        for top in range(0, L, step):
+            z = top + step / 2
+            for pc, u, f in (("TOC", "percent", lambda z: 6 - z * .12 + rng.uniform(-.3, .3)),
+                             ("TN", "percent", lambda z: .6 - z * .012 + rng.uniform(-.03, .03)),
+                             ("d15N", "permil", lambda z: 4 + 2 * math.exp(-z / 8) + rng.uniform(-.2, .2)),
+                             ("Pb210", "Bq/kg", lambda z: 300 * math.exp(-z / 7) + 20 + rng.uniform(-5, 5))):
+                co.append(dict(core_id=cid, extraction_point_id=ep, date=date(2025, 8, 25), section_top_cm=top,
+                               section_bottom_cm=top + step, parameter_code=pc, value=round(f(z), 3),
+                               unit_code=u, qc_flag=0, below_lod=False))
+    sens, sat, idx = [], [], []
+    for k in range(0, 400):
+        dd = date(2024, 3, 1) + timedelta(days=k)
+        season = .5 + .5 * math.sin((dd.timetuple().tm_yday - 110) / 365 * 2 * math.pi)
+        for z in range(0, 16, 1):
+            w = 1 / (1 + math.exp((z - 6) * 1.2))
+            sens.append(dict(reservoir_id=1, source_code="aquadam_mock", date=dd, dbin=z,
+                             chlorophyll=(2 + 25 * season * w) * rng.uniform(.8, 1.2),
+                             phycocyanin=(.5 + 12 * season ** 2 * w) * rng.uniform(.7, 1.3),
+                             water_temp=9 + (14 * season) * w, ph=7.8 + .9 * season * w, turbidity=3 + rng.uniform(0, 3), n=12))
+        if k % 5 == 0 and rng.random() < .6:
+            pci = 1 + 1.2 * season ** 2 + rng.uniform(-.1, .1)
+            sat.append(dict(reservoir_id=1, date=dd, phycocyanin_est=1 + 10 * season ** 2 * rng.uniform(.8, 1.2),
+                            index_value=pci, index_name="pci", model_name="Sigmoide 4p", r2_cv=.62, rmse_cv=2.1, is_valid=True))
+            idx.append(dict(reservoir_id=1, date=dd, pci=pci, tbda=.9 + .2 * season, ci=-.01 + .02 * season))
+    return {"phyto": pd.DataFrame(ph), "cores": cores, "core_obs": pd.DataFrame(co), "sensors": pd.DataFrame(sens),
+            "sat": pd.DataFrame(sat), "idx": pd.DataFrame(idx),
+            "res_names": pd.DataFrame([(1, "EL VAL")], columns=["reservoir_id", "reservoir_name"])}
 
 
 # ── API interna ─────────────────────────────────────────────────────────────
@@ -416,6 +523,8 @@ def _jsonable(df: pd.DataFrame) -> list:
     for c in out.columns:
         if pd.api.types.is_datetime64_any_dtype(out[c]):
             out[c] = out[c].dt.strftime("%Y-%m-%d")
+    num = out.select_dtypes("number").columns
+    out[num] = out[num].replace([float("inf"), float("-inf")], float("nan"))
     out = out.astype(object).where(pd.notna(out), None)
     return out.to_dict(orient="records")
 
@@ -603,3 +712,189 @@ def export_csv(parameter: Optional[str] = None, water_body: Optional[str] = None
 
 def sources() -> dict:
     return {"sources": _jsonable(data()["sources"])}
+
+
+# ── Fitoplancton ───────────────────────────────────────────────────────────
+
+def _site_filter(d: dict, df: pd.DataFrame, water_body: Optional[str], sites_: Optional[list]) -> pd.DataFrame:
+    p = d["points"].set_index("extraction_point_id")
+    df = df.assign(site=df["extraction_point_id"].map(p["site"]),
+                   site_code=df["extraction_point_id"].map(p["site_code"]),
+                   water_body=df["extraction_point_id"].map(p["water_body_name"]))
+    if water_body:
+        df = df[df["water_body"] == water_body]
+    if sites_:
+        df = df[df["site"].isin(sites_)]
+    return df
+
+
+def phyto(water_body: Optional[str] = None, sites_: Optional[list] = None, metric: str = "biovolume") -> dict:
+    """Una muestra por (punto, fecha, profundidad): total, reparto por grupos y taxones dominantes."""
+    d = data()
+    ph = d.get("phyto")
+    if ph is None or not len(ph):
+        return {"samples": [], "groups": [], "metric": metric}
+    metric = "density" if metric == "density" else "biovolume"
+    o = _site_filter(d, ph.copy(), water_body, sites_)
+    o = o[pd.to_numeric(o[metric], errors="coerce").notna()]
+    o["taxonomic_group"] = o["taxonomic_group"].fillna("Sin asignar").str.strip()
+    o["date"] = pd.to_datetime(o["date"], errors="coerce")
+    o = o.dropna(subset=["date"])
+    groups = (o.groupby("taxonomic_group")[metric].sum().sort_values(ascending=False).index.tolist())
+    out = []
+    for (site, dt, dep), g in o.groupby(["site", "date", o["depth_m"].fillna(-1)]):
+        tot = float(g[metric].sum())
+        byg = g.groupby("taxonomic_group")[metric].sum()
+        cy = float(byg.get("Cyanobacteria", 0.0))
+        tox = float(g.loc[g["toxic"].astype(bool), metric].sum())
+        top = (g.groupby(["scientific_name", "taxonomic_group", "toxic"])[["density", "biovolume"]].sum()
+                .reset_index().sort_values(metric, ascending=False).head(12))
+        out.append({
+            "site": site, "code": g["site_code"].iloc[0], "water_body": g["water_body"].iloc[0],
+            "date": dt.strftime("%Y-%m-%d"), "depth_m": None if dep == -1 else float(dep),
+            "total": tot, "n_taxa": int(g["scientific_name"].nunique()),
+            "groups": {k: float(v) for k, v in byg.items()},
+            "cyano_pct": 100 * cy / tot if tot else None, "toxic_pct": 100 * tox / tot if tot else None,
+            "cyano_density": float(g.loc[g["taxonomic_group"] == "Cyanobacteria", "density"].sum()),
+            "top": [{"name": r.scientific_name, "group": r.taxonomic_group, "toxic": bool(r.toxic),
+                     "density": None if pd.isna(r.density) else float(r.density),
+                     "biovolume": None if pd.isna(r.biovolume) else float(r.biovolume)} for r in top.itertuples()],
+        })
+    out.sort(key=lambda x: (x["date"], x["code"]))
+    return {"samples": out, "groups": groups, "metric": metric}
+
+
+# ── Testigos de sedimento ──────────────────────────────────────────────────
+
+def cores(water_body: Optional[str] = None) -> dict:
+    d = data()
+    c, co = d.get("cores"), d.get("core_obs")
+    if c is None or not len(c):
+        return {"cores": []}
+    c = _site_filter(d, c.copy(), water_body, None)
+    stats = {}
+    if co is not None and len(co):
+        for cid, g in co.groupby("core_id"):
+            stats[cid] = (int(g[["section_top_cm", "section_bottom_cm"]].drop_duplicates().shape[0]),
+                          sorted(g["parameter_code"].dropna().unique().tolist()))
+    out = []
+    for r in c.itertuples():
+        n, prm = stats.get(r.core_id, (0, []))
+        nn = lambda v: None if v is None or (isinstance(v, float) and math.isnan(v)) else v  # noqa: E731
+        out.append({"core_id": int(r.core_id), "code": nn(r.core_code), "site": nn(r.site), "site_code": nn(r.site_code),
+                    "water_body": nn(r.water_body), "date": None if pd.isna(r.date) else str(r.date)[:10],
+                    "length_cm": None if pd.isna(r.core_length_cm) else float(r.core_length_cm),
+                    "water_depth_m": None if pd.isna(r.water_depth_m) else float(r.water_depth_m),
+                    "interval_cm": None if pd.isna(r.slicing_interval_cm) else float(r.slicing_interval_cm),
+                    "notes": None if pd.isna(r.notes) else str(r.notes), "n_sections": n, "parameters": prm})
+    out.sort(key=lambda x: (-x["n_sections"], x["date"] or "", x["code"] or ""))
+    return {"cores": out}
+
+
+def core(core_id: int) -> dict:
+    d = data()
+    co = d.get("core_obs")
+    if co is None or not len(co):
+        return {"core_id": core_id, "parameters": [], "rows": []}
+    g = co[co["core_id"] == core_id].copy()
+    g["depth_cm"] = (g["section_top_cm"] + g["section_bottom_cm"].fillna(g["section_top_cm"])) / 2
+    cat = d["catalog"]
+    pinfo = {}
+    base = d["catalog"]["parameter_code"].str.split(":").str[-1]
+    for code, name in zip(base, cat["name"]):
+        pinfo.setdefault(code, name)
+    SHORT = {"percent": "%", "permil": "‰", "ug/g": "µg/g", "g/cm2": "g/cm²"}
+    params = []
+    for pc, gg in g.groupby("parameter_code"):
+        u = gg["unit_code"].dropna().iloc[0] if gg["unit_code"].notna().any() else None
+        params.append({"parameter_code": pc, "name": pinfo.get(pc, pc), "unit": SHORT.get(u, u), "n": int(len(gg))})
+    rows = g[["parameter_code", "section_top_cm", "section_bottom_cm", "depth_cm", "value", "qc_flag", "below_lod"]]
+    return {"core_id": core_id, "parameters": sorted(params, key=lambda x: x["name"] or ""),
+            "rows": _jsonable(rows.sort_values(["parameter_code", "depth_cm"]))}
+
+
+# ── Sondas fijas + satélite ────────────────────────────────────────────────
+
+SENSOR_VARS = {"chlorophyll": ("Clorofila (sonda)", "µg/L"), "phycocyanin": ("Ficocianina (sonda)", "µg/L"),
+               "water_temp": ("Temperatura del agua", "°C"), "ph": ("pH", ""), "turbidity": ("Turbidez", "NTU")}
+
+
+def _res_name(d: dict, rid) -> str:
+    p = d["points"]
+    m = p.loc[p["reservoir_id"] == rid, "water_body_name"].dropna()
+    if len(m):
+        return str(m.iloc[0])
+    rn = d.get("res_names")
+    if rn is not None and len(rn):
+        m = rn.loc[rn["reservoir_id"] == rid, "reservoir_name"]
+        if len(m):
+            return str(m.iloc[0])
+    return f"Embalse {rid}"
+
+
+def sensor_reservoirs() -> dict:
+    d = data()
+    out = {}
+    for key in ("sensors", "sat", "idx"):
+        df = d.get(key)
+        if df is None or not len(df):
+            continue
+        for rid, g in df.groupby("reservoir_id"):
+            e = out.setdefault(int(rid), {"reservoir_id": int(rid), "name": _res_name(d, rid),
+                                          "sensor_days": 0, "sat_dates": 0, "first": None, "last": None})
+            dates = pd.to_datetime(g["date"], errors="coerce").dropna()
+            if key == "sensors":
+                e["sensor_days"] = int(dates.nunique())
+                e["sources"] = sorted(g["source_code"].dropna().unique().tolist())
+            else:
+                e["sat_dates"] = max(e["sat_dates"], int(dates.nunique()))
+            f, l = dates.min().strftime("%Y-%m-%d"), dates.max().strftime("%Y-%m-%d")
+            e["first"] = min(filter(None, [e["first"], f]))
+            e["last"] = max(filter(None, [e["last"], l]))
+    vars_ = [{"key": k, "name": n, "unit": u} for k, (n, u) in SENSOR_VARS.items()]
+    return {"reservoirs": sorted(out.values(), key=lambda x: -x["sensor_days"]), "variables": vars_}
+
+
+def sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: str = "surface") -> dict:
+    d = data()
+    if variable not in SENSOR_VARS:
+        variable = "phycocyanin"
+    s = d.get("sensors")
+    daily, profile = [], []
+    if s is not None and len(s):
+        g = s[(s["reservoir_id"] == reservoir_id) & s[variable].notna()].copy()
+        g["date"] = pd.to_datetime(g["date"], errors="coerce")
+        if len(g):
+            # capa: superficie (0–2 m), media de toda la columna, o por metro (diagrama)
+            sub = g[g["dbin"] <= 1] if layer == "surface" else g
+            w = sub.assign(vn=sub[variable] * sub["n"])
+            agg = w.groupby("date").agg(vn=("vn", "sum"), n=("n", "sum"), zmax=("dbin", "max")).reset_index()
+            agg["value"] = agg["vn"] / agg["n"]
+            daily = _jsonable(agg[["date", "value", "n", "zmax"]].sort_values("date"))
+            # diagrama profundidad × tiempo: media semanal por metro (ligero para el navegador)
+            g["week"] = g["date"].dt.to_period("W").dt.start_time
+            pw = g.assign(vn=g[variable] * g["n"]).groupby(["week", "dbin"]).agg(vn=("vn", "sum"), n=("n", "sum")).reset_index()
+            pw["value"] = pw["vn"] / pw["n"]
+            profile = _jsonable(pw.rename(columns={"week": "date"})[["date", "dbin", "value"]])
+    sat, idx, model = [], [], None
+    st = d.get("sat")
+    if st is not None and len(st):
+        g = st[st["reservoir_id"] == reservoir_id].copy()
+        if len(g):
+            g["date"] = pd.to_datetime(g["date"], errors="coerce")
+            model = {"name": str(g["model_name"].dropna().iloc[0]) if g["model_name"].notna().any() else None,
+                     "index": str(g["index_name"].dropna().iloc[0]) if g["index_name"].notna().any() else None,
+                     "r2": None if g["r2_cv"].isna().all() else float(g["r2_cv"].dropna().iloc[0]),
+                     "rmse": None if g["rmse_cv"].isna().all() else float(g["rmse_cv"].dropna().iloc[0]),
+                     "valid": bool(g["is_valid"].fillna(False).astype(bool).any())}
+            sat = _jsonable(g[["date", "phycocyanin_est", "index_value", "is_valid"]].sort_values("date"))
+    ix = d.get("idx")
+    if ix is not None and len(ix):
+        g = ix[ix["reservoir_id"] == reservoir_id].copy()
+        if len(g):
+            g["date"] = pd.to_datetime(g["date"], errors="coerce")
+            idx = _jsonable(g[["date", "pci", "tbda", "ci"]].sort_values("date"))
+    n, u = SENSOR_VARS[variable]
+    return {"reservoir_id": reservoir_id, "name": _res_name(d, reservoir_id), "variable": variable,
+            "var_name": n, "unit": u, "layer": layer, "daily": daily, "profile": profile,
+            "sat": sat, "idx": idx, "model": model}

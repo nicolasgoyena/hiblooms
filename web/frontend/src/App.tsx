@@ -5,7 +5,8 @@ import { CalibrationForm, CalibrationResult } from './Calibration'
 import ProjectPage from './ProjectPage'
 import { MonitorForm, MonitorResult } from './Monitor'
 import Climatology from './Climatology'
-import { DataForm, DataResult } from './DataTab'
+import { DataForm, DataResult, DbView } from './DataTab'
+import { CoresResult, PhytoResult, SensorsResult } from './Extra'
 import { CampaignsResult } from './Campaigns'
 import ErrorBoundary from './ErrorBoundary'
 import {
@@ -87,7 +88,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [dbSel, setDbSel] = useState<string[]>([])
   const [dbSeries, setDbSeries] = useState<DbSeries | null>(null)
   const [dbShow, setDbShow] = useState(true)
-  const [dbView, setDbView] = useState<'measures' | 'campaigns'>('measures')
+  const [dbView, setDbView] = useState<DbView>('measures')
   const [dbCamps, setDbCamps] = useState<{ campaigns: DbCampaign[]; kinds: DbKind[] } | null>(null)
   useEffect(() => {
     if (appMode !== 'db' || dbView !== 'campaigns') return
@@ -457,7 +458,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
               exportUrl={api.dbExportUrl(dbParam || undefined, dbBody || undefined)}
               view={dbView} setView={v => { setDbView(v); setDbShow(true) }} /></ErrorBoundary>
             {dbView === 'campaigns' && !dbCamps && !error && <div className="hint-inline muted small"><span className="spin" /> {t('Cargando campañas…')}</div>}
-            {!dbShow && (dbView === 'campaigns' ? dbCamps : dbSeries) && <button className="primary" onClick={() => setDbShow(true)}>{t('Ver gráfico')}</button>}
+            {!dbShow && (dbView === 'campaigns' ? dbCamps : dbView === 'measures' ? dbSeries : true) && <button className="primary" onClick={() => setDbShow(true)}>{t('Ver gráfico')}</button>}
             {error && <div className="badge err">{error}</div>}
           </>
         ) : appMode === 'mon' ? (
@@ -742,6 +743,15 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       {appMode === 'db' && dbView === 'campaigns' && dbShow && dbCamps && (
         <ErrorBoundary label="Datos"><CampaignsResult data={dbCamps} onClose={() => setDbShow(false)}
           onOpenSite={(site, wb) => { if (wb) setDbBody(wb); setDbView('measures'); setTimeout(() => setDbSel([site]), 400); setDbShow(true) }} /></ErrorBoundary>
+      )}
+      {appMode === 'db' && dbShow && dbView === 'phyto' && (
+        <ErrorBoundary label="Datos"><PhytoResult body={dbBody} sites={dbSel} onClose={() => setDbShow(false)} /></ErrorBoundary>
+      )}
+      {appMode === 'db' && dbShow && dbView === 'cores' && (
+        <ErrorBoundary label="Datos"><CoresResult body={dbBody} onClose={() => setDbShow(false)} /></ErrorBoundary>
+      )}
+      {appMode === 'db' && dbShow && dbView === 'sensors' && (
+        <ErrorBoundary label="Datos"><SensorsResult onClose={() => setDbShow(false)} /></ErrorBoundary>
       )}
       {appMode === 'db' && dbView === 'measures' && dbShow && dbSeries && (
         <ErrorBoundary label="Datos"><DataResult data={dbSeries} sites={dbSites} onClose={() => setDbShow(false)} /></ErrorBoundary>

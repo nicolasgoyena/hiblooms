@@ -35,6 +35,17 @@ export type DbDepth = 'surface' | 'bottom' | 'all'
 export type DbVisit = { extraction_point_id: number; site: string; code: string; date: string | null; time: string | null; kinds: string[]; n_obs: number; n_params: number; lat: number | null; lon: number | null }
 export type DbCampaign = { campaign_id: number | null; code: string; water_body: string | null; start: string | null; end: string | null; n_visits: number; n_sites: number; n_obs: number; kinds: string[]; visits: DbVisit[] }
 export type DbKind = { key: string; label: string }
+export type PhytoTaxon = { name: string; group: string; toxic: boolean; density: number | null; biovolume: number | null }
+export type PhytoSample = { site: string; code: string; water_body: string; date: string; depth_m: number | null; total: number; n_taxa: number; groups: Record<string, number>; cyano_pct: number | null; toxic_pct: number | null; cyano_density: number; top: PhytoTaxon[] }
+export type PhytoResp = { samples: PhytoSample[]; groups: string[]; metric: 'density' | 'biovolume' }
+export type CoreMeta = { core_id: number; code: string | null; site: string | null; site_code: string | null; water_body: string | null; date: string | null; length_cm: number | null; water_depth_m: number | null; interval_cm: number | null; notes: string | null; n_sections: number; parameters: string[] }
+export type CoreData = { core_id: number; parameters: { parameter_code: string; name: string; unit: string | null; n: number }[]; rows: { parameter_code: string; section_top_cm: number; section_bottom_cm: number | null; depth_cm: number; value: number; qc_flag: number | null; below_lod: boolean }[] }
+export type SensorRes = { reservoir_id: number; name: string; sensor_days: number; sat_dates: number; first: string | null; last: string | null; sources?: string[] }
+export type SensorSeries = { reservoir_id: number; name: string; variable: string; var_name: string; unit: string; layer: string
+  daily: { date: string; value: number; n: number; zmax: number }[]; profile: { date: string; dbin: number; value: number }[]
+  sat: { date: string; phycocyanin_est: number | null; index_value: number | null; is_valid: boolean | null }[]
+  idx: { date: string; pci: number | null; tbda: number | null; ci: number | null }[]
+  model: { name: string | null; index: string | null; r2: number | null; rmse: number | null; valid: boolean } | null }
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
@@ -119,6 +130,17 @@ export const api = {
     return req<DbSeries>(`/api/db/series?${q}`)
   },
   dbCampaigns: (wb?: string) => req<{ campaigns: DbCampaign[]; kinds: DbKind[] }>(`/api/db/campaigns${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
+  dbPhyto: (wb: string | undefined, sites: string[], metric: string) => {
+    const q = new URLSearchParams({ metric })
+    if (wb) q.set('water_body', wb)
+    if (sites.length) q.set('sites', sites.join(','))
+    return req<PhytoResp>(`/api/db/phyto?${q}`)
+  },
+  dbCores: (wb?: string) => req<{ cores: CoreMeta[] }>(`/api/db/cores${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
+  dbCore: (id: number) => req<CoreData>(`/api/db/core/${id}`),
+  dbSensors: () => req<{ reservoirs: SensorRes[]; variables: { key: string; name: string; unit: string }[] }>('/api/db/sensors'),
+  dbSensorSeries: (id: number, variable: string, layer: string) =>
+    req<SensorSeries>(`/api/db/sensors/${id}?variable=${variable}&layer=${layer}`),
   dbExportUrl: (parameter?: string, wb?: string) => {
     const q = new URLSearchParams()
     if (parameter) q.set('parameter', parameter)

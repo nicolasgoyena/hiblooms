@@ -1485,6 +1485,31 @@ def db_campaigns(water_body: Optional[str] = None):
     return _pdb(pdb.campaigns, water_body)
 
 
+@app.get("/api/db/phyto")
+def db_phyto(water_body: Optional[str] = None, sites: Optional[str] = None, metric: str = "biovolume"):
+    return _pdb(pdb.phyto, water_body, [x for x in (sites or "").split(",") if x] or None, metric)
+
+
+@app.get("/api/db/cores")
+def db_cores(water_body: Optional[str] = None):
+    return _pdb(pdb.cores, water_body)
+
+
+@app.get("/api/db/core/{core_id}")
+def db_core(core_id: int):
+    return _pdb(pdb.core, core_id)
+
+
+@app.get("/api/db/sensors")
+def db_sensors():
+    return _pdb(pdb.sensor_reservoirs)
+
+
+@app.get("/api/db/sensors/{reservoir_id}")
+def db_sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: str = "surface"):
+    return _pdb(pdb.sensor_series, reservoir_id, variable, layer)
+
+
 @app.post("/api/db/reload")
 def db_reload():
     """Vuelve a leer la base de datos (tras cargar datos nuevos)."""

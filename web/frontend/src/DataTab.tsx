@@ -6,6 +6,8 @@ import { locale, t } from './i18n'
 const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Controles de la pestaña, en el panel lateral. */
+export type DbView = 'measures' | 'campaigns' | 'phyto' | 'sensors' | 'cores'
+
 export function DataForm(p: {
   status: DbStatus | null
   bodies: { name: string; n_sites: number }[]
@@ -15,7 +17,7 @@ export function DataForm(p: {
   depth: DbDepth; setDepth: (d: DbDepth) => void
   sites: DbSite[]; selSites: string[]; toggleSite: (s: string) => void; clearSites: () => void
   exportUrl: string
-  view: 'measures' | 'campaigns'; setView: (v: 'measures' | 'campaigns') => void
+  view: DbView; setView: (v: DbView) => void
 }) {
   const groups = useMemo(() => Array.from(new Set(p.params.map(x => x.group))), [p.params])
   const s = p.status
@@ -30,22 +32,25 @@ export function DataForm(p: {
         </p>
       )}
 
-      <div className="seg dark depth-seg">
-        <button className={p.view === 'measures' ? 'on' : ''} onClick={() => p.setView('measures')}>📈 {t('Medidas')}</button>
-        <button className={p.view === 'campaigns' ? 'on' : ''} onClick={() => p.setView('campaigns')}>🗓️ {t('Campañas y visitas')}</button>
+      <div className="db-views">
+        {([['measures', '📈', 'Medidas'], ['campaigns', '🗓️', 'Campañas'], ['phyto', '🦠', 'Fitoplancton'],
+          ['sensors', '📡', 'Sondas + satélite'], ['cores', '🧱', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
+          <button key={k} className={p.view === k ? 'on' : ''} onClick={() => p.setView(k)}><span>{ic}</span>{t(lb)}</button>
+        ))}
       </div>
 
-      <section>
+      {p.view !== 'sensors' && <section>
         <label className="lbl">{t('Masa de agua')}</label>
         <select value={p.body} onChange={e => p.setBody(e.target.value)}>
           <option value="">{t('Todas')}</option>
           {p.bodies.map(b => <option key={b.name} value={b.name}>{b.name} · {b.n_sites} {t('puntos')}</option>)}
         </select>
-      </section>
+      </section>}
 
-      {p.view === 'campaigns' ? (
-        <p className="muted small">{t('Calendario de muestreos: qué puntos se visitaron en cada campaña y qué se tomó en cada visita. Pulsa una campaña para ver sus visitas.')}</p>
-      ) : <>
+      {p.view !== 'measures' ? (<>
+        <p className="muted small">{t(VIEW_HELP[p.view])}</p>
+        {p.view === 'phyto' && <SiteChips {...p} />}
+      </>) : <>
       <section>
         <label className="lbl">{t('Parámetro')}</label>
         <select value={p.param} onChange={e => p.setParam(e.target.value)} disabled={!p.params.length}>
@@ -74,6 +79,27 @@ export function DataForm(p: {
           : t('Todas las profundidades, sin promediar: perfiles y diagrama profundidad × tiempo.')}</small>
       </section>
 
+      <SiteChips {...p} />
+
+      <a className="ghost solid wide dl-link" href={p.exportUrl} download>
+        ⬇ {p.param ? t('Descargar este parámetro (CSV)') : t('Descargar datos (CSV)')}
+      </a>
+      </>}
+    </>
+  )
+}
+
+
+const VIEW_HELP: Record<DbView, string> = {
+  measures: '',
+  campaigns: 'Calendario de muestreos: qué puntos se visitaron en cada campaña y qué se tomó en cada visita. Pulsa una campaña para ver sus visitas.',
+  phyto: 'Composición del fitoplancton de cada muestra: grupos, porcentaje de cianobacterias y taxones dominantes. Filtra por masa de agua y puntos.',
+  sensors: 'Series de las sondas fijas de los embalses junto a las estimaciones de ficocianina por satélite. Elige embalse y variable en el gráfico.',
+  cores: 'Testigos de sedimento: perfiles de cada parámetro a lo largo del testigo, en centímetros bajo la superficie del sedimento.',
+}
+
+function SiteChips(p: { sites: DbSite[]; selSites: string[]; toggleSite: (s: string) => void; clearSites: () => void }) {
+  return (<>
       {p.sites.length > 0 && (
         <section className="pois">
           <label className="lbl">{t('Puntos de muestreo')} <b>{p.selSites.length ? `${p.selSites.length}/${p.sites.length}` : p.sites.length}</b></label>
@@ -91,13 +117,7 @@ export function DataForm(p: {
           {p.selSites.length > 0 && <button className="link" onClick={p.clearSites}>{t('Ver todos los puntos')}</button>}
         </section>
       )}
-
-      <a className="ghost solid wide dl-link" href={p.exportUrl} download>
-        ⬇ {p.param ? t('Descargar este parámetro (CSV)') : t('Descargar datos (CSV)')}
-      </a>
-      </>}
-    </>
-  )
+  </>)
 }
 
 const RAMP = ['#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#ffff8c', '#f9d057', '#f29e2e', '#e76818', '#d7191c']

@@ -128,7 +128,7 @@ export function CampaignsResult({ data, onOpenSite, onClose }: {
                             </span>
                           )) : <span className="muted">—</span>}
                         </td>
-                        <td>{v.n_params ? `${v.n_params} · ${fmt(v.n_obs, 0)} ${t('medidas')}` : <span className="muted">{v.kinds.length ? t('aún sin mostrar') : t('sin datos')}</span>}</td>
+                        <td>{v.n_params ? `${v.n_params} · ${fmt(v.n_obs, 0)} ${t('medidas')}` : <span className="muted">{v.kinds.length ? t('ver en su vista') : t('sin datos')}</span>}</td>
                         <td>{v.n_obs > 0 && <button className="link" onClick={() => onOpenSite(v.site, c.water_body)}>{t('Ver datos')} →</button>}</td>
                       </tr>
                     ))}
@@ -140,7 +140,6 @@ export function CampaignsResult({ data, onOpenSite, onClose }: {
         })}
         {!camps.length && <p className="muted small">{t('No hay campañas con este filtro.')}</p>}
       </div>
-      <p className="muted small">{t('"Aún sin mostrar" marca visitas cuyos datos (fitoplancton, testigos de sedimento…) todavía no tienen vista propia en la pestaña.')}</p>
     </div>
   )
 }
