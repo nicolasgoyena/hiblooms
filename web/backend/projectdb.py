@@ -301,24 +301,27 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     points = points.copy()
     _fix_cols(points, "lat", "lon")
     _fix_cols(points, "sp_lat", "sp_lon")
-    points["site"] = points.apply(
-        lambda r: f"sp{int(r.sampling_point_id)}" if pd.notna(r.sampling_point_id) else f"ep{int(r.extraction_point_id)}", axis=1)
+    points["site"] = ("sp" + points["sampling_point_id"].astype("Int64").astype(str)).where(
+        points["sampling_point_id"].notna(), "ep" + points["extraction_point_id"].astype("Int64").astype(str))
     points["site_code"] = points["point_code"].fillna(points["location_code"]).fillna(points["site"])
     points["site_lat"] = points["sp_lat"].fillna(points["lat"])
     points["site_lon"] = points["sp_lon"].fillna(points["lon"])
     ep2site = dict(zip(points.extraction_point_id, points.site))
 
     # Parámetro normalizado
-    vmap = {(r.table_name, r.column_name): (r.parameter_code, r.unit_code) for r in vocab.itertuples()}
-    def norm(r):
-        if r.column_name in EXTRA_PARAMS:
-            return r.column_name, EXTRA_PARAMS[r.column_name][2]
-        if r.source_table == "lab_measurements":
-            return r.column_name, getattr(r, "unit_raw", None)
-        return vmap.get((r.source_table, r.column_name), (r.column_name, None))
+    # (vectorizado: con decenas de miles de filas, un apply fila a fila tarda minutos en Render)
     obs = obs.copy()
-    pc = obs.apply(norm, axis=1, result_type="expand")
-    obs["parameter_code"], obs["unit_code"] = pc[0], pc[1]
+    v = vocab.rename(columns={"table_name": "source_table", "parameter_code": "_pc", "unit_code": "_uc"})
+    v = v.drop_duplicates(["source_table", "column_name"])
+    obs = obs.merge(v[["source_table", "column_name", "_pc", "_uc"]], on=["source_table", "column_name"], how="left")
+    is_lab = obs["source_table"] == "lab_measurements"
+    is_extra = obs["column_name"].isin(list(EXTRA_PARAMS))
+    unit_raw = obs["unit_raw"] if "unit_raw" in obs else pd.Series(None, index=obs.index, dtype=object)
+    obs["parameter_code"] = obs["_pc"].where(~is_lab & ~is_extra & obs["_pc"].notna(), obs["column_name"])
+    obs["unit_code"] = obs["_uc"].where(~is_lab & ~is_extra, None)
+    obs.loc[is_lab, "unit_code"] = unit_raw[is_lab]
+    obs.loc[is_extra, "unit_code"] = obs.loc[is_extra, "column_name"].map(lambda c: EXTRA_PARAMS[c][2])
+    obs = obs.drop(columns=["_pc", "_uc"])
     extra = pd.DataFrame([(k, n, g, u) for k, (n, g, u) in EXTRA_PARAMS.items()],
                          columns=["parameter_code", "name", "parameter_group", "default_unit"])
     params = pd.concat([params, extra[~extra.parameter_code.isin(params.parameter_code)]], ignore_index=True)

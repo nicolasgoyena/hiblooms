@@ -110,6 +110,9 @@ if not MOCK:
         MOCK = True
 
 app = FastAPI(title="HIBLOOMS web API", version="0.1.0")
+# Respuestas comprimidas: las series y perfiles viajan 5–10 veces más ligeros
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
