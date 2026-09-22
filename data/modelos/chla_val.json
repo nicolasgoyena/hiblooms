@@ -1,35 +1,1545 @@
 {
-  "id": "chla_val",
-  "index_id": "Chla_Val_cal",
-  "reservoir": "VAL",
-  "reservoir_label": "Embalse de El Val (Zaragoza)",
-  "variable": "Clorofila-a",
-  "unit": "µg/L",
-  "status": "validado",
-  "version": "2026-09",
-  "description": "Estima la concentración de clorofila-a (biomasa algal total) en la superficie del embalse a partir del índice NDCI de Sentinel-2.",
-  "formula": "log10(Chl-a) = 0,3174·NDCI² + 1,089·NDCI + 1,159",
-  "index_formula": "NDCI = (B5 − B4) / (B5 + B4)   ·   B4 = 665 nm, B5 = 705 nm",
-  "training": {
-    "pairs": 248,
-    "period": "2018–2024",
-    "ground_truth": "Sonda de perfiles Aquadam de la CHE (clorofila, 0–1,5 m)",
-    "matching": "Imagen Sentinel-2 L2A y sonda en ±3 h · media de 3×3 píxeles alrededor de la boya · solo agua sin nubes a 300 m"
-  },
-  "validation": {
-    "method": "Validación cruzada dejando fuera un año completo cada vez (el modelo nunca ve el año que predice)",
-    "metrics": [
-      {"label": "Error típico", "value": "×2,1", "help": "La predicción suele estar dentro de un factor 2 del valor real"},
-      {"label": "R² (escala log)", "value": "0,48", "help": "Proporción de la variación explicada"},
-      {"label": "AUC ≥ 10 µg/L", "value": "0,83", "help": "Capacidad de distinguir episodios de más de 10 µg/L (0,5 = azar, 1 = perfecto)"},
-      {"label": "AUC ≥ 20 µg/L", "value": "0,81", "help": "Capacidad de distinguir episodios de más de 20 µg/L"}
-    ],
-    "compared": "Se compararon regresión lineal y cuadrática, Lasso, bosque aleatorio y gradient boosting: ninguno mejoró de forma clara a esta fórmula, más sencilla y transparente."
-  },
-  "limits": [
-    "Estima la biomasa algal total: no distingue cianobacterias de otras algas.",
-    "Por debajo de ~7 µg/L no discrimina (aguas oligotróficas).",
-    "Calibrado en El Val: en otros embalses es orientativo hasta validarlo con sus datos."
+ "id": "chla_val",
+ "index_id": "Chla_Val_cal",
+ "reservoir": "VAL",
+ "reservoir_label": "Embalse de El Val (Zaragoza)",
+ "variable": "Clorofila-a",
+ "unit": "µg/L",
+ "status": "validado",
+ "version": "2026-09",
+ "description": "Estima la concentración de clorofila-a (biomasa algal total) en la superficie del embalse a partir del índice NDCI de Sentinel-2.",
+ "formula": "log10(Chl-a) = 0,3174·NDCI² + 1,089·NDCI + 1,159",
+ "index_formula": "NDCI = (B5 − B4) / (B5 + B4)   ·   B4 = 665 nm, B5 = 705 nm",
+ "training": {
+  "pairs": 248,
+  "period": "2018–2024",
+  "ground_truth": "Sonda de perfiles Aquadam de la CHE (clorofila, 0–1,5 m)",
+  "matching": "Imagen Sentinel-2 L2A y sonda en ±3 h · media de 3×3 píxeles alrededor de la boya · solo agua (≥75%) sin nubes a 300 m"
+ },
+ "validation": {
+  "method": "Validación cruzada dejando fuera un año completo cada vez (el modelo nunca ve el año que predice)",
+  "metrics": [
+   {
+    "label": "Error típico",
+    "value": "×2,1",
+    "help": "La predicción suele estar dentro de ese factor del valor real"
+   },
+   {
+    "label": "R² (escala log)",
+    "value": "0,48",
+    "help": "Proporción de la variación explicada"
+   },
+   {
+    "label": "AUC ≥ 10 µg/L",
+    "value": "0,83",
+    "help": "Capacidad de distinguir episodios de más de 10 µg/L (0,5 = azar, 1 = perfecto)"
+   },
+   {
+    "label": "AUC ≥ 20 µg/L",
+    "value": "0,81",
+    "help": "Capacidad de distinguir episodios de más de 20 µg/L"
+   },
+   {
+    "label": "Clase trófica",
+    "value": "50%",
+    "help": "Aciertos de clase OCDE (oligo · meso · eutro · hipereutrófico)"
+   }
   ],
-  "pairs": []
+  "compared": "Se compararon regresión lineal y cuadrática, Lasso, bosque aleatorio y gradient boosting: ninguno mejoró de forma clara a esta fórmula, más sencilla y transparente."
+ },
+ "limits": [
+  "Estima la biomasa algal total: no distingue cianobacterias de otras algas.",
+  "Por debajo de ~7 µg/L no discrimina (aguas oligotróficas).",
+  "Calibrado en El Val: en otros embalses es orientativo hasta validarlo con sus datos."
+ ],
+ "pairs": [
+  {
+   "date": "2018-01-29",
+   "obs": 21.5,
+   "pred": 7.37,
+   "ndci": -0.293
+  },
+  {
+   "date": "2018-02-23",
+   "obs": 12.2,
+   "pred": 2.41,
+   "ndci": -1.0
+  },
+  {
+   "date": "2018-03-15",
+   "obs": 10.1,
+   "pred": 10.31,
+   "ndci": -0.1339
+  },
+  {
+   "date": "2018-03-15",
+   "obs": 10.1,
+   "pred": 11.22,
+   "ndci": -0.0959
+  },
+  {
+   "date": "2018-03-30",
+   "obs": 6.4,
+   "pred": 10.32,
+   "ndci": -0.1336
+  },
+  {
+   "date": "2018-03-30",
+   "obs": 6.4,
+   "pred": 10.76,
+   "ndci": -0.1146
+  },
+  {
+   "date": "2018-05-09",
+   "obs": 63.1,
+   "pred": 19.21,
+   "ndci": 0.1297
+  },
+  {
+   "date": "2018-07-23",
+   "obs": 38.3,
+   "pred": 18.41,
+   "ndci": 0.1128
+  },
+  {
+   "date": "2018-07-23",
+   "obs": 38.3,
+   "pred": 18.59,
+   "ndci": 0.1168
+  },
+  {
+   "date": "2018-08-02",
+   "obs": 500.0,
+   "pred": 73.75,
+   "ndci": 0.6091
+  },
+  {
+   "date": "2018-08-02",
+   "obs": 500.0,
+   "pred": 45.54,
+   "ndci": 0.4483
+  },
+  {
+   "date": "2018-08-22",
+   "obs": 177.7,
+   "pred": 34.71,
+   "ndci": 0.3528
+  },
+  {
+   "date": "2018-08-22",
+   "obs": 177.7,
+   "pred": 38.71,
+   "ndci": 0.3916
+  },
+  {
+   "date": "2018-08-27",
+   "obs": 34.4,
+   "pred": 40.15,
+   "ndci": 0.4045
+  },
+  {
+   "date": "2018-08-27",
+   "obs": 34.4,
+   "pred": 26.29,
+   "ndci": 0.2509
+  },
+  {
+   "date": "2018-09-01",
+   "obs": 258.4,
+   "pred": 261.77,
+   "ndci": 0.9901
+  },
+  {
+   "date": "2018-09-01",
+   "obs": 258.4,
+   "pred": 250.74,
+   "ndci": 0.978
+  },
+  {
+   "date": "2018-10-06",
+   "obs": 125.9,
+   "pred": 26.98,
+   "ndci": 0.2607
+  },
+  {
+   "date": "2018-10-06",
+   "obs": 125.9,
+   "pred": 36.46,
+   "ndci": 0.3704
+  },
+  {
+   "date": "2018-10-16",
+   "obs": 69.9,
+   "pred": 56.22,
+   "ndci": 0.5199
+  },
+  {
+   "date": "2018-10-16",
+   "obs": 69.9,
+   "pred": 77.16,
+   "ndci": 0.6237
+  },
+  {
+   "date": "2018-12-20",
+   "obs": 1.0,
+   "pred": 6.92,
+   "ndci": -0.3253
+  },
+  {
+   "date": "2018-12-30",
+   "obs": 2.1,
+   "pred": 3.31,
+   "ndci": -0.755
+  },
+  {
+   "date": "2018-12-30",
+   "obs": 2.1,
+   "pred": 3.97,
+   "ndci": -0.6368
+  },
+  {
+   "date": "2019-02-08",
+   "obs": 9.8,
+   "pred": 2.46,
+   "ndci": -1.0
+  },
+  {
+   "date": "2019-02-08",
+   "obs": 9.8,
+   "pred": 6.24,
+   "ndci": -0.3405
+  },
+  {
+   "date": "2019-02-13",
+   "obs": 12.5,
+   "pred": 5.0,
+   "ndci": -0.4593
+  },
+  {
+   "date": "2019-02-13",
+   "obs": 12.5,
+   "pred": 10.67,
+   "ndci": -0.0929
+  },
+  {
+   "date": "2019-02-18",
+   "obs": 5.0,
+   "pred": 12.42,
+   "ndci": -0.0305
+  },
+  {
+   "date": "2019-02-23",
+   "obs": 44.3,
+   "pred": 145.61,
+   "ndci": 0.7549
+  },
+  {
+   "date": "2019-03-05",
+   "obs": 25.3,
+   "pred": 16.4,
+   "ndci": 0.0777
+  },
+  {
+   "date": "2019-03-05",
+   "obs": 25.3,
+   "pred": 16.19,
+   "ndci": 0.0728
+  },
+  {
+   "date": "2019-03-15",
+   "obs": 14.5,
+   "pred": 7.29,
+   "ndci": -0.2632
+  },
+  {
+   "date": "2019-03-15",
+   "obs": 14.5,
+   "pred": 14.19,
+   "ndci": 0.0225
+  },
+  {
+   "date": "2019-03-20",
+   "obs": 22.3,
+   "pred": 12.44,
+   "ndci": -0.0297
+  },
+  {
+   "date": "2019-03-20",
+   "obs": 22.3,
+   "pred": 11.66,
+   "ndci": -0.0559
+  },
+  {
+   "date": "2019-03-25",
+   "obs": 36.4,
+   "pred": 14.77,
+   "ndci": 0.0378
+  },
+  {
+   "date": "2019-03-30",
+   "obs": 5.2,
+   "pred": 8.38,
+   "ndci": -0.1984
+  },
+  {
+   "date": "2019-03-30",
+   "obs": 5.2,
+   "pred": 9.52,
+   "ndci": -0.1418
+  },
+  {
+   "date": "2019-04-04",
+   "obs": 21.9,
+   "pred": 7.37,
+   "ndci": -0.2581
+  },
+  {
+   "date": "2019-04-04",
+   "obs": 21.9,
+   "pred": 7.6,
+   "ndci": -0.244
+  },
+  {
+   "date": "2019-04-09",
+   "obs": 4.1,
+   "pred": 6.45,
+   "ndci": -0.3234
+  },
+  {
+   "date": "2019-04-09",
+   "obs": 4.1,
+   "pred": 11.11,
+   "ndci": -0.0759
+  },
+  {
+   "date": "2019-04-29",
+   "obs": 14.5,
+   "pred": 9.52,
+   "ndci": -0.1417
+  },
+  {
+   "date": "2019-04-29",
+   "obs": 14.5,
+   "pred": 8.33,
+   "ndci": -0.2013
+  },
+  {
+   "date": "2019-05-09",
+   "obs": 24.6,
+   "pred": 14.54,
+   "ndci": 0.0317
+  },
+  {
+   "date": "2019-05-14",
+   "obs": 37.9,
+   "pred": 36.19,
+   "ndci": 0.3518
+  },
+  {
+   "date": "2019-05-14",
+   "obs": 37.9,
+   "pred": 36.08,
+   "ndci": 0.3508
+  },
+  {
+   "date": "2019-06-08",
+   "obs": 20.6,
+   "pred": 13.52,
+   "ndci": 0.0035
+  },
+  {
+   "date": "2019-06-28",
+   "obs": 51.8,
+   "pred": 16.04,
+   "ndci": 0.0695
+  },
+  {
+   "date": "2019-07-03",
+   "obs": 37.6,
+   "pred": 13.49,
+   "ndci": 0.0026
+  },
+  {
+   "date": "2019-07-08",
+   "obs": 65.4,
+   "pred": 15.97,
+   "ndci": 0.0678
+  },
+  {
+   "date": "2019-08-02",
+   "obs": 65.6,
+   "pred": 15.22,
+   "ndci": 0.0495
+  },
+  {
+   "date": "2019-08-02",
+   "obs": 65.6,
+   "pred": 15.45,
+   "ndci": 0.0551
+  },
+  {
+   "date": "2019-08-17",
+   "obs": 22.2,
+   "pred": 10.15,
+   "ndci": -0.114
+  },
+  {
+   "date": "2019-08-17",
+   "obs": 22.2,
+   "pred": 11.2,
+   "ndci": -0.0728
+  },
+  {
+   "date": "2019-08-22",
+   "obs": 17.1,
+   "pred": 7.91,
+   "ndci": -0.2248
+  },
+  {
+   "date": "2019-08-22",
+   "obs": 17.1,
+   "pred": 10.03,
+   "ndci": -0.1194
+  },
+  {
+   "date": "2019-09-06",
+   "obs": 63.6,
+   "pred": 46.98,
+   "ndci": 0.4337
+  },
+  {
+   "date": "2019-09-06",
+   "obs": 63.6,
+   "pred": 26.54,
+   "ndci": 0.2495
+  },
+  {
+   "date": "2019-09-26",
+   "obs": 9.3,
+   "pred": 8.66,
+   "ndci": -0.1837
+  },
+  {
+   "date": "2019-09-26",
+   "obs": 9.3,
+   "pred": 6.6,
+   "ndci": -0.3118
+  },
+  {
+   "date": "2019-10-11",
+   "obs": 88.8,
+   "pred": 35.43,
+   "ndci": 0.3449
+  },
+  {
+   "date": "2019-10-11",
+   "obs": 88.8,
+   "pred": 39.1,
+   "ndci": 0.3764
+  },
+  {
+   "date": "2019-12-10",
+   "obs": 0.9,
+   "pred": 4.9,
+   "ndci": -0.4702
+  },
+  {
+   "date": "2019-12-10",
+   "obs": 0.9,
+   "pred": 4.6,
+   "ndci": -0.5071
+  },
+  {
+   "date": "2019-12-25",
+   "obs": 2.0,
+   "pred": 4.28,
+   "ndci": -0.5518
+  },
+  {
+   "date": "2020-01-14",
+   "obs": 2.8,
+   "pred": 6.84,
+   "ndci": -0.325
+  },
+  {
+   "date": "2020-01-14",
+   "obs": 2.8,
+   "pred": 8.0,
+   "ndci": -0.2472
+  },
+  {
+   "date": "2020-03-14",
+   "obs": 12.8,
+   "pred": 21.56,
+   "ndci": 0.1714
+  },
+  {
+   "date": "2020-03-14",
+   "obs": 12.8,
+   "pred": 3.41,
+   "ndci": -0.7489
+  },
+  {
+   "date": "2020-05-08",
+   "obs": 25.4,
+   "pred": 18.98,
+   "ndci": 0.123
+  },
+  {
+   "date": "2020-05-08",
+   "obs": 25.4,
+   "pred": 18.52,
+   "ndci": 0.1137
+  },
+  {
+   "date": "2020-05-28",
+   "obs": 7.3,
+   "pred": 13.79,
+   "ndci": -0.0042
+  },
+  {
+   "date": "2020-06-22",
+   "obs": 19.6,
+   "pred": 19.43,
+   "ndci": 0.1322
+  },
+  {
+   "date": "2020-06-22",
+   "obs": 19.6,
+   "pred": 19.58,
+   "ndci": 0.1351
+  },
+  {
+   "date": "2020-06-27",
+   "obs": 5.9,
+   "pred": 14.15,
+   "ndci": 0.0066
+  },
+  {
+   "date": "2020-07-02",
+   "obs": 9.1,
+   "pred": 12.25,
+   "ndci": -0.0538
+  },
+  {
+   "date": "2020-07-02",
+   "obs": 9.1,
+   "pred": 11.21,
+   "ndci": -0.0922
+  },
+  {
+   "date": "2020-07-07",
+   "obs": 16.9,
+   "pred": 13.16,
+   "ndci": -0.0235
+  },
+  {
+   "date": "2020-07-07",
+   "obs": 16.9,
+   "pred": 13.31,
+   "ndci": -0.0188
+  },
+  {
+   "date": "2020-07-17",
+   "obs": 65.5,
+   "pred": 15.37,
+   "ndci": 0.0402
+  },
+  {
+   "date": "2020-07-27",
+   "obs": 84.6,
+   "pred": 17.18,
+   "ndci": 0.0844
+  },
+  {
+   "date": "2020-08-01",
+   "obs": 118.3,
+   "pred": 17.8,
+   "ndci": 0.0983
+  },
+  {
+   "date": "2020-08-01",
+   "obs": 118.3,
+   "pred": 18.93,
+   "ndci": 0.122
+  },
+  {
+   "date": "2020-08-06",
+   "obs": 98.3,
+   "pred": 16.11,
+   "ndci": 0.059
+  },
+  {
+   "date": "2020-08-16",
+   "obs": 71.7,
+   "pred": 18.97,
+   "ndci": 0.1229
+  },
+  {
+   "date": "2020-08-16",
+   "obs": 71.7,
+   "pred": 17.31,
+   "ndci": 0.0874
+  },
+  {
+   "date": "2020-08-21",
+   "obs": 102.2,
+   "pred": 21.38,
+   "ndci": 0.1682
+  },
+  {
+   "date": "2020-08-21",
+   "obs": 102.2,
+   "pred": 20.35,
+   "ndci": 0.1497
+  },
+  {
+   "date": "2020-08-26",
+   "obs": 57.4,
+   "pred": 32.42,
+   "ndci": 0.3181
+  },
+  {
+   "date": "2020-08-26",
+   "obs": 57.4,
+   "pred": 20.11,
+   "ndci": 0.1452
+  },
+  {
+   "date": "2020-08-31",
+   "obs": 25.8,
+   "pred": 20.81,
+   "ndci": 0.1582
+  },
+  {
+   "date": "2020-08-31",
+   "obs": 25.8,
+   "pred": 20.21,
+   "ndci": 0.147
+  },
+  {
+   "date": "2020-09-05",
+   "obs": 19.0,
+   "pred": 6.03,
+   "ndci": -0.3912
+  },
+  {
+   "date": "2020-09-05",
+   "obs": 19.0,
+   "pred": 13.25,
+   "ndci": -0.0206
+  },
+  {
+   "date": "2020-09-10",
+   "obs": 71.2,
+   "pred": 28.67,
+   "ndci": 0.275
+  },
+  {
+   "date": "2020-09-10",
+   "obs": 71.2,
+   "pred": 37.5,
+   "ndci": 0.3678
+  },
+  {
+   "date": "2020-09-30",
+   "obs": 2.6,
+   "pred": 15.3,
+   "ndci": 0.0382
+  },
+  {
+   "date": "2020-09-30",
+   "obs": 2.6,
+   "pred": 14.7,
+   "ndci": 0.022
+  },
+  {
+   "date": "2020-10-30",
+   "obs": 1.8,
+   "pred": 7.52,
+   "ndci": -0.277
+  },
+  {
+   "date": "2020-10-30",
+   "obs": 1.8,
+   "pred": 7.32,
+   "ndci": -0.2906
+  },
+  {
+   "date": "2020-12-04",
+   "obs": 3.6,
+   "pred": 7.19,
+   "ndci": -0.2997
+  },
+  {
+   "date": "2020-12-04",
+   "obs": 3.6,
+   "pred": 7.47,
+   "ndci": -0.2805
+  },
+  {
+   "date": "2020-12-29",
+   "obs": 5.1,
+   "pred": 9.3,
+   "ndci": -0.1759
+  },
+  {
+   "date": "2020-12-29",
+   "obs": 5.1,
+   "pred": 9.65,
+   "ndci": -0.1588
+  },
+  {
+   "date": "2021-02-27",
+   "obs": 15.8,
+   "pred": 14.24,
+   "ndci": -0.0013
+  },
+  {
+   "date": "2021-02-27",
+   "obs": 15.8,
+   "pred": 14.37,
+   "ndci": 0.0022
+  },
+  {
+   "date": "2021-03-24",
+   "obs": 7.0,
+   "pred": 2.52,
+   "ndci": -1.0
+  },
+  {
+   "date": "2021-03-29",
+   "obs": 9.7,
+   "pred": 17.65,
+   "ndci": 0.0818
+  },
+  {
+   "date": "2021-04-18",
+   "obs": 10.4,
+   "pred": 12.98,
+   "ndci": -0.0384
+  },
+  {
+   "date": "2021-04-18",
+   "obs": 10.4,
+   "pred": 12.85,
+   "ndci": -0.0426
+  },
+  {
+   "date": "2021-06-07",
+   "obs": 17.3,
+   "pred": 9.27,
+   "ndci": -0.1817
+  },
+  {
+   "date": "2021-06-07",
+   "obs": 17.3,
+   "pred": 10.3,
+   "ndci": -0.1354
+  },
+  {
+   "date": "2021-06-12",
+   "obs": 23.5,
+   "pred": 14.53,
+   "ndci": 0.0066
+  },
+  {
+   "date": "2021-06-27",
+   "obs": 31.6,
+   "pred": 15.07,
+   "ndci": 0.021
+  },
+  {
+   "date": "2021-07-02",
+   "obs": 27.1,
+   "pred": 14.91,
+   "ndci": 0.0169
+  },
+  {
+   "date": "2021-07-17",
+   "obs": 18.9,
+   "pred": 10.86,
+   "ndci": -0.1125
+  },
+  {
+   "date": "2021-07-17",
+   "obs": 18.9,
+   "pred": 10.22,
+   "ndci": -0.1389
+  },
+  {
+   "date": "2021-07-22",
+   "obs": 47.3,
+   "pred": 15.83,
+   "ndci": 0.0401
+  },
+  {
+   "date": "2021-08-06",
+   "obs": 10.1,
+   "pred": 6.58,
+   "ndci": -0.3446
+  },
+  {
+   "date": "2021-08-06",
+   "obs": 10.1,
+   "pred": 7.43,
+   "ndci": -0.2845
+  },
+  {
+   "date": "2021-08-11",
+   "obs": 27.8,
+   "pred": 17.13,
+   "ndci": 0.0704
+  },
+  {
+   "date": "2021-08-16",
+   "obs": 250.1,
+   "pred": 96.58,
+   "ndci": 0.6323
+  },
+  {
+   "date": "2021-08-16",
+   "obs": 250.1,
+   "pred": 48.04,
+   "ndci": 0.4243
+  },
+  {
+   "date": "2021-08-21",
+   "obs": 17.6,
+   "pred": 21.71,
+   "ndci": 0.1581
+  },
+  {
+   "date": "2021-08-21",
+   "obs": 17.6,
+   "pred": 24.57,
+   "ndci": 0.2021
+  },
+  {
+   "date": "2021-09-05",
+   "obs": 135.0,
+   "pred": 75.73,
+   "ndci": 0.5621
+  },
+  {
+   "date": "2021-09-05",
+   "obs": 135.0,
+   "pred": 70.97,
+   "ndci": 0.543
+  },
+  {
+   "date": "2021-09-30",
+   "obs": 86.1,
+   "pred": 390.85,
+   "ndci": 0.999
+  },
+  {
+   "date": "2021-09-30",
+   "obs": 86.1,
+   "pred": 215.8,
+   "ndci": 0.8499
+  },
+  {
+   "date": "2021-10-15",
+   "obs": 3.7,
+   "pred": 12.86,
+   "ndci": -0.0423
+  },
+  {
+   "date": "2021-10-15",
+   "obs": 3.7,
+   "pred": 13.51,
+   "ndci": -0.0223
+  },
+  {
+   "date": "2021-10-25",
+   "obs": 4.6,
+   "pred": 7.76,
+   "ndci": -0.2634
+  },
+  {
+   "date": "2021-10-25",
+   "obs": 4.6,
+   "pred": 8.32,
+   "ndci": -0.2309
+  },
+  {
+   "date": "2021-11-09",
+   "obs": 2.3,
+   "pred": 4.41,
+   "ndci": -0.5665
+  },
+  {
+   "date": "2021-11-09",
+   "obs": 2.3,
+   "pred": 3.48,
+   "ndci": -0.7231
+  },
+  {
+   "date": "2021-12-14",
+   "obs": 2.3,
+   "pred": 5.06,
+   "ndci": -0.4849
+  },
+  {
+   "date": "2021-12-14",
+   "obs": 2.3,
+   "pred": 2.67,
+   "ndci": -0.9424
+  },
+  {
+   "date": "2021-12-29",
+   "obs": 2.5,
+   "pred": 10.32,
+   "ndci": -0.1344
+  },
+  {
+   "date": "2022-01-03",
+   "obs": 3.4,
+   "pred": 14.9,
+   "ndci": 0.0
+  },
+  {
+   "date": "2022-01-13",
+   "obs": 1.8,
+   "pred": 2.6,
+   "ndci": -1.0
+  },
+  {
+   "date": "2022-01-13",
+   "obs": 1.8,
+   "pred": 2.6,
+   "ndci": -1.0
+  },
+  {
+   "date": "2022-01-18",
+   "obs": 2.5,
+   "pred": 2.92,
+   "ndci": -0.876
+  },
+  {
+   "date": "2022-01-18",
+   "obs": 2.5,
+   "pred": 3.31,
+   "ndci": -0.7675
+  },
+  {
+   "date": "2022-01-23",
+   "obs": 2.3,
+   "pred": 8.5,
+   "ndci": -0.228
+  },
+  {
+   "date": "2022-01-23",
+   "obs": 2.3,
+   "pred": 8.6,
+   "ndci": -0.2228
+  },
+  {
+   "date": "2022-01-28",
+   "obs": 1.9,
+   "pred": 5.42,
+   "ndci": -0.4483
+  },
+  {
+   "date": "2022-02-02",
+   "obs": 6.2,
+   "pred": 2.6,
+   "ndci": -1.0
+  },
+  {
+   "date": "2022-02-02",
+   "obs": 6.2,
+   "pred": 2.61,
+   "ndci": -0.9991
+  },
+  {
+   "date": "2022-02-17",
+   "obs": 2.8,
+   "pred": 2.6,
+   "ndci": -1.0
+  },
+  {
+   "date": "2022-02-17",
+   "obs": 2.8,
+   "pred": 11.66,
+   "ndci": -0.095
+  },
+  {
+   "date": "2022-02-22",
+   "obs": 3.1,
+   "pred": 2.6,
+   "ndci": -1.0
+  },
+  {
+   "date": "2022-02-27",
+   "obs": 4.1,
+   "pred": 13.36,
+   "ndci": -0.0413
+  },
+  {
+   "date": "2022-04-18",
+   "obs": 137.1,
+   "pred": 82.14,
+   "ndci": 0.5385
+  },
+  {
+   "date": "2022-04-18",
+   "obs": 137.1,
+   "pred": 80.87,
+   "ndci": 0.5342
+  },
+  {
+   "date": "2022-05-13",
+   "obs": 27.5,
+   "pred": 19.49,
+   "ndci": 0.0973
+  },
+  {
+   "date": "2022-05-13",
+   "obs": 27.5,
+   "pred": 19.25,
+   "ndci": 0.0928
+  },
+  {
+   "date": "2022-05-28",
+   "obs": 7.0,
+   "pred": 8.11,
+   "ndci": -0.2491
+  },
+  {
+   "date": "2022-05-28",
+   "obs": 7.0,
+   "pred": 10.0,
+   "ndci": -0.1581
+  },
+  {
+   "date": "2022-06-22",
+   "obs": 32.5,
+   "pred": 16.16,
+   "ndci": 0.03
+  },
+  {
+   "date": "2022-07-07",
+   "obs": 12.3,
+   "pred": 14.7,
+   "ndci": -0.005
+  },
+  {
+   "date": "2022-07-12",
+   "obs": 9.5,
+   "pred": 9.2,
+   "ndci": -0.1934
+  },
+  {
+   "date": "2022-07-12",
+   "obs": 9.5,
+   "pred": 12.21,
+   "ndci": -0.0766
+  },
+  {
+   "date": "2022-07-17",
+   "obs": 6.8,
+   "pred": 17.56,
+   "ndci": 0.0602
+  },
+  {
+   "date": "2022-07-27",
+   "obs": 23.7,
+   "pred": 19.98,
+   "ndci": 0.1059
+  },
+  {
+   "date": "2022-07-27",
+   "obs": 23.7,
+   "pred": 18.25,
+   "ndci": 0.0741
+  },
+  {
+   "date": "2022-08-06",
+   "obs": 13.8,
+   "pred": 38.41,
+   "ndci": 0.3192
+  },
+  {
+   "date": "2022-08-06",
+   "obs": 13.8,
+   "pred": 22.6,
+   "ndci": 0.1484
+  },
+  {
+   "date": "2022-08-11",
+   "obs": 37.5,
+   "pred": 26.94,
+   "ndci": 0.2068
+  },
+  {
+   "date": "2022-08-16",
+   "obs": 116.4,
+   "pred": 35.7,
+   "ndci": 0.2966
+  },
+  {
+   "date": "2022-08-31",
+   "obs": 14.5,
+   "pred": 78.25,
+   "ndci": 0.5252
+  },
+  {
+   "date": "2022-08-31",
+   "obs": 14.5,
+   "pred": 44.47,
+   "ndci": 0.3635
+  },
+  {
+   "date": "2022-09-05",
+   "obs": 223.4,
+   "pred": 71.7,
+   "ndci": 0.501
+  },
+  {
+   "date": "2022-09-05",
+   "obs": 223.4,
+   "pred": 69.73,
+   "ndci": 0.4933
+  },
+  {
+   "date": "2022-09-10",
+   "obs": 14.7,
+   "pred": 468.51,
+   "ndci": 0.9666
+  },
+  {
+   "date": "2022-09-10",
+   "obs": 14.7,
+   "pred": 96.15,
+   "ndci": 0.5809
+  },
+  {
+   "date": "2022-10-05",
+   "obs": 154.3,
+   "pred": 80.28,
+   "ndci": 0.5322
+  },
+  {
+   "date": "2022-10-15",
+   "obs": 119.7,
+   "pred": 521.57,
+   "ndci": 0.9906
+  },
+  {
+   "date": "2022-10-15",
+   "obs": 119.7,
+   "pred": 129.74,
+   "ndci": 0.6593
+  },
+  {
+   "date": "2022-11-04",
+   "obs": 4.9,
+   "pred": 12.69,
+   "ndci": -0.0614
+  },
+  {
+   "date": "2022-12-24",
+   "obs": 4.1,
+   "pred": 9.02,
+   "ndci": -0.202
+  },
+  {
+   "date": "2023-01-03",
+   "obs": 4.4,
+   "pred": 3.25,
+   "ndci": -0.743
+  },
+  {
+   "date": "2023-01-03",
+   "obs": 4.4,
+   "pred": 4.72,
+   "ndci": -0.5479
+  },
+  {
+   "date": "2023-02-02",
+   "obs": 4.0,
+   "pred": 2.21,
+   "ndci": -0.9733
+  },
+  {
+   "date": "2023-02-17",
+   "obs": 2.5,
+   "pred": 7.05,
+   "ndci": -0.357
+  },
+  {
+   "date": "2023-02-17",
+   "obs": 2.5,
+   "pred": 4.34,
+   "ndci": -0.59
+  },
+  {
+   "date": "2023-03-04",
+   "obs": 5.1,
+   "pred": 6.12,
+   "ndci": -0.4227
+  },
+  {
+   "date": "2023-03-29",
+   "obs": 4.9,
+   "pred": 17.16,
+   "ndci": 0.0137
+  },
+  {
+   "date": "2023-04-03",
+   "obs": 15.0,
+   "pred": 9.1,
+   "ndci": -0.2446
+  },
+  {
+   "date": "2023-04-18",
+   "obs": 41.8,
+   "pred": 31.95,
+   "ndci": 0.2429
+  },
+  {
+   "date": "2023-04-18",
+   "obs": 41.8,
+   "pred": 38.77,
+   "ndci": 0.3105
+  },
+  {
+   "date": "2023-06-17",
+   "obs": 10.8,
+   "pred": 21.57,
+   "ndci": 0.1004
+  },
+  {
+   "date": "2023-06-17",
+   "obs": 10.8,
+   "pred": 21.62,
+   "ndci": 0.1013
+  },
+  {
+   "date": "2023-06-27",
+   "obs": 25.2,
+   "pred": 54.66,
+   "ndci": 0.4265
+  },
+  {
+   "date": "2023-07-02",
+   "obs": 43.9,
+   "pred": 88.61,
+   "ndci": 0.5821
+  },
+  {
+   "date": "2023-07-07",
+   "obs": 9.2,
+   "pred": 15.95,
+   "ndci": -0.0147
+  },
+  {
+   "date": "2023-07-17",
+   "obs": 16.4,
+   "pred": 23.47,
+   "ndci": 0.1317
+  },
+  {
+   "date": "2023-07-27",
+   "obs": 15.9,
+   "pred": 17.11,
+   "ndci": 0.0125
+  },
+  {
+   "date": "2023-08-01",
+   "obs": 30.2,
+   "pred": 18.74,
+   "ndci": 0.0475
+  },
+  {
+   "date": "2023-08-01",
+   "obs": 30.2,
+   "pred": 19.4,
+   "ndci": 0.0605
+  },
+  {
+   "date": "2023-08-06",
+   "obs": 71.8,
+   "pred": 24.23,
+   "ndci": 0.1433
+  },
+  {
+   "date": "2023-08-06",
+   "obs": 71.8,
+   "pred": 22.99,
+   "ndci": 0.1241
+  },
+  {
+   "date": "2023-08-11",
+   "obs": 17.8,
+   "pred": 17.84,
+   "ndci": 0.0285
+  },
+  {
+   "date": "2023-08-11",
+   "obs": 17.8,
+   "pred": 18.65,
+   "ndci": 0.0457
+  },
+  {
+   "date": "2023-08-11",
+   "obs": 17.8,
+   "pred": 16.81,
+   "ndci": 0.0057
+  },
+  {
+   "date": "2023-08-11",
+   "obs": 17.8,
+   "pred": 18.7,
+   "ndci": 0.0466
+  },
+  {
+   "date": "2023-08-16",
+   "obs": 15.3,
+   "pred": 26.71,
+   "ndci": 0.1789
+  },
+  {
+   "date": "2023-08-16",
+   "obs": 15.3,
+   "pred": 38.31,
+   "ndci": 0.3063
+  },
+  {
+   "date": "2023-08-21",
+   "obs": 10.8,
+   "pred": 16.04,
+   "ndci": -0.0125
+  },
+  {
+   "date": "2023-08-21",
+   "obs": 10.8,
+   "pred": 18.12,
+   "ndci": 0.0345
+  },
+  {
+   "date": "2023-08-31",
+   "obs": 17.8,
+   "pred": 42.11,
+   "ndci": 0.3388
+  },
+  {
+   "date": "2023-09-20",
+   "obs": 6.4,
+   "pred": 3.05,
+   "ndci": -0.7799
+  },
+  {
+   "date": "2023-09-20",
+   "obs": 6.4,
+   "pred": 11.23,
+   "ndci": -0.1559
+  },
+  {
+   "date": "2023-09-25",
+   "obs": 11.4,
+   "pred": 24.13,
+   "ndci": 0.1419
+  },
+  {
+   "date": "2023-09-25",
+   "obs": 11.4,
+   "pred": 22.53,
+   "ndci": 0.1166
+  },
+  {
+   "date": "2023-09-30",
+   "obs": 14.5,
+   "pred": 28.86,
+   "ndci": 0.2068
+  },
+  {
+   "date": "2023-09-30",
+   "obs": 14.5,
+   "pred": 28.32,
+   "ndci": 0.2
+  },
+  {
+   "date": "2023-10-05",
+   "obs": 9.1,
+   "pred": 21.6,
+   "ndci": 0.1009
+  },
+  {
+   "date": "2023-10-05",
+   "obs": 9.1,
+   "pred": 21.78,
+   "ndci": 0.104
+  },
+  {
+   "date": "2023-10-10",
+   "obs": 8.1,
+   "pred": 19.52,
+   "ndci": 0.063
+  },
+  {
+   "date": "2023-10-10",
+   "obs": 8.1,
+   "pred": 19.88,
+   "ndci": 0.0698
+  },
+  {
+   "date": "2023-10-20",
+   "obs": 7.7,
+   "pred": 17.01,
+   "ndci": 0.0102
+  },
+  {
+   "date": "2023-10-20",
+   "obs": 7.7,
+   "pred": 17.25,
+   "ndci": 0.0156
+  },
+  {
+   "date": "2023-10-30",
+   "obs": 7.8,
+   "pred": 16.02,
+   "ndci": -0.0129
+  },
+  {
+   "date": "2023-11-14",
+   "obs": 4.8,
+   "pred": 19.78,
+   "ndci": 0.0679
+  },
+  {
+   "date": "2023-11-14",
+   "obs": 4.8,
+   "pred": 19.77,
+   "ndci": 0.0677
+  },
+  {
+   "date": "2023-11-19",
+   "obs": 5.6,
+   "pred": 20.68,
+   "ndci": 0.0846
+  },
+  {
+   "date": "2023-11-19",
+   "obs": 5.6,
+   "pred": 20.11,
+   "ndci": 0.0742
+  },
+  {
+   "date": "2023-12-19",
+   "obs": 6.4,
+   "pred": 16.64,
+   "ndci": 0.0018
+  },
+  {
+   "date": "2023-12-19",
+   "obs": 6.4,
+   "pred": 16.88,
+   "ndci": 0.0073
+  },
+  {
+   "date": "2023-12-24",
+   "obs": 4.5,
+   "pred": 23.72,
+   "ndci": 0.1356
+  },
+  {
+   "date": "2023-12-24",
+   "obs": 4.5,
+   "pred": 20.18,
+   "ndci": 0.0754
+  },
+  {
+   "date": "2023-12-29",
+   "obs": 5.8,
+   "pred": 18.21,
+   "ndci": 0.0364
+  },
+  {
+   "date": "2023-12-29",
+   "obs": 5.8,
+   "pred": 17.79,
+   "ndci": 0.0276
+  },
+  {
+   "date": "2024-01-23",
+   "obs": 5.3,
+   "pred": 8.48,
+   "ndci": -0.2235
+  },
+  {
+   "date": "2024-01-23",
+   "obs": 5.3,
+   "pred": 10.33,
+   "ndci": -0.1351
+  },
+  {
+   "date": "2024-02-17",
+   "obs": 12.5,
+   "pred": 12.89,
+   "ndci": -0.0418
+  },
+  {
+   "date": "2024-02-17",
+   "obs": 12.5,
+   "pred": 15.59,
+   "ndci": 0.0346
+  },
+  {
+   "date": "2024-04-07",
+   "obs": 7.7,
+   "pred": 17.16,
+   "ndci": 0.0716
+  },
+  {
+   "date": "2024-04-12",
+   "obs": 7.6,
+   "pred": 7.19,
+   "ndci": -0.3022
+  },
+  {
+   "date": "2024-04-12",
+   "obs": 7.6,
+   "pred": 11.99,
+   "ndci": -0.0717
+  },
+  {
+   "date": "2024-04-22",
+   "obs": 76.1,
+   "pred": 18.43,
+   "ndci": 0.0988
+  },
+  {
+   "date": "2024-05-02",
+   "obs": 24.0,
+   "pred": 13.45,
+   "ndci": -0.0244
+  },
+  {
+   "date": "2024-05-02",
+   "obs": 24.0,
+   "pred": 14.06,
+   "ndci": -0.0064
+  },
+  {
+   "date": "2024-06-06",
+   "obs": 22.9,
+   "pred": 13.06,
+   "ndci": -0.0363
+  },
+  {
+   "date": "2024-06-16",
+   "obs": 33.4,
+   "pred": 16.97,
+   "ndci": 0.0674
+  },
+  {
+   "date": "2024-06-16",
+   "obs": 33.4,
+   "pred": 17.01,
+   "ndci": 0.0682
+  }
+ ]
 }
