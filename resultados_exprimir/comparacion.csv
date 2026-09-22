@@ -1,0 +1,109 @@
+corrección,ventana,capa_sonda,filtro,predictores,n,R2_log,RMSE,MAE,sesgo,MAE_log(×),AUC≥10,AUC≥20,clase_trófica_ok
+L1C sin corregir,5x5,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,211,0.746,26.07,15.05,-2.8,1.7,0.93,0.928,63%
+L1C sin corregir,5x5,0-3,sin filtro,NDCI + estacionalidad,227,0.733,27.18,15.17,-3.45,1.7,0.926,0.898,64%
+L1C sin corregir,5x5,0-3,"sin brillo (B11<0,02)",NDCI,211,0.71,30.33,17.02,-5.12,1.79,0.891,0.908,63%
+L1C sin corregir,5x5,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,211,0.71,45.8,21.49,-6.36,1.81,0.915,0.896,60%
+L1C sin corregir,5x5,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,211,0.706,19.07,12.05,-1.8,1.69,0.94,0.891,59%
+L1C sin corregir,5x5,0-1.5,sin filtro,NDCI + estacionalidad,227,0.703,47.57,20.96,-6.67,1.78,0.924,0.884,59%
+L1C sin corregir,3x3,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,212,0.701,29.88,16.29,-3.95,1.75,0.91,0.905,60%
+L1C sin corregir,5x5,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.695,23.17,12.36,-2.22,1.74,0.902,0.931,57%
+L1C sin corregir,5x5,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.695,30.67,15.11,-3.57,1.77,0.903,0.907,56%
+L2A Sen2Cor,3x3,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.692,39.91,16.53,-2.61,1.72,0.939,0.919,73%
+L1C sin corregir,5x5,0-5,sin filtro,NDCI + estacionalidad,227,0.692,19.19,12.0,-2.21,1.68,0.94,0.87,58%
+L1C sin corregir,5x5,0-5,"sin brillo (B11<0,02)",NDCI,211,0.691,19.61,12.53,-3.53,1.72,0.915,0.872,62%
+L1C sin corregir,5x5,0-3,sin filtro,NDCI,227,0.69,30.05,17.04,-5.45,1.8,0.891,0.88,62%
+L2A Sen2Cor,3x3,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.687,26.26,13.31,-2.47,1.7,0.917,0.937,65%
+L1C sin corregir,5x5,0-1.5,"sin brillo (B11<0,02)",NDCI,211,0.686,54.14,23.11,-8.43,1.85,0.871,0.89,60%
+L2A Sen2Cor,5x5,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,148,0.686,30.38,14.2,-1.13,1.68,0.922,0.957,66%
+L1C sin corregir,5x5,0-1.5,sin filtro,NDCI,227,0.678,52.54,22.25,-8.34,1.83,0.879,0.884,61%
+L1C sin corregir,5x5,0-3,sin brillo ni aerosoles,NDCI,150,0.675,23.48,13.54,-3.68,1.8,0.876,0.907,61%
+L2A Sen2Cor,1px,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,208,0.672,44.06,21.04,-3.44,1.78,0.928,0.9,68%
+L2A Sen2Cor,5x5,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,148,0.672,46.37,19.08,-1.53,1.77,0.926,0.925,72%
+L1C sin corregir,3x3,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.671,31.26,15.39,-3.78,1.8,0.896,0.898,55%
+L1C sin corregir,3x3,0-3,sin filtro,NDCI + estacionalidad,255,0.67,30.06,16.96,-4.57,1.77,0.908,0.863,60%
+L2A Sen2Cor,5x5,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,148,0.67,20.09,10.25,-1.46,1.61,0.926,0.926,70%
+L1C sin corregir,3x3,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,212,0.668,19.82,12.36,-2.31,1.71,0.921,0.872,59%
+L2A Sen2Cor,3x3,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,206,0.668,54.5,23.45,-1.09,1.78,0.937,0.916,68%
+L1C sin corregir,3x3,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.667,22.92,12.71,-2.46,1.79,0.893,0.912,54%
+L1C sin corregir,3x3,0-3,"sin brillo (B11<0,02)",NDCI,212,0.666,31.69,17.91,-6.25,1.86,0.876,0.884,60%
+L1C sin corregir,1px,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,218,0.664,32.02,16.9,-4.78,1.79,0.901,0.874,60%
+L2A Sen2Cor,1px,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.664,40.35,17.44,-2.75,1.78,0.933,0.906,66%
+L2A Sen2Cor,1px,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.663,27.62,13.64,-2.43,1.73,0.919,0.929,65%
+L1C sin corregir,5x5,0-5,sin filtro,NDCI,227,0.662,19.72,12.53,-3.83,1.73,0.912,0.849,60%
+L1C sin corregir,5x5,0-1.5,sin brillo ni aerosoles,NDCI,150,0.66,33.61,16.3,-5.57,1.86,0.842,0.885,57%
+L1C sin corregir,3x3,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,212,0.659,54.43,24.29,-7.71,1.88,0.908,0.887,58%
+L2A Sen2Cor,1px,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,208,0.657,23.93,13.23,-3.04,1.67,0.927,0.894,72%
+L2A Sen2Cor,5x5,0-3,"sin brillo (B11<0,02)",NDCI + estacionalidad,207,0.657,64.8,25.51,1.11,1.78,0.942,0.93,67%
+L1C sin corregir,5x5,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.656,17.97,10.46,-1.59,1.72,0.919,0.896,55%
+L1C sin corregir,1px,0-3,sin brillo ni aerosoles,NDCI + estacionalidad,153,0.655,22.37,12.7,-3.19,1.79,0.891,0.892,58%
+L2A Sen2Cor,3x3,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.654,19.21,10.09,-2.23,1.64,0.915,0.899,68%
+L1C sin corregir,3x3,0-5,"sin brillo (B11<0,02)",NDCI,212,0.651,20.41,12.9,-4.16,1.77,0.899,0.854,56%
+L1C sin corregir,5x5,0-5,sin brillo ni aerosoles,NDCI,150,0.65,17.88,10.73,-2.96,1.73,0.899,0.874,61%
+L2A Sen2Cor,3x3,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,206,0.649,26.72,14.16,-2.24,1.67,0.931,0.899,69%
+L1C sin corregir,1px,0-1.5,sin brillo ni aerosoles,NDCI + estacionalidad,153,0.649,31.12,15.09,-4.49,1.82,0.894,0.875,58%
+L1C sin corregir,3x3,0-3,sin brillo ni aerosoles,NDCI,150,0.647,23.45,13.94,-3.74,1.84,0.869,0.89,55%
+L2A Sen2Cor,5x5,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,207,0.645,29.76,14.94,-1.27,1.68,0.941,0.908,68%
+L1C sin corregir,3x3,0-1.5,"sin brillo (B11<0,02)",NDCI,212,0.643,56.01,23.94,-9.9,1.94,0.868,0.88,55%
+L1C sin corregir,1px,0-3,sin filtro,NDCI + estacionalidad,285,0.642,29.95,17.41,-5.34,1.81,0.898,0.837,58%
+L2A Sen2Cor,5x5,0-3,sin filtro,NDCI + estacionalidad,223,0.642,62.12,24.41,0.71,1.77,0.938,0.91,67%
+L2A Sen2Cor,1px,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,147,0.642,19.04,10.15,-2.32,1.65,0.915,0.895,68%
+L1C sin corregir,1px,0-5,"sin brillo (B11<0,02)",NDCI + estacionalidad,218,0.638,20.6,12.38,-2.93,1.73,0.913,0.862,61%
+L1C sin corregir,3x3,0-1.5,sin filtro,NDCI + estacionalidad,255,0.638,52.16,23.58,-8.32,1.88,0.901,0.858,57%
+L2A Sen2Cor,3x3,0-3,sin filtro,NDCI + estacionalidad,249,0.637,49.3,22.43,-2.29,1.8,0.928,0.88,65%
+L1C sin corregir,3x3,0-1.5,sin brillo ni aerosoles,NDCI,150,0.63,34.12,16.7,-5.58,1.92,0.845,0.881,51%
+L1C sin corregir,3x3,0-5,sin brillo ni aerosoles,NDCI,150,0.629,17.83,10.88,-2.98,1.77,0.893,0.865,58%
+L2A Sen2Cor,5x5,0-5,sin filtro,NDCI + estacionalidad,223,0.628,29.03,14.56,-1.38,1.68,0.937,0.888,68%
+L1C sin corregir,3x3,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,150,0.623,17.86,10.63,-1.69,1.76,0.904,0.874,54%
+L1C sin corregir,1px,0-5,sin brillo ni aerosoles,NDCI + estacionalidad,153,0.615,17.93,10.51,-2.31,1.75,0.902,0.867,56%
+L2A Sen2Cor,1px,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,208,0.615,87.99,32.58,-3.48,1.93,0.938,0.887,67%
+L2A Sen2Cor,1px,0-3,sin filtro,NDCI + estacionalidad,275,0.615,40.19,21.02,-4.45,1.84,0.912,0.85,63%
+L1C sin corregir,3x3,0-1.5,sin filtro,NDCI,255,0.614,51.34,22.64,-9.47,1.92,0.865,0.861,57%
+L1C sin corregir,1px,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,218,0.614,58.12,25.01,-7.97,1.92,0.907,0.867,54%
+L2A Sen2Cor,3x3,0-5,sin filtro,NDCI + estacionalidad,249,0.608,25.65,14.48,-2.92,1.72,0.923,0.857,63%
+L2A Sen2Cor,3x3,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,206,0.596,117.09,39.14,2.3,1.93,0.944,0.894,70%
+L1C sin corregir,1px,0-1.5,sin filtro,NDCI + estacionalidad,285,0.595,51.05,23.56,-8.58,1.93,0.885,0.843,54%
+L1C sin corregir,3x3,0-3,sin filtro,NDCI,255,0.589,31.54,18.39,-5.82,1.89,0.867,0.838,58%
+L1C sin corregir,3x3,0-5,sin filtro,NDCI + estacionalidad,255,0.583,21.85,13.4,-2.65,1.76,0.911,0.834,58%
+L1C sin corregir,1px,0-3,"sin brillo (B11<0,02)",NDCI,218,0.578,34.39,19.8,-7.56,2.0,0.844,0.832,54%
+L2A Sen2Cor,5x5,0-1.5,"sin brillo (B11<0,02)",NDCI + estacionalidad,207,0.578,136.93,42.83,5.79,1.97,0.935,0.894,69%
+L2A Sen2Cor,1px,0-5,sin filtro,NDCI + estacionalidad,275,0.578,23.88,14.55,-3.89,1.76,0.91,0.827,60%
+L1C sin corregir,1px,0-1.5,"sin brillo (B11<0,02)",NDCI,218,0.576,57.58,24.79,-11.06,2.06,0.851,0.864,49%
+L2A Sen2Cor,5x5,0-1.5,sin filtro,NDCI + estacionalidad,223,0.575,128.14,39.81,4.61,1.92,0.94,0.882,67%
+L1C sin corregir,1px,0-3,sin brillo ni aerosoles,NDCI,153,0.575,24.05,14.38,-4.49,1.93,0.842,0.845,50%
+L2A Sen2Cor,3x3,0-1.5,sin filtro,NDCI + estacionalidad,249,0.574,100.4,34.83,-0.4,1.94,0.93,0.864,65%
+L1C sin corregir,1px,0-1.5,sin brillo ni aerosoles,NDCI,153,0.574,33.74,16.99,-6.13,2.02,0.829,0.859,46%
+L1C sin corregir,1px,0-1.5,sin filtro,NDCI,285,0.564,51.19,22.84,-10.18,1.98,0.846,0.854,56%
+L2A Sen2Cor,1px,0-1.5,sin filtro,NDCI + estacionalidad,275,0.564,74.86,29.57,-5.16,1.98,0.905,0.833,60%
+L1C sin corregir,1px,0-5,"sin brillo (B11<0,02)",NDCI,218,0.558,22.39,14.15,-5.08,1.87,0.865,0.813,49%
+L1C sin corregir,1px,0-5,sin brillo ni aerosoles,NDCI,153,0.552,18.63,11.27,-3.64,1.84,0.862,0.83,48%
+L1C sin corregir,1px,0-5,sin filtro,NDCI + estacionalidad,285,0.545,21.68,13.87,-3.43,1.8,0.895,0.81,55%
+L1C sin corregir,3x3,0-5,sin filtro,NDCI,255,0.533,21.65,13.97,-4.06,1.83,0.879,0.811,54%
+L2A Sen2Cor,3x3,0-1.5,sin brillo ni aerosoles,NDCI,147,0.529,44.52,21.25,-3.63,2.12,0.828,0.864,44%
+L2A Sen2Cor,3x3,0-3,sin brillo ni aerosoles,NDCI,147,0.521,29.72,16.0,-3.8,2.02,0.822,0.861,48%
+L1C sin corregir,1px,0-3,sin filtro,NDCI,285,0.514,32.72,19.02,-6.88,1.96,0.843,0.802,55%
+L2A Sen2Cor,5x5,0-3,sin brillo ni aerosoles,NDCI,148,0.512,30.85,16.32,-3.54,2.03,0.829,0.894,48%
+L2A Sen2Cor,5x5,0-5,sin brillo ni aerosoles,NDCI,148,0.503,21.48,11.43,-3.15,1.87,0.865,0.893,57%
+L2A Sen2Cor,3x3,0-5,sin brillo ni aerosoles,NDCI,147,0.502,21.07,11.44,-3.46,1.88,0.842,0.855,53%
+L2A Sen2Cor,5x5,0-1.5,sin brillo ni aerosoles,NDCI,148,0.5,44.79,21.57,-4.17,2.18,0.787,0.865,45%
+L2A Sen2Cor,1px,0-1.5,sin brillo ni aerosoles,NDCI,147,0.491,40.34,20.47,-5.5,2.18,0.815,0.843,44%
+L2A Sen2Cor,3x3,0-3,"sin brillo (B11<0,02)",NDCI,206,0.46,61.69,29.27,-2.11,2.23,0.836,0.849,51%
+L2A Sen2Cor,5x5,0-3,"sin brillo (B11<0,02)",NDCI,207,0.454,63.7,29.63,-1.6,2.22,0.846,0.875,50%
+L2A Sen2Cor,3x3,0-1.5,"sin brillo (B11<0,02)",NDCI,206,0.451,110.09,41.98,1.16,2.29,0.848,0.863,50%
+L2A Sen2Cor,5x5,0-3,sin filtro,NDCI,223,0.45,60.81,27.87,-1.68,2.16,0.843,0.855,51%
+L2A Sen2Cor,1px,0-1.5,"sin brillo (B11<0,02)",NDCI,208,0.448,87.38,36.21,-4.61,2.32,0.831,0.851,49%
+L2A Sen2Cor,1px,0-3,sin brillo ni aerosoles,NDCI,147,0.447,29.01,16.05,-4.78,2.09,0.798,0.818,46%
+L2A Sen2Cor,3x3,0-5,"sin brillo (B11<0,02)",NDCI,206,0.446,32.55,17.92,-3.1,2.02,0.847,0.841,52%
+L2A Sen2Cor,5x5,0-5,"sin brillo (B11<0,02)",NDCI,207,0.446,33.88,18.07,-2.62,2.01,0.868,0.863,55%
+L2A Sen2Cor,3x3,0-3,sin filtro,NDCI,249,0.439,53.58,26.58,-3.62,2.18,0.823,0.811,51%
+L2A Sen2Cor,5x5,0-5,sin filtro,NDCI,223,0.438,32.39,17.26,-2.62,1.98,0.861,0.84,56%
+L1C sin corregir,1px,0-5,sin filtro,NDCI,285,0.437,22.81,14.69,-4.85,1.9,0.846,0.781,48%
+L2A Sen2Cor,5x5,0-1.5,"sin brillo (B11<0,02)",NDCI,207,0.434,108.63,41.91,0.65,2.34,0.823,0.863,52%
+L2A Sen2Cor,3x3,0-1.5,sin filtro,NDCI,249,0.433,94.07,36.61,-1.53,2.24,0.83,0.824,50%
+L2A Sen2Cor,5x5,0-1.5,sin filtro,NDCI,223,0.431,103.5,39.25,0.29,2.27,0.822,0.847,51%
+L2A Sen2Cor,1px,0-5,sin brillo ni aerosoles,NDCI,147,0.421,21.29,11.61,-4.04,1.94,0.809,0.816,53%
+L2A Sen2Cor,1px,0-3,"sin brillo (B11<0,02)",NDCI,208,0.418,52.11,26.83,-5.03,2.28,0.81,0.81,50%
+L2A Sen2Cor,3x3,0-5,sin filtro,NDCI,249,0.415,29.35,17.18,-4.0,2.02,0.827,0.795,52%
+L2A Sen2Cor,1px,0-1.5,sin filtro,NDCI,275,0.415,73.22,31.74,-6.34,2.27,0.809,0.807,47%
+L2A Sen2Cor,1px,0-5,"sin brillo (B11<0,02)",NDCI,208,0.399,29.44,17.2,-4.4,2.07,0.815,0.805,54%
+L2A Sen2Cor,1px,0-3,sin filtro,NDCI,275,0.384,45.19,24.87,-6.27,2.22,0.801,0.777,48%
+L2A Sen2Cor,1px,0-5,sin filtro,NDCI,275,0.35,27.29,17.16,-5.34,2.08,0.796,0.759,51%

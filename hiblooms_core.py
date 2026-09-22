@@ -308,6 +308,50 @@ def _apply_calibrated_model_band(image: ee.Image, raster_config: Optional[Dict])
     return expr.max(0).rename(str(band_name))
 
 
+# ── Clorofila-a de El Val (modelo validado, ver pestaña Modelos de la web) ─────
+_CHLA_VAL_DEFAULT = {"intercept": 1.159, "ndci": 1.089, "ndci2": 0.3174, "sin_doy": 0.0, "cos_doy": 0.0,
+                     "fuente": "L2A", "ventana_m": 0, "ndci_rango": [-0.3, 0.7]}
+
+
+def _chla_val_coef() -> Dict:
+    """Coeficientes del modelo desde data/modelos/chla_val.json (así recalibrar no exige tocar código)."""
+    try:
+        f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "modelos", "chla_val.json")
+        with open(f, encoding="utf-8") as fh:
+            c = json.load(fh).get("coef")
+        return c or _CHLA_VAL_DEFAULT
+    except Exception:  # noqa: BLE001
+        return _CHLA_VAL_DEFAULT
+
+
+def _chla_val_image(base_image: ee.Image, aoi: ee.Geometry, cloud_mask: ee.Image) -> ee.Image:
+    """log10(Chl) = a + b·NDCI + c·NDCI² + d·sen(día) + e·cos(día)
+    NDCI sobre Sentinel-2 L1C (sin corrección atmosférica) del mismo paso, con media espacial
+    de ~100 m, como en la calibración. Si no hay L1C, usa la propia imagen L2A."""
+    c = _chla_val_coef()
+    t = ee.Date(base_image.get("system:time_start"))
+    src = base_image
+    if c.get("fuente") == "L1C":
+        l1c = (ee.ImageCollection("COPERNICUS/S2_HARMONIZED").filterBounds(aoi)
+               .filterDate(t.advance(-2, "hour"), t.advance(2, "hour")))
+        src = ee.Image(ee.Algorithms.If(l1c.size().gt(0), l1c.mosaic(), base_image))
+    b4, b5 = src.select("B4").toFloat(), src.select("B5").toFloat()
+    r = float(c.get("ventana_m") or 0)
+    if r > 0:  # media 5×5 píxeles de 20 m
+        b4 = b4.focal_mean(r, "square", "meters")
+        b5 = b5.focal_mean(r, "square", "meters")
+    lo, hi = (c.get("ndci_rango") or [-0.3, 0.7])[:2]
+    ndci = b5.subtract(b4).divide(b5.add(b4)).clamp(float(lo), float(hi))
+    doy = t.getRelative("day", "year").add(1)
+    ang = doy.multiply(2 * 3.141592653589793 / 365.25)
+    est = ee.Number(float(c.get("sin_doy", 0))).multiply(ang.sin()).add(
+        ee.Number(float(c.get("cos_doy", 0))).multiply(ang.cos()))
+    log_chl = (ndci.multiply(float(c["ndci"])).add(ndci.pow(2).multiply(float(c["ndci2"])))
+               .add(float(c["intercept"])).add(ee.Image.constant(est)))
+    return (ee.Image.constant(10).pow(log_chl).min(500).clip(aoi)
+            .updateMask(cloud_mask).rename("Chla_Val_cal"))
+
+
 def _build_indices_image(
     base_image: ee.Image,
     aoi: ee.Geometry,
@@ -351,18 +395,8 @@ def _build_indices_image(
             .updateMask(cloud_mask)
             .rename("PC_Val_cal")
         ),
-        # Clorofila-a en El Val (recalibrada 2026 con 248 pares Sentinel-2 ↔ sonda Aquadam 2018–2024,
-        # validación dejando fuera cada año: R²(log) 0,48 · error típico ×2,1 · AUC ≥10 µg/L 0,83).
-        # log10(Chl) = 0,3174·NDCI² + 1,089·NDCI + 1,159 ; NDCI acotado al rango de calibración.
-        "Chla_Val_cal": lambda: (
-            ee.Image(10).pow(
-                ee.Image().expression("0.3174 * x * x + 1.089 * x + 1.159",
-                                      {"x": b5.subtract(b4).divide(b5.add(b4)).clamp(-0.3, 0.7)})
-            )
-            .min(500)
-            .updateMask(cloud_mask)
-            .rename("Chla_Val_cal")
-        ),
+        # Clorofila-a en El Val: coeficientes en data/modelos/chla_val.json (ver _chla_val_image)
+        "Chla_Val_cal": lambda: _chla_val_image(base_image, aoi, cloud_mask),
         "PC_Bellus_cal": lambda: (
             ee.Image(16957)
             .multiply(

@@ -238,7 +238,7 @@ def main():
     figura(m, preds, ["actual web (sin reajustar)", sencillos.modelo, tabla.iloc[0].modelo]
            if tabla.iloc[0].modelo != sencillos.modelo else ["actual web (sin reajustar)", sencillos.modelo])
     print(f"\n   Modelo sencillo: {sencillos.modelo} · {final['formula']}  (x = {indice})")
-    actualizar_ficha(m, preds[sencillos.modelo], sencillos, final, ok)
+    # (la ficha de la web la actualiza ahora ajustar_clorofila_final.py)
     print(f"\nListo → {OUT}")
 
 
