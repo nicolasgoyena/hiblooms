@@ -41,7 +41,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [end, setEnd] = useState(iso(today))
   const [maxCloud, setMaxCloud] = useState(30)
   const [waterOnly, setWaterOnly] = useState(true)
-  const [indexId, setIndexId] = useState('PC_Val_cal')
+  const [indexId, setIndexId] = useState('NDCI_ind')
 
   const [pois, setPois] = useState<Poi[]>([])
   const [adding, setAdding] = useState(false)
@@ -240,7 +240,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   // Los índices calibrados para un embalse concreto solo se ofrecen en ese embalse
   // (o cuando aún no hay ninguno elegido, para que se vea que existen).
   const allowed = useMemo(() => indices.filter(i => !i.reservoir || !reservoir || i.reservoir === reservoir), [indices, reservoir])
-  const groups = useMemo(() => Array.from(new Set(allowed.map(i => i.group))), [allowed])
+  const groups = useMemo(() => { const g = Array.from(new Set(allowed.map(i => i.group))); return [...g.filter(x => x !== 'Experimentales'), ...g.filter(x => x === 'Experimentales')] }, [allowed])
   useEffect(() => {
     if (!indices.length || allowed.some(i => i.id === indexId)) return
     changeIndex(allowed.find(i => i.id === 'NDCI_ind')?.id ?? allowed[0]?.id)

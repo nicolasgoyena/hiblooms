@@ -35,7 +35,7 @@ export function MonitorForm({ days, setDays, maxCloud, setMaxCloud, onRun, runni
         {running ? <><span className="spin" /> {t('Revisando embalses…')}</> : t('Actualizar estado')}
       </button>
       <p className="muted small">
-        {t('Estado orientativo a partir de índices espectrales generalistas (no de calibraciones locales): NDCI como proxy de clorofila-a y PCI como proxy de ficocianina. Sirve para priorizar qué embalse mirar, no para dar concentraciones.')}
+        {t('Estado orientativo a partir del NDCI, un índice espectral de biomasa algal (clorofila-a). Sirve para priorizar qué embalse mirar, no para dar concentraciones ni distinguir cianobacterias de otras algas.')}
       </p>
     </>
   )
@@ -94,11 +94,10 @@ export function MonitorResult({ data, onOpen, onClose }: {
             </span>
             <span className="mon-vals">
               <em>NDCI</em><b>{fmt(r.ndci_p90, 2)} <Arrow v={r.ndci_trend} thr={0.03} up="bad" fmtv={v => fmt(v, 2)} /></b>
-              <em>PCI</em><b>{fmt(r.pci_p90, 2)} <Arrow v={r.pci_trend} thr={0.08} up="bad" fmtv={v => fmt(v, 2)} /></b>
             </span>
             <span className="mon-tags">
               <span className="mon-lvl" style={{ background: LEVELS[r.level].bg, color: LEVELS[r.level].color }}>{t(r.level)}</span>
-              {r.cyano && <span className="mon-cy" title={t('posible cianobacteria')}>🦠 {t('cianobact.')}</span>}
+              {r.cyano && <span className="mon-cy" title={t('Biomasa algal alta (NDCI ≥ 0,15): posible floración. Confirmar con muestreo o sonda.')}>🌿 {t('biomasa alta')}</span>}
             </span>
           </button>
         ))}
@@ -108,10 +107,10 @@ export function MonitorResult({ data, onOpen, onClose }: {
         {t('Nivel del embalse: donde existe, el volumen embalsado oficial del Boletín Hidrológico Semanal (MITECO, embalses de más de 5 hm³, dato semanal); en el resto, la superficie de agua vista por el satélite frente a su lámina habitual (JRC Global Surface Water), con la flecha de los {n} días anteriores. El aviso ⚠ marca los embalses con señal alta de algas y nivel por debajo del 60 %, donde la concentración de nutrientes y el calentamiento agravan el episodio.', { n: data.days })}
       </p>
       <p className="muted small">
-        {t('Las flechas comparan con el periodo anterior de la misma duración: en el NDCI y el PCI, ↑ en rojo significa que la señal va a más; en el nivel, ↓ en rojo significa que el embalse sigue bajando.')}
+        {t('Las flechas comparan con el periodo anterior de la misma duración: en el NDCI, ↑ en rojo significa que la señal va a más; en el nivel, ↓ en rojo significa que el embalse sigue bajando.')}
       </p>
       <p className="muted small">
-        {t('NDCI es el percentil 90 del píxel despejado más reciente de cada embalse dentro de la ventana, sobre la lámina de agua (NDWI > 0). Un valor alto indica mucha biomasa algal; el aviso de cianobacterias aparece cuando además PCI ≥ 1,35. Confirma siempre en el visor y, donde haya calibración, con el índice calibrado.')}
+        {t('NDCI es el percentil 90 del píxel despejado más reciente de cada embalse dentro de la ventana, sobre la lámina de agua (NDWI > 0). Un valor alto indica mucha biomasa algal; el aviso 🌿 aparece con NDCI ≥ 0,15. El satélite no distingue cianobacterias de otras algas: confirma con muestreo o sonda.')}
       </p>
     </div>
   )

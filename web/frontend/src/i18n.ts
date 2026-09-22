@@ -48,6 +48,18 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  'Ficocianina · El Val (experimental)': 'Phycocyanin · El Val (experimental)',
+  'Clorofila-a · El Val': 'Chlorophyll-a · El Val',
+  'Ficocianina · Bellús (experimental)': 'Phycocyanin · Bellús (experimental)',
+  'Ficocianina general (UV, experimental)': 'Phycocyanin, general (UV, experimental)',
+  'PCI (B5/B4, experimental)': 'PCI (B5/B4, experimental)',
+  'Experimentales': 'Experimental',
+  'Biomasa algal alta (NDCI ≥ 0,15): posible floración. Confirmar con muestreo o sonda.': 'High algal biomass (NDCI ≥ 0.15): possible bloom. Confirm with sampling or probe.',
+  'biomasa alta': 'high biomass',
+  'Estado orientativo a partir del NDCI, un índice espectral de biomasa algal (clorofila-a). Sirve para priorizar qué embalse mirar, no para dar concentraciones ni distinguir cianobacterias de otras algas.': 'Indicative status from NDCI, a spectral index of algal biomass (chlorophyll-a). Use it to prioritise which reservoir to look at, not to give concentrations or tell cyanobacteria from other algae.',
+  'Las flechas comparan con el periodo anterior de la misma duración: en el NDCI, ↑ en rojo significa que la señal va a más; en el nivel, ↓ en rojo significa que el embalse sigue bajando.': 'Arrows compare with the previous period of the same length: for NDCI, a red ↑ means the signal is increasing; for level, a red ↓ means the reservoir keeps dropping.',
+  'NDCI es el percentil 90 del píxel despejado más reciente de cada embalse dentro de la ventana, sobre la lámina de agua (NDWI > 0). Un valor alto indica mucha biomasa algal; el aviso 🌿 aparece con NDCI ≥ 0,15. El satélite no distingue cianobacterias de otras algas: confirma con muestreo o sonda.': 'NDCI is the 90th percentile of the most recent clear image of each reservoir in the window, over the water surface (NDWI > 0). High values mean high algal biomass; the 🌿 flag appears at NDCI ≥ 0.15. The satellite cannot tell cyanobacteria from other algae: confirm with sampling or probe.',
+
   'Clorofila-a · El Val (validada, error ×2)': 'Chlorophyll-a · El Val (validated, ×2 error)',
   'Ficocianina · El Val (no validada)': 'Phycocyanin · El Val (not validated)',
   'ver en su vista': 'see its own view',

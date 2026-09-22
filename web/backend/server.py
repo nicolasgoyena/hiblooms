@@ -52,12 +52,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # ── Catálogo de índices ──────────────────────────────────────────────────────
 INDICES = [
-    {"id": "PC_Val_cal", "label": "Ficocianina · El Val (no validada)", "unit": "µg/L", "min": 0, "max": 100, "group": "Calibrados", "reservoir": "VAL"},
-    {"id": "Chla_Val_cal", "label": "Clorofila-a · El Val (validada, error ×2)", "unit": "µg/L", "min": 0, "max": 60, "group": "Calibrados", "reservoir": "VAL"},
-    {"id": "PC_Bellus_cal", "label": "Ficocianina calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 800, "group": "Calibrados", "reservoir": "BELLUS"},
+    {"id": "PC_Val_cal", "label": "Ficocianina · El Val (experimental)", "unit": "µg/L", "min": 0, "max": 100, "group": "Experimentales", "reservoir": "VAL"},
+    {"id": "Chla_Val_cal", "label": "Clorofila-a · El Val", "unit": "µg/L", "min": 0, "max": 60, "group": "Calibrados", "reservoir": "VAL"},
+    {"id": "PC_Bellus_cal", "label": "Ficocianina · Bellús (experimental)", "unit": "µg/L", "min": 0, "max": 800, "group": "Experimentales", "reservoir": "BELLUS"},
     {"id": "Chla_Bellus_cal", "label": "Clorofila-a calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 80, "group": "Calibrados", "reservoir": "BELLUS"},
-    {"id": "UV_PC_Gral_cal", "label": "Ficocianina general (UV)", "unit": "µg/L", "min": 0, "max": 100, "group": "Calibrados"},
-    {"id": "PCI_B5/B4", "label": "PCI (B5/B4)", "unit": "", "min": 0.5, "max": 3, "group": "Espectrales"},
+    {"id": "UV_PC_Gral_cal", "label": "Ficocianina general (UV, experimental)", "unit": "µg/L", "min": 0, "max": 100, "group": "Experimentales"},
+    {"id": "PCI_B5/B4", "label": "PCI (B5/B4, experimental)", "unit": "", "min": 0.5, "max": 3, "group": "Experimentales"},
     {"id": "NDCI_ind", "label": "NDCI", "unit": "", "min": -0.2, "max": 0.5, "group": "Espectrales"},
     {"id": "MCI", "label": "MCI", "unit": "", "min": -0.05, "max": 0.2, "group": "Espectrales"},
 ]
