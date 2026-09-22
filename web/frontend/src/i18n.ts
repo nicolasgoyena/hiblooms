@@ -48,6 +48,12 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  'Sondas fijas': 'Fixed probes',
+  'Sondas': 'Probes',
+  '{a} días con datos de sonda': '{a} days of probe data',
+  'No hay datos de sondas en la base de datos.': 'No probe data in the database.',
+  'Series de alta frecuencia de las sondas fijas de los embalses (clorofila, ficocianina, temperatura…). Elige embalse y variable en el gráfico.': 'High-frequency series from the fixed reservoir probes (chlorophyll, phycocyanin, temperature…). Choose reservoir and variable in the chart.',
+
   'Ficocianina · El Val (experimental)': 'Phycocyanin · El Val (experimental)',
   'Clorofila-a · El Val': 'Chlorophyll-a · El Val',
   'Ficocianina · Bellús (experimental)': 'Phycocyanin · Bellús (experimental)',

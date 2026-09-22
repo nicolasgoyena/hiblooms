@@ -34,7 +34,7 @@ export function DataForm(p: {
 
       <div className="db-views">
         {([['measures', '📈', 'Medidas'], ['campaigns', '🗓️', 'Campañas'], ['phyto', '🦠', 'Fitoplancton'],
-          ['sensors', '📡', 'Sondas + satélite'], ['cores', '🧱', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
+          ['sensors', '📡', 'Sondas'], ['cores', '🧱', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
           <button key={k} className={p.view === k ? 'on' : ''} onClick={() => p.setView(k)}><span>{ic}</span>{t(lb)}</button>
         ))}
       </div>
@@ -94,7 +94,7 @@ const VIEW_HELP: Record<DbView, string> = {
   measures: '',
   campaigns: 'Calendario de muestreos: qué puntos se visitaron en cada campaña y qué se tomó en cada visita. Pulsa una campaña para ver sus visitas.',
   phyto: 'Composición del fitoplancton de cada muestra: grupos, porcentaje de cianobacterias y taxones dominantes. Filtra por masa de agua y puntos.',
-  sensors: 'Series de las sondas fijas de los embalses junto a las estimaciones de ficocianina por satélite. Elige embalse y variable en el gráfico.',
+  sensors: 'Series de alta frecuencia de las sondas fijas de los embalses (clorofila, ficocianina, temperatura…). Elige embalse y variable en el gráfico.',
   cores: 'Testigos de sedimento: perfiles de cada parámetro a lo largo del testigo, en centímetros bajo la superficie del sedimento.',
 }
 

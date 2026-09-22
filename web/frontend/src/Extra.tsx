@@ -217,7 +217,7 @@ export function CoresResult({ body, onClose }: { body: string; onClose: () => vo
   )
 }
 
-// ── Sondas fijas + satélite ─────────────────────────────────────────────────
+// ── Sondas fijas ───────────────────────────────────────────────────────────
 
 export function SensorsResult({ onClose }: { onClose: () => void }) {
   const [res, setRes] = useState<SensorRes[] | null>(null)
@@ -228,9 +228,8 @@ export function SensorsResult({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<'series' | 'section'>('series')
   const [d, setD] = useState<SensorSeries | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [showIdx, setShowIdx] = useState(true)
   useEffect(() => {
-    api.dbSensors().then(r => { setRes(r.reservoirs); setVars(r.variables); setRid(r.reservoirs[0]?.reservoir_id ?? null) }).catch(e => setErr(e.message))
+    api.dbSensors().then(r => { const rs = r.reservoirs.filter(x => x.sensor_days > 0); setRes(rs); setVars(r.variables); setRid(rs[0]?.reservoir_id ?? null) }).catch(e => setErr(e.message))
   }, [])
   useEffect(() => {
     if (rid == null) return
@@ -246,29 +245,26 @@ export function SensorsResult({ onClose }: { onClose: () => void }) {
       const x = ms(date); const r = m.get(x) ?? { t: x }; r[k] = v; m.set(x, r)
     }
     d.daily.forEach(r => put(r.date, 'sensor', r.value))
-    if (d.variable === 'phycocyanin') d.sat.forEach(r => { if (r.phycocyanin_est != null) put(r.date, 'sat', r.phycocyanin_est) })
-    d.idx.forEach(r => { if (r.pci != null) put(r.date, 'pci', r.pci) })
     return Array.from(m.values()).sort((a, b) => (a.t as number) - (b.t as number))
   }, [d])
 
   const hasSensor = !!d?.daily.length
-  const hasPci = rows.some(r => r.pci != null)
   const meta = res?.find(r => r.reservoir_id === rid)
 
   return (
     <div className="card calres dbres xres">
       <button className="x" onClick={onClose} aria-label={t('Cerrar')}>×</button>
       <div>
-        <p className="eyebrow">{t('Sondas fijas y satélite')}</p>
+        <p className="eyebrow">{t('Sondas fijas')}</p>
         <h2 className="serif">{d?.name ?? meta?.name ?? t('Cargando…')}{d?.unit ? <span className="unit"> · {t(d.var_name)}</span> : null}</h2>
         {meta && <p className="muted small">
-          {t('{a} días con datos de sonda · {b} fechas de satélite', { a: meta.sensor_days, b: meta.sat_dates })}
+          {t('{a} días con datos de sonda', { a: meta.sensor_days })}
           {meta.first ? ` · ${fmtDate(meta.first)} → ${fmtDate(meta.last)}` : ''}
           {meta.sources?.length ? ` · ${meta.sources.join(', ')}` : ''}
         </p>}
       </div>
       {err && <div className="badge err">{err}</div>}
-      {res && !res.length && <Empty text={t('No hay datos de sondas ni estimaciones de satélite en la base de datos.')} />}
+      {res && !res.length && <Empty text={t('No hay datos de sondas en la base de datos.')} />}
       {res && res.length > 0 && (
         <div className="wc-bar">
           <select className="wc-date" value={rid ?? ''} onChange={e => setRid(+e.target.value)}>
@@ -299,24 +295,12 @@ export function SensorsResult({ onClose }: { onClose: () => void }) {
                   <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tick={{ fontSize: 11 }}
                     tickFormatter={v => new Date(v).toLocaleDateString(locale(), { month: 'short', year: '2-digit' })} />
                   <YAxis yAxisId="l" tick={{ fontSize: 11 }} width={48} label={{ value: d.unit, angle: -90, position: 'insideLeft', fontSize: 11 }} />
-                  {hasPci && showIdx && <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} width={40} label={{ value: 'PCI', angle: 90, position: 'insideRight', fontSize: 11 }} />}
                   <Tooltip labelFormatter={v => fmtDate(new Date(v as number).toISOString())} formatter={(v: any) => fmt(v, 2)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {hasSensor && <Line yAxisId="l" dataKey="sensor" name={t('Sonda (media diaria)')} stroke="#1D6FA8" dot={false} strokeWidth={1.4} connectNulls={false} isAnimationActive={false} />}
-                  {d.variable === 'phycocyanin' && <Scatter yAxisId="l" dataKey="sat" name={t('Satélite (ficocianina estimada)')} fill="#C8561B" />}
-                  {hasPci && showIdx && <Scatter yAxisId="r" dataKey="pci" name={t('Índice PCI (Sentinel-2)')} fill="#16B3A6" shape="diamond" />}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            {hasPci && <label className="chk small"><input type="checkbox" checked={showIdx} onChange={e => setShowIdx(e.target.checked)} /> {t('Mostrar el índice PCI de Sentinel-2')}</label>}
-            {d.model && d.variable === 'phycocyanin' && (
-              <p className={'small ' + (d.model.valid && (d.model.r2 ?? 0) > 0.3 ? 'muted' : 'badge warn')}>
-                {t('Modelo de satélite')}: {d.model.name ?? '—'} {t('sobre')} {d.model.index?.toUpperCase() ?? '—'}
-                {d.model.r2 != null ? ` · R² (CV) ${fmt(d.model.r2, 2)}` : ''}{d.model.rmse != null ? ` · RMSE ${fmt(d.model.rmse, 2)}` : ''}
-                {!(d.model.valid && (d.model.r2 ?? 0) > 0.3) ? ` · ${t('modelo no validado: las estimaciones son orientativas.')}` : ''}
-              </p>
-            )}
-            {!hasSensor && <p className="muted small">{t('Este embalse no tiene datos de sonda válidos para esta variable; solo se muestra el satélite.')}</p>}
           </>
         )
       )}
