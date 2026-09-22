@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmt, MonitorRow } from './api'
+import { api, ElValLive, fmt, LiveVar, MonitorRow } from './api'
 import { t } from './i18n'
 
 export const LEVELS: Record<string, { color: string; bg: string }> = {
@@ -65,6 +65,8 @@ export function MonitorResult({ data, onOpen, onClose }: {
           {t('{n} con observación despejada en la ventana', { n: withData })} · {data.start} → {data.end}
         </p>
       </div>
+
+      <ElValPanel onOpen={() => { const r = data.rows.find(x => /^(el )?val$/i.test(x.label.trim())); if (r) onOpen(r.id, r.date) }} />
 
       <div className="mon-sum">
         {counts.map(([l, n]) => (
@@ -155,4 +157,68 @@ function Fill({ row }: { row: MonitorRow }) {
 /** Carga inicial automática al entrar en la pestaña. */
 export function useAutoRun(run: () => void, ready: boolean) {
   useEffect(() => { if (ready) run() }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+const RIESGO_COL: Record<string, { color: string; bg: string }> = {
+  bajo: LEVELS['bajo'], medio: LEVELS['moderado'], alto: LEVELS['alto'],
+}
+
+/** El Val: últimos datos de la sonda SAICA, riesgo estacional de hoy y tendencia a corto plazo. */
+function ElValPanel({ onOpen }: { onOpen: () => void }) {
+  const [d, setD] = useState<ElValLive | null>(null)
+  const [err, setErr] = useState(false)
+  useEffect(() => { api.elvalLive().then(setD).catch(() => setErr(true)) }, [])
+  if (err || (d && !d.ok)) return null
+  if (!d) return <div className="elval loading"><span className="spin" /> {t('Cargando la sonda de El Val…')}</div>
+  const viejo = (d.hours_ago ?? 0) > 48
+  const rk = d.risk_today
+  const tr = d.trend?.slice(1) || []
+  return (
+    <div className="elval">
+      <div className="elval-head">
+        <div>
+          <b>{t('El Val · sonda en tiempo real')}</b>
+          <small className="muted"> · {d.station} · {t('último dato')} {d.last}</small>
+          {viejo && <small className="elval-old"> ⚠ {t('hace {n} días', { n: fmt((d.hours_ago ?? 0) / 24, 0) })}</small>}
+        </div>
+        <button className="link" onClick={onOpen}>{t('Abrir en el visor')} →</button>
+      </div>
+      <div className="elval-vars">
+        {d.variables.map(v => <LiveTile key={v.key} v={v} />)}
+      </div>
+      <div className="elval-models">
+        {rk && (
+          <span className="elval-risk" style={{ background: RIESGO_COL[rk.level].bg, color: RIESGO_COL[rk.level].color }}
+            title={t('Modelo validado de riesgo estacional (pestaña Modelos): probabilidad de pico de ficocianina según la época del año.')}>
+            {t('Riesgo estacional')}: <b>{t(rk.level)}</b> ({fmt(rk.p * 100, 0)} %)
+          </span>
+        )}
+        {tr.length > 0 && (
+          <span className="elval-trend" title={t('Experimental: persistencia + estacionalidad. Banda del 80 % de los casos en años anteriores.')}>
+            ⚗ {t('Tendencia ficocianina')}: {tr.map(p => (
+              <span key={p.h}>+{p.h}d <b>{fmt(p.value, 1)}</b> <small>({fmt(p.lo, 1)}–{fmt(p.hi, 1)})</small></span>
+            ))} µg/L
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LiveTile({ v }: { v: LiveVar }) {
+  const ys = v.spark.map(p => p.v)
+  const lo = Math.min(...ys), hi = Math.max(...ys)
+  const pts = ys.map((y, i) => `${(i / Math.max(ys.length - 1, 1)) * 100},${28 - ((y - lo) / (hi - lo || 1)) * 26}`).join(' ')
+  const dl = v.delta_24h
+  const flat = dl === null || Math.abs(dl) < (v.key === 'ph' ? 0.05 : 0.2)
+  return (
+    <div className="elval-tile" title={`${t(v.name)} · ${v.time}`}>
+      <span>{t(v.name)}</span>
+      <b>{fmt(v.value, v.decimals)} <small>{v.unit}</small></b>
+      <em className={flat ? '' : dl! > 0 ? 'up' : 'down'}>
+        {dl === null ? '' : flat ? `→ ${t('estable 24 h')}` : `${dl > 0 ? '↑' : '↓'} ${fmt(Math.abs(dl), v.decimals)} ${t('en 24 h')}`}
+      </em>
+      {ys.length > 1 && <svg viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points={pts} /></svg>}
+    </div>
+  )
 }

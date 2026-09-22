@@ -50,7 +50,17 @@ export type ModelCard = { id: string; index_id: string; reservoir: string; reser
   status: string; version: string; description: string; formula: string; index_formula: string
   training: { pairs: number; period: string; ground_truth: string; matching: string }
   validation: { method: string; metrics: { label: string; value: string; help: string }[]; compared: string }
-  limits: string[]; pairs: { date: string; obs: number; pred: number; ndci: number }[] }
+  limits: string[]; pairs: { date: string; obs: number; pred: number; ndci: number }[]
+  kind?: 'satellite' | 'seasonal' | 'trend'
+  curve?: { doy: number; p: number; obs: number | null }[]; levels?: { medio: number; alto: number }
+  high_season?: string | null; today?: RiskToday
+  history?: { date: string; value: number }[]; forecast?: TrendPoint[] }
+export type RiskToday = { doy: number; p: number; level: 'bajo' | 'medio' | 'alto' }
+export type TrendPoint = { h: number; date: string; value: number; lo: number; hi: number }
+export type LiveVar = { key: string; name: string; unit: string; decimals: number; value: number; time: string
+  delta_24h: number | null; spark: { t: string; v: number }[] }
+export type ElValLive = { ok: boolean; reservoir_id: number; station?: string; last?: string; hours_ago?: number
+  variables: LiveVar[]; risk_today?: RiskToday | null; trend?: TrendPoint[] | null }
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
@@ -147,6 +157,7 @@ export const api = {
   dbSensorSeries: (id: number, variable: string, layer: string) =>
     req<SensorSeries>(`/api/db/sensors/${id}?variable=${variable}&layer=${layer}`),
   models: () => req<{ models: ModelCard[] }>('/api/models'),
+  elvalLive: () => req<ElValLive>('/api/db/elval/live'),
   dbExportUrl: (parameter?: string, wb?: string) => {
     const q = new URLSearchParams()
     if (parameter) q.set('parameter', parameter)

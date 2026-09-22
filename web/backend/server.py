@@ -555,6 +555,8 @@ def models():
             out.append(json.loads(f.read_text(encoding="utf-8")))
         except Exception:  # noqa: BLE001
             continue
+    import sonda_val  # fichas calculadas en vivo con la sonda de El Val
+    out += sonda_val.cards()
     return {"models": out}
 
 
@@ -1526,6 +1528,13 @@ def db_sensors():
 @app.get("/api/db/sensors/{reservoir_id}")
 def db_sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: str = "surface"):
     return _pdb(pdb.sensor_series, reservoir_id, variable, layer)
+
+
+@app.get("/api/db/elval/live")
+def db_elval_live():
+    """Últimos datos de la sonda SAICA de El Val + riesgo estacional y tendencia."""
+    import sonda_val
+    return _pdb(sonda_val.live)
 
 
 @app.post("/api/db/reload")

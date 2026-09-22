@@ -1,4 +1,4 @@
-import { CartesianGrid, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { fmt, ModelCard } from './api'
 import { locale, t } from './i18n'
 
@@ -21,7 +21,7 @@ export function ModelList({ models, sel, onSel }: { models: ModelCard[]; sel: st
           <button key={m.id} className={'model-item' + (sel === m.id ? ' on' : '')} onClick={() => onSel(m.id)}>
             <span className="model-dot" />
             <span><b>{t(m.variable)}</b><small>{m.reservoir_label}</small></span>
-            <span className="model-status">✓ {t(m.status)}</span>
+            <Status s={m.status} small />
           </button>
         ))}
         {!models.length && <p className="muted small">{t('Cargando modelos…')}</p>}
@@ -51,7 +51,7 @@ export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: ()
           <h2 className="serif">{t(m.variable)} <span className="unit">· {m.unit}</span></h2>
           <p className="muted">{t(m.description)}</p>
         </div>
-        <span className="model-badge">✓ {t(m.status)}</span>
+        <Status s={m.status} />
       </div>
 
       <div className="model-formula">
@@ -69,7 +69,7 @@ export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: ()
 
       <div className="model-grid">
         <div>
-          {pts.length > 0 ? (
+          {m.kind === 'seasonal' ? <SeasonalChart m={m} /> : m.kind === 'trend' ? <TrendChart m={m} /> : pts.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
                 <ScatterChart margin={{ top: 8, right: 12, bottom: 18, left: 0 }}>
@@ -101,14 +101,16 @@ export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: ()
           ) : (
             <p className="muted an-empty">{t('Gráfico de validación no disponible todavía.')}</p>
           )}
-          <div className="model-legend">
-            {TROFICO.map(c => <span key={c.label}><i style={{ background: c.color }} />{t(c.label)}</span>)}
-          </div>
+          {!m.kind || m.kind === 'satellite' ? (
+            <div className="model-legend">
+              {TROFICO.map(c => <span key={c.label}><i style={{ background: c.color }} />{t(c.label)}</span>)}
+            </div>
+          ) : <ByYear m={m} />}
         </div>
         <div className="model-info">
           <h4>{t('Datos de calibración')}</h4>
           <ul>
-            <li><b>{m.training.pairs}</b> {t('pares imagen–sonda')} · {m.training.period}</li>
+            <li><b>{m.training.pairs}</b> {m.kind && m.kind !== 'satellite' ? t('días de sonda') : t('pares imagen–sonda')} · {m.training.period}</li>
             <li>{t(m.training.ground_truth)}</li>
             <li className="muted">{t(m.training.matching)}</li>
           </ul>
@@ -117,9 +119,125 @@ export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: ()
           <p className="muted small">{t(m.validation.compared)}</p>
           <h4>{t('Limitaciones')}</h4>
           <ul>{m.limits.map(l => <li key={l}>{t(l)}</li>)}</ul>
-          <button className="primary" onClick={onOpen}>🛰️ {t('Ver en el visor')}</button>
+          {m.index_id
+            ? <button className="primary" onClick={onOpen}>🛰️ {t('Ver en el visor')}</button>
+            : <p className="muted small">{t('Se calcula con los datos de la sonda y se actualiza solo cuando llegan datos nuevos. El valor de hoy aparece en la pestaña Monitor, junto a El Val.')}</p>}
         </div>
       </div>
     </div>
+  )
+}
+
+const RIESGO_COL: Record<string, string> = { bajo: '#1C6B4B', medio: '#8A6D0B', alto: '#A8540C' }
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const MES_INI = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
+const doyLabel = (d: number) => {
+  const x = new Date(2025, 0, d)
+  return `${x.getDate()} ${t(MESES[x.getMonth()])}`
+}
+
+function Status({ s, small }: { s: string; small?: boolean }) {
+  const exp = s !== 'validado'
+  return <span className={(small ? 'model-status' : 'model-badge') + (exp ? ' exp' : '')}>{exp ? '⚗' : '✓'} {t(s)}</span>
+}
+
+/** Curva anual de riesgo, con la frecuencia observada de picos y el día de hoy. */
+function SeasonalChart({ m }: { m: ModelCard }) {
+  const c = (m.curve || []).map(p => ({ ...p, pp: p.p * 100, oo: p.obs === null ? null : p.obs * 100 }))
+  const hoy = m.today
+  const lv = m.levels
+  const ymax = Math.max(10, ...c.map(p => Math.max(p.pp, p.oo ?? 0))) * 1.1
+  return (
+    <>
+      {hoy && (
+        <div className="risk-today" style={{ borderColor: RIESGO_COL[hoy.level], color: RIESGO_COL[hoy.level] }}>
+          {t('Hoy')} ({doyLabel(hoy.doy)}): <b>{t('riesgo {n}', { n: t(hoy.level) })}</b> · {fmt(hoy.p * 100, 0)} %
+          {m.high_season && <span className="muted"> · {t('época de más riesgo')}: {m.high_season}</span>}
+        </div>
+      )}
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={c} margin={{ top: 18, right: 12, bottom: 18, left: 0 }}>
+          <CartesianGrid stroke="#E3ECEC" />
+          {lv && <ReferenceArea y1={lv.alto * 100} y2={ymax} fill="#FBE6CE" fillOpacity={0.6} ifOverflow="hidden" />}
+          {lv && <ReferenceArea y1={lv.medio * 100} y2={lv.alto * 100} fill="#FBF0C7" fillOpacity={0.6} ifOverflow="hidden" />}
+          <XAxis dataKey="doy" type="number" domain={[1, 366]} ticks={MES_INI} tickFormatter={d => t(MESES[MES_INI.indexOf(d)])} tick={{ fontSize: 11 }} />
+          <YAxis domain={[0, ymax]} tickFormatter={v => `${fmt(v, 0)}%`} tick={{ fontSize: 11 }} width={44}
+            label={{ value: t('Probabilidad de pico'), angle: -90, position: 'insideLeft', fontSize: 11 }} />
+          <Tooltip content={({ payload }: any) => {
+            const p = payload?.[0]?.payload
+            return p ? <div className="tt">{doyLabel(p.doy)}<br />{t('Modelo')}: <b>{fmt(p.pp, 0)} %</b>
+              {p.oo !== null && <><br />{t('Observado')}: {fmt(p.oo, 0)} %</>}</div> : null
+          }} />
+          <Line dataKey="oo" stroke="#9AB0B3" strokeWidth={1.2} dot={false} connectNulls isAnimationActive={false} />
+          <Line dataKey="pp" stroke="#0E7C86" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+          {hoy && <ReferenceLine x={hoy.doy} stroke={RIESGO_COL[hoy.level]} strokeDasharray="4 3" label={{ value: t('hoy'), fontSize: 11, position: 'top' }} />}
+        </ComposedChart>
+      </ResponsiveContainer>
+      <p className="muted small">
+        {t('Línea gruesa: probabilidad de que un día sea de pico según la época (modelo). Línea gris: proporción de días de pico observada por la sonda en esas fechas. Fondo: riesgo medio y alto.')}
+      </p>
+    </>
+  )
+}
+
+/** Últimas semanas de la sonda y pronóstico a 1, 3 y 7 días con su rango. */
+function TrendChart({ m }: { m: ModelCard }) {
+  const h = (m.history || []).map(p => ({ date: p.date, obs: p.value }))
+  const f = (m.forecast || []).map(p => ({ date: p.date, pred: p.value, band: [p.lo, p.hi] as [number, number] }))
+  const data = [...h.filter(p => !f.some(q => q.date === p.date)), ...f.map(q => ({ ...q, obs: h.find(p => p.date === q.date)?.obs }))]
+  const fd = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short' })
+  const last = m.forecast?.[m.forecast.length - 1]
+  return (
+    <>
+      {m.forecast && m.forecast.length > 1 && (
+        <div className="risk-today trend-row">
+          {m.forecast.slice(1).map(p => (
+            <span key={p.h}>+{p.h} {p.h > 1 ? t('días') : t('día')}: <b>{fmt(p.value, 1)}</b> <small className="muted">({fmt(p.lo, 1)}–{fmt(p.hi, 1)})</small></span>
+          ))}
+          <span className="muted">µg/L</span>
+        </div>
+      )}
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={data} margin={{ top: 18, right: 12, bottom: 18, left: 0 }}>
+          <CartesianGrid stroke="#E3ECEC" />
+          <XAxis dataKey="date" tickFormatter={fd} tick={{ fontSize: 11 }} minTickGap={24} />
+          <YAxis tick={{ fontSize: 11 }} width={44} label={{ value: 'µg/L', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+          <Tooltip content={({ payload }: any) => {
+            const p = payload?.[0]?.payload
+            return p ? <div className="tt">{fd(p.date)}<br />
+              {p.obs !== undefined && <>{t('Sonda')}: <b>{fmt(p.obs, 1)}</b><br /></>}
+              {p.pred !== undefined && <>{t('Esperado')}: <b>{fmt(p.pred, 1)}</b> ({fmt(p.band[0], 1)}–{fmt(p.band[1], 1)})</>}</div> : null
+          }} />
+          <Area dataKey="band" stroke="none" fill="#F29E2E" fillOpacity={0.22} isAnimationActive={false} />
+          <Line dataKey="obs" stroke="#0E7C86" strokeWidth={2} dot={false} isAnimationActive={false} />
+          <Line dataKey="pred" stroke="#A8540C" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} isAnimationActive={false} />
+          {last && <ReferenceLine x={m.forecast![0].date} stroke="#5E7376" strokeDasharray="2 3" label={{ value: t('último dato'), fontSize: 11, position: 'top' }} />}
+        </ComposedChart>
+      </ResponsiveContainer>
+      <p className="muted small">
+        {t('Azul: ficocianina media diaria de la sonda. Naranja: valor esperado; la banda es el rango en el que cayó el 80 % de los casos en años anteriores.')}
+      </p>
+    </>
+  )
+}
+
+/** Tabla de validación año a año. */
+function ByYear({ m }: { m: ModelCard }) {
+  const rows: any[] = (m.validation as any).by_year || []
+  if (!rows.length) return null
+  if (m.kind === 'seasonal') {
+    return (
+      <table className="by-year"><thead><tr><th>{t('Año fuera')}</th><th>{t('Días')}</th><th>{t('Picos')}</th><th>AUC</th></tr></thead>
+        <tbody>{rows.map(r => <tr key={r.year}><td>{r.year}</td><td>{r.days}</td><td>{r.peaks}</td><td>{r.auc === null ? '–' : fmt(r.auc, 2)}</td></tr>)}</tbody></table>
+    )
+  }
+  const years = [...new Set(rows.map(r => r.year))]
+  const hs = [...new Set(rows.map(r => r.h))]
+  return (
+    <table className="by-year"><thead><tr><th>{t('Año')}</th>{hs.map(h => <th key={h}>R² {h} d</th>)}</tr></thead>
+      <tbody>{years.map(y => <tr key={y}><td>{y}</td>{hs.map(h => {
+        const r = rows.find(x => x.year === y && x.h === h)
+        return <td key={h} className={r && r.r2 < 0.3 ? 'bad' : ''}>{r ? fmt(r.r2, 2) : '–'}</td>
+      })}</tr>)}</tbody></table>
   )
 }
