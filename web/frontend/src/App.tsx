@@ -8,11 +8,12 @@ import Climatology from './Climatology'
 import { DataForm, DataResult, DbView } from './DataTab'
 import { CoresResult, PhytoResult, SensorsResult } from './Extra'
 import { CampaignsResult } from './Campaigns'
+import { ModelCardView, ModelList } from './Models'
 import ErrorBoundary from './ErrorBoundary'
 import {
   api, CalResult, ClimResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
   parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
-  DbCampaign, DbKind,
+  DbCampaign, DbKind, ModelCard,
 } from './api'
 import { locale, t, useLang } from './i18n'
 import LangToggle from './LangToggle'
@@ -143,6 +144,18 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   }
   const [calRes, setCalRes] = useState<{ r: CalResult; unit: string; target: string } | null>(null)
   const [calRunning, setCalRunning] = useState(false)
+  const [calView, setCalView] = useState<'models' | 'calibrate'>('models')
+  const [models, setModels] = useState<ModelCard[]>([])
+  const [modelSel, setModelSel] = useState<string | null>(null)
+  const [modelShow, setModelShow] = useState(true)
+  useEffect(() => {
+    if (appMode !== 'cal' || models.length) return
+    api.models().then(r => { setModels(r.models); if (r.models[0]) setModelSel(r.models[0].id) }).catch(() => {})
+  }, [appMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  const openModel = (m: ModelCard) => {
+    setAppMode('visor'); pickReservoir(m.reservoir)
+    setTimeout(() => changeIndex(m.index_id), 50)
+  }
   const [prog, setProg] = useState<{ progress: number; step: string } | null>(null)
   const useCalibration = async (id: string) => {
     const r = await api.indices(); setIndices(r.indices)
@@ -406,11 +419,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}>ℹ️ {t('Proyecto')}</button>
           <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
           <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Monitor')}</button>
-          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')}>🧪 {t('Calibración')}</button>
+          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos')}</button>
           <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos')}</button>
         </div>
 
-        {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && (
+        {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
         <section>
             <label className="lbl">{t('Embalse')}</label>
             <select value={reservoir ?? ''} onChange={e => pickReservoir(e.target.value)}>
@@ -447,7 +460,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           <div className="pj-nav">
             <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
             <p>🛰️ <b>{t('Visor')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
-            <p>🧪 <b>{t('Calibración')}</b>: {t('sube tus medidas in situ y obtén un modelo validado que se pinta como índice en el mapa.')}</p>
+            <p>🧪 <b>{t('Modelos')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
             <button className="primary" onClick={() => setAppMode('visor')}>{t('Empezar')}</button>
           </div>
         ) : appMode === 'db' ? (
@@ -469,9 +482,20 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           </>
         ) : appMode === 'cal' ? (
           <>
+            <div className="seg dark depth-seg">
+              <button className={calView === 'models' ? 'on' : ''} onClick={() => { setCalView('models'); setModelShow(true) }}>📐 {t('Modelos de la plataforma')}</button>
+              <button className={calView === 'calibrate' ? 'on' : ''} onClick={() => setCalView('calibrate')}>🧪 {t('Calibra tu embalse')}</button>
+            </div>
+            {calView === 'models' ? (
+              <>
+                <ModelList models={models} sel={modelSel} onSel={id => { setModelSel(id); setModelShow(true) }} />
+                {!modelShow && modelSel && <button className="primary" onClick={() => setModelShow(true)}>{t('Ver ficha del modelo')}</button>}
+              </>
+            ) : <>
             <CalibrationForm reservoir={reservoir} reservoirLabel={reservoir ? labelOf(reservoir) : ''}
               onResult={(r, unit, target) => setCalRes({ r, unit, target })} onError={setError}
               running={calRunning} setRunning={setCalRunning} onProgress={setProg} />
+            </>}
             {error && <div className="badge err">{error}</div>}
           </>
         ) : (<>
@@ -734,11 +758,15 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         </div>
       )}
 
-      {appMode === 'cal' && calRes && (
+      {appMode === 'cal' && calView === 'models' && modelShow && models.find(m => m.id === modelSel) && (
+        <ErrorBoundary label="Modelos"><ModelCardView m={models.find(m => m.id === modelSel)!} onClose={() => setModelShow(false)}
+          onOpen={() => openModel(models.find(m => m.id === modelSel)!)} /></ErrorBoundary>
+      )}
+      {appMode === 'cal' && calView === 'calibrate' && calRes && (
         <CalibrationResult r={calRes.r} unit={calRes.unit} target={calRes.target} reservoirLabel={reservoir ? labelOf(reservoir) : ''}
           onUse={useCalibration} onClose={() => setCalRes(null)} />
       )}
-      {appMode === 'cal' && calRunning && <div className="hint">{prog?.step || t('Extrayendo índices de Sentinel-2 y ajustando modelos…')}</div>}
+      {appMode === 'cal' && calView === 'calibrate' && calRunning && <div className="hint">{prog?.step || t('Extrayendo índices de Sentinel-2 y ajustando modelos…')}</div>}
 
       {appMode === 'db' && dbView === 'campaigns' && dbShow && dbCamps && (
         <ErrorBoundary label="Datos"><CampaignsResult data={dbCamps} onClose={() => setDbShow(false)}
@@ -762,7 +790,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       {appMode === 'mon' && monRunning && !mon && <div className="hint">{prog?.step || t('Consultando Sentinel-2 en todos los embalses…')}</div>}
       {appMode === 'info' && <ProjectPage lang={lang} setLang={setLang} onClose={() => setAppMode('visor')} onStart={() => setAppMode('visor')} />}
 
-      {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && (
+      {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
         <div className="hint">{t('Selecciona un embalse en el mapa o en el panel para empezar')}</div>
       )}
       {adding && <div className="hint">{t('Haz clic en el embalse para añadir un punto · Esc para cancelar')}</div>}

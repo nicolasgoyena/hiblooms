@@ -1,0 +1,35 @@
+{
+  "id": "chla_val",
+  "index_id": "Chla_Val_cal",
+  "reservoir": "VAL",
+  "reservoir_label": "Embalse de El Val (Zaragoza)",
+  "variable": "Clorofila-a",
+  "unit": "µg/L",
+  "status": "validado",
+  "version": "2026-09",
+  "description": "Estima la concentración de clorofila-a (biomasa algal total) en la superficie del embalse a partir del índice NDCI de Sentinel-2.",
+  "formula": "log10(Chl-a) = 0,3174·NDCI² + 1,089·NDCI + 1,159",
+  "index_formula": "NDCI = (B5 − B4) / (B5 + B4)   ·   B4 = 665 nm, B5 = 705 nm",
+  "training": {
+    "pairs": 248,
+    "period": "2018–2024",
+    "ground_truth": "Sonda de perfiles Aquadam de la CHE (clorofila, 0–1,5 m)",
+    "matching": "Imagen Sentinel-2 L2A y sonda en ±3 h · media de 3×3 píxeles alrededor de la boya · solo agua sin nubes a 300 m"
+  },
+  "validation": {
+    "method": "Validación cruzada dejando fuera un año completo cada vez (el modelo nunca ve el año que predice)",
+    "metrics": [
+      {"label": "Error típico", "value": "×2,1", "help": "La predicción suele estar dentro de un factor 2 del valor real"},
+      {"label": "R² (escala log)", "value": "0,48", "help": "Proporción de la variación explicada"},
+      {"label": "AUC ≥ 10 µg/L", "value": "0,83", "help": "Capacidad de distinguir episodios de más de 10 µg/L (0,5 = azar, 1 = perfecto)"},
+      {"label": "AUC ≥ 20 µg/L", "value": "0,81", "help": "Capacidad de distinguir episodios de más de 20 µg/L"}
+    ],
+    "compared": "Se compararon regresión lineal y cuadrática, Lasso, bosque aleatorio y gradient boosting: ninguno mejoró de forma clara a esta fórmula, más sencilla y transparente."
+  },
+  "limits": [
+    "Estima la biomasa algal total: no distingue cianobacterias de otras algas.",
+    "Por debajo de ~7 µg/L no discrimina (aguas oligotróficas).",
+    "Calibrado en El Val: en otros embalses es orientativo hasta validarlo con sus datos."
+  ],
+  "pairs": []
+}

@@ -46,6 +46,11 @@ export type SensorSeries = { reservoir_id: number; name: string; variable: strin
   sat: { date: string; phycocyanin_est: number | null; index_value: number | null; is_valid: boolean | null }[]
   idx: { date: string; pci: number | null; tbda: number | null; ci: number | null }[]
   model: { name: string | null; index: string | null; r2: number | null; rmse: number | null; valid: boolean } | null }
+export type ModelCard = { id: string; index_id: string; reservoir: string; reservoir_label: string; variable: string; unit: string
+  status: string; version: string; description: string; formula: string; index_formula: string
+  training: { pairs: number; period: string; ground_truth: string; matching: string }
+  validation: { method: string; metrics: { label: string; value: string; help: string }[]; compared: string }
+  limits: string[]; pairs: { date: string; obs: number; pred: number; ndci: number }[] }
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
@@ -141,6 +146,7 @@ export const api = {
   dbSensors: () => req<{ reservoirs: SensorRes[]; variables: { key: string; name: string; unit: string }[] }>('/api/db/sensors'),
   dbSensorSeries: (id: number, variable: string, layer: string) =>
     req<SensorSeries>(`/api/db/sensors/${id}?variable=${variable}&layer=${layer}`),
+  models: () => req<{ models: ModelCard[] }>('/api/models'),
   dbExportUrl: (parameter?: string, wb?: string) => {
     const q = new URLSearchParams()
     if (parameter) q.set('parameter', parameter)

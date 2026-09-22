@@ -543,6 +543,21 @@ def health():
     return {"ok": True, "mode": "demo" if MOCK else "gee", "gee_error": GEE_ERROR, "auth": bool(USERS)}
 
 
+MODELOS_DIR = ROOT / "data" / "modelos"
+
+
+@app.get("/api/models")
+def models():
+    """Fichas de los modelos de la plataforma (data/modelos/*.json)."""
+    out = []
+    for f in sorted(MODELOS_DIR.glob("*.json")) if MODELOS_DIR.exists() else []:
+        try:
+            out.append(json.loads(f.read_text(encoding="utf-8")))
+        except Exception:  # noqa: BLE001
+            continue
+    return {"models": out}
+
+
 @app.get("/api/indices")
 def indices():
     return {"indices": INDICES + [c["meta"] for c in CALS.values()], "palette": PALETTE}

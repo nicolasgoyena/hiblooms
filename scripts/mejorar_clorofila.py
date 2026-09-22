@@ -155,6 +155,40 @@ def figura(m, preds, nombres):
     fig.savefig(OUT / "pred_vs_obs.png", dpi=140, bbox_inches="tight"); plt.close(fig)
 
 
+def actualizar_ficha(m, pred, fila, final, ok):
+    """Actualiza la ficha del modelo que muestra la web (data/modelos/chla_val.json):
+    métricas, fórmula y los pares observado–predicho (validación por años) para el gráfico."""
+    f = ROOT / "data" / "modelos" / "chla_val.json"
+    if not f.exists():
+        print("   (no existe data/modelos/chla_val.json: no se actualiza la ficha de la web)")
+        return
+    card = json.loads(f.read_text(encoding="utf-8"))
+    es = lambda v, d=2: f"{v:.{d}f}".replace(".", ",")  # noqa: E731
+    k = np.isfinite(pred)
+    card["pairs"] = [{"date": t.strftime("%Y-%m-%d"), "obs": round(float(o), 2), "pred": round(float(p), 2),
+                      "ndci": round(float(n), 4)}
+                     for t, o, p, n in zip(m.t[k], m.chl_sup[k], pred[k], m.NDCI[k])]
+    card["training"]["pairs"] = int(k.sum())
+    card["training"]["period"] = f"{m.t.dt.year.min()}–{m.t.dt.year.max()}"
+    card["training"]["matching"] = (f"Imagen Sentinel-2 L2A y sonda en ±{int(ok.ventana_h)} h · media de 3×3 píxeles "
+                                    f"alrededor de la boya · solo agua (≥{ok.agua_min:.0%}) sin nubes a 300 m")
+    if final["indice"] == "[NDCI]" and final["grado"] == 2:
+        a, b, c = final["coef_log10"]
+        card["formula"] = f"log10(Chl-a) = {es(a, 4)}·NDCI² + {es(b, 3)}·NDCI + {es(c, 3)}"
+    card["validation"]["metrics"] = [
+        {"label": "Error típico", "value": f"×{es(fila['MAE_log(×)'], 1)}", "help": "La predicción suele estar dentro de ese factor del valor real"},
+        {"label": "R² (escala log)", "value": es(fila["R2_log"]), "help": "Proporción de la variación explicada"},
+        {"label": "AUC ≥ 10 µg/L", "value": es(fila["AUC≥10"]), "help": "Capacidad de distinguir episodios de más de 10 µg/L (0,5 = azar, 1 = perfecto)"},
+        {"label": "AUC ≥ 20 µg/L", "value": es(fila["AUC≥20"]), "help": "Capacidad de distinguir episodios de más de 20 µg/L"},
+        {"label": "Clase trófica", "value": str(fila["clase_trófica_ok"]), "help": "Aciertos de clase OCDE (oligo · meso · eutro · hipereutrófico)"},
+    ]
+    f.write_text(json.dumps(card, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"   Ficha de la web actualizada: {f.relative_to(ROOT)} ({len(card['pairs'])} pares)")
+    if not (final["indice"] == "[NDCI]" and final["grado"] == 2):
+        print("   ⚠ El modelo elegido ya no es el cuadrático sobre NDCI: habría que cambiar también la fórmula"
+              " de Chla_Val_cal en hiblooms_core.py.")
+
+
 def main():
     url = os.getenv("DATABASE_URL")
     if not url:
@@ -204,6 +238,7 @@ def main():
     figura(m, preds, ["actual web (sin reajustar)", sencillos.modelo, tabla.iloc[0].modelo]
            if tabla.iloc[0].modelo != sencillos.modelo else ["actual web (sin reajustar)", sencillos.modelo])
     print(f"\n   Modelo sencillo: {sencillos.modelo} · {final['formula']}  (x = {indice})")
+    actualizar_ficha(m, preds[sencillos.modelo], sencillos, final, ok)
     print(f"\nListo → {OUT}")
 
 
