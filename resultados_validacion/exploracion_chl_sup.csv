@@ -1,0 +1,21 @@
+indice,rho_en_muestra
+altura B4 sobre B1–B5,-0.783
+[PCI],0.758
+[NDCI],0.758
+"ND(B4,B5)",-0.758
+altura B5 sobre B4–B8,0.752
+altura B5 sobre B4–B8A,0.748
+altura B5 sobre B4–B7,0.738
+[B5-B4],0.736
+B4−B5,-0.736
+altura B5 sobre B4–B11,0.733
+(1/B4−1/B5)·B2,0.73
+(1/B5−1/B4)·B2,-0.73
+altura B4 sobre B2–B5,-0.726
+(1/B5−1/B3)·B4,-0.722
+(1/B3−1/B5)·B4,0.722
+(1/B5−1/B4)·B3,-0.72
+(1/B4−1/B5)·B3,0.72
+(1/B4−1/B5)·B11,0.719
+(1/B5−1/B4)·B11,-0.719
+(1/B3−1/B4)·B5,-0.701

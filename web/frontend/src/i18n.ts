@@ -48,6 +48,8 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  'Clorofila-a · El Val (validada, error ×2)': 'Chlorophyll-a · El Val (validated, ×2 error)',
+  'Ficocianina · El Val (no validada)': 'Phycocyanin · El Val (not validated)',
   'ver en su vista': 'see its own view',
   'Campañas': 'Campaigns',
   'Sondas + satélite': 'Probes + satellite',

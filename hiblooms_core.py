@@ -351,16 +351,15 @@ def _build_indices_image(
             .updateMask(cloud_mask)
             .rename("PC_Val_cal")
         ),
+        # Clorofila-a en El Val (recalibrada 2026 con 248 pares Sentinel-2 ↔ sonda Aquadam 2018–2024,
+        # validación dejando fuera cada año: R²(log) 0,48 · error típico ×2,1 · AUC ≥10 µg/L 0,83).
+        # log10(Chl) = 0,3174·NDCI² + 1,089·NDCI + 1,159 ; NDCI acotado al rango de calibración.
         "Chla_Val_cal": lambda: (
-            ee.Image(450)
-            .divide(
-                ee.Image(1).add(
-                    (b5.subtract(b4).divide(b5.add(b4)).subtract(0.46))
-                    .multiply(-7.14)
-                    .exp()
-                )
+            ee.Image(10).pow(
+                ee.Image().expression("0.3174 * x * x + 1.089 * x + 1.159",
+                                      {"x": b5.subtract(b4).divide(b5.add(b4)).clamp(-0.3, 0.7)})
             )
-            .max(0)
+            .min(500)
             .updateMask(cloud_mask)
             .rename("Chla_Val_cal")
         ),

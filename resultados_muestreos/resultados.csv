@@ -1,0 +1,6 @@
+variable,n,embalses,mismo_dia,rango,NDCI rho (todo),mejor índice · rho validado (embalse fuera),mejor índice · AUC p75 validado,índice más elegido,NDCI · AUC p75,RF satélite · rho validado,RF satélite · AUC p75,solo estacionalidad · rho validado,solo estacionalidad · AUC p75
+Clorofila a (laboratorio/campo),64,5,8,0.0443 – 360,0.216,0.525,0.757,altura B2 sobre B1–B3,0.492,-0.439,0.277,-0.691,0.12
+Clorofila de cianobacterias (FluoroProbe),53,5,5,0.0186 – 75.3,0.133,0.042,0.529,altura B7 sobre B2–B8A,0.599,-0.555,0.317,-0.363,0.294
+Clorofila total (FluoroProbe),53,5,5,0.372 – 101,0.201,0.209,0.707,altura B5 sobre B4–B8,0.496,-0.127,0.353,-0.607,0.194
+Biovolumen de cianobacterias (µm³/mL),46,5,7,0 – 2.74e+05,0.163,0.255,0.664,B4−B5,0.663,0.116,0.586,0.107,0.512
+% cianobacterias (biovolumen),46,5,7,0 – 99.3,0.148,0.116,0.458,altura B6 sobre B4–B8A,0.636,-0.04,0.431,0.067,0.502

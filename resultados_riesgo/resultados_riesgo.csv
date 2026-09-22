@@ -1,0 +1,11 @@
+predictores,modelo,n_dias,picos,AUC,rho_con_pc,picos_en_top10%,Brier
+1 · solo estacionalidad,logística,886,89,0.782,0.599,34/89,0.0837
+1 · solo estacionalidad,boosting,886,89,0.885,0.373,56/89,0.0881
+2 · + meteorología,logística,886,89,0.683,0.48,17/89,0.0986
+2 · + meteorología,boosting,886,89,0.752,0.359,34/89,0.1086
+3 · + NDCI satélite,logística,886,89,0.677,0.455,14/89,0.1059
+3 · + NDCI satélite,boosting,886,89,0.781,0.405,28/89,0.1098
+4 · + nivel embalse,logística,886,89,0.63,0.414,6/89,0.1134
+4 · + nivel embalse,boosting,886,89,0.765,0.413,22/89,0.1224
+ref · + temperatura del agua (sonda),logística,886,89,0.608,0.385,6/89,0.1153
+ref · + temperatura del agua (sonda),boosting,886,89,0.754,0.38,22/89,0.1236

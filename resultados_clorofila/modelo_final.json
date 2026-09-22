@@ -1,0 +1,35 @@
+{
+  "indice": "[NDCI]",
+  "grado": 2,
+  "coef_log10": [
+    0.3173977911394206,
+    1.0891866979884992,
+    1.159201001670587
+  ],
+  "formula": "log10(Chl-a µg/L) = 0.3174·x^2 + 1.089·x + 1.159",
+  "rango_indice_entrenamiento": [
+    -1.0,
+    0.9989780567663774
+  ],
+  "rango_chl_entrenamiento": [
+    0.9,
+    500.0
+  ],
+  "n": 248,
+  "validacion": {
+    "modelo": "cuadrático NDCI",
+    "n": 248,
+    "R2_log": 0.478,
+    "RMSE": 69.11,
+    "MAE": 27.54,
+    "sesgo": -8.06,
+    "MAE_log(×)": 2.14,
+    "AUC≥10": 0.827,
+    "AUC≥20": 0.814,
+    "clase_trófica_ok": "50%"
+  },
+  "emparejado": {
+    "ventana_h": 3.0,
+    "agua_min": 0.75
+  }
+}
