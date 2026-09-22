@@ -23,3 +23,6 @@ service-account*.json
 
 # Datos de la instancia del visor
 web/backend/_uploads/
+web/frontend/node_modules/
+web/frontend/.vite/
+scripts/actualizar_sonda_val.bat
