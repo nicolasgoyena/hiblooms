@@ -1,0 +1,32 @@
+# Descarga a diario los perfiles de la sonda de El Val (SAICA · CHE) y los añade a sensor_data en Neon.
+# OJO: GitHub solo ejecuta los flujos programados que están en la rama por defecto (main).
+name: Actualizar sonda El Val
+
+on:
+  schedule:
+    - cron: "30 5 * * *"   # 05:30 UTC = 07:30 en verano, 06:30 en invierno
+  workflow_dispatch:        # botón "Run workflow" para lanzarlo a mano
+    inputs:
+      desde:
+        description: "Desde (AAAA-MM-DD). Vacío = desde el último dato de la base"
+        required: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas requests beautifulsoup4 lxml SQLAlchemy psycopg2-binary
+      - name: Descargar e insertar
+        env:
+          DATABASE_URL_WRITE: ${{ secrets.NEON_WRITE_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.desde }}" ]; then
+            python scripts/actualizar_sonda_val.py --desde "${{ github.event.inputs.desde }}"
+          else
+            python scripts/actualizar_sonda_val.py
+          fi
