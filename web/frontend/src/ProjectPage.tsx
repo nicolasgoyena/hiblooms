@@ -55,6 +55,8 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
 
       <section className="pj-hero">
       <div className="pj-logobar">
+        <img className="pj-logo-main" src="/logo_hiblooms.png" alt="HIBLOOMS" />
+        <span className="pj-logo-sep" />
         <img src="/ministerio.png" alt={t('Ministerio de Ciencia, Innovación y Universidades')} />
         <img src="/logo_bioma_unav.png" alt={t('Instituto BIOMA · Universidad de Navarra')} />
         <img src="/logo_ebro.png" alt={t('Confederación Hidrográfica del Ebro')} />
