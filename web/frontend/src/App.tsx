@@ -417,10 +417,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
         <div className="seg dark big">
           <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}>ℹ️ {t('Proyecto')}</button>
-          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
           <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Monitor')}</button>
-          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos')}</button>
+          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
           <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos')}</button>
+          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos')}</button>
         </div>
 
         {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
@@ -459,9 +459,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         {appMode === 'info' ? (
           <div className="pj-nav">
             <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
+            <p>📊 <b>{t('Monitor')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
             <p>🛰️ <b>{t('Visor')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
+            <p>🗄️ <b>{t('Datos')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
             <p>🧪 <b>{t('Modelos')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
-            <button className="primary" onClick={() => setAppMode('visor')}>{t('Empezar')}</button>
+            <button className="primary" onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }}>{t('Empezar')}</button>
           </div>
         ) : appMode === 'db' ? (
           <>
@@ -788,7 +790,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         <MonitorResult data={mon} onOpen={openFromMonitor} onClose={() => setAppMode('visor')} />
       )}
       {appMode === 'mon' && monRunning && !mon && <div className="hint">{prog?.step || t('Consultando Sentinel-2 en todos los embalses…')}</div>}
-      {appMode === 'info' && <ProjectPage lang={lang} setLang={setLang} onClose={() => setAppMode('visor')} onStart={() => setAppMode('visor')} />}
+      {appMode === 'info' && <ProjectPage lang={lang} setLang={setLang} onClose={() => { setAppMode('mon'); if (!mon) runMonitor() }} onStart={() => { setAppMode('mon'); if (!mon) runMonitor() }} />}
 
       {!reservoir && mode && appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
         <div className="hint">{t('Selecciona un embalse en el mapa o en el panel para empezar')}</div>

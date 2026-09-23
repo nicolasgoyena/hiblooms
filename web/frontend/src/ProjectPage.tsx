@@ -69,7 +69,7 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
         <div className="pj-chips">
           <span>🛰️ {t('31 embalses por defecto')}</span><span>📅 {t('Desde 2017')}</span><span>🧪 {t('Clorofila-a y ficocianina')}</span><span>🔬 {t('Calibración con datos in situ')}</span>
         </div>
-        <button className="primary pj-cta" onClick={onStart}>{t('Abrir el visor →')}</button>
+        <button className="primary pj-cta" onClick={onStart}>{t('Ver el estado de los embalses →')}</button>
       </section>
 
       <section className="pj-flow">

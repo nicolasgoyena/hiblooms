@@ -48,6 +48,9 @@ export function t(es: string, vars?: Record<string, string | number>): string {
 
 /** English dictionary, keyed by the exact Spanish source string. */
 const EN: Record<string, string> = {
+  'Ver el estado de los embalses →': 'See the state of the reservoirs →',
+  'estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.': 'state of every reservoir at a glance, with alerts and the latest readings from the El Val probe.',
+  'muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.': 'field sampling, phytoplankton, probes and sediment cores from the project database.',
   'Modelos validados y calibración con tus datos': 'Validated models and calibration with your data',
   'Modelos de la plataforma': 'Platform models',
   'Calibra tu embalse': 'Calibrate your reservoir',
