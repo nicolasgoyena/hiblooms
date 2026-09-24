@@ -435,11 +435,7 @@ export function LabPC() {
       </div>
 
       {quitados.length > 0 && (
-        <p className="lab-quitados">
-          {t('{n} puntos excluidos a mano', { n: quitados.length })}: {quitados.join(' · ')}
-          <button className="ghost small" onClick={() => setQuitados([])}>{t('restaurar todos')}</button>
-          <br /><span className="muted">{t('Quitar puntos cambia el resultado: hazlo solo si sabes por qué esa medida es mala, y déjalo escrito. Si de verdad es un fallo de la sonda, lo correcto es marcarla en la base de datos con su bandera de calidad.')}</span>
-        </p>
+        <button className="ghost small lab-restaurar" onClick={() => setQuitados([])}>↺ {t('restaurar puntos')}</button>
       )}
       <p className={'lab-veredicto' + (buena ? ' ok' : '')}>{buena ? '✓ ' : '⚠ '}{veredicto}</p>
 
