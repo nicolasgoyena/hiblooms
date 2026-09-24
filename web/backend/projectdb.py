@@ -352,7 +352,7 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     # mg/m³ y ng/mL equivalen exactamente a µg/L: se muestran así, que es lo que se usa
     # en calidad de aguas (no se convierte ningún valor, solo cambia la etiqueta)
     SHORT = {"degC": "°C", "percent": "%", "permil": "‰", "uS/cm": "µS/cm", "ug/L": "µg/L",
-             "ug/g": "µg/g", "mg/m3": "µg/L", "ng/mL": "µg/L", "um3/mL": "µm³/mL",
+             "ug/g": "µg/g", "mg/m3": "µg/L", "mg_m3": "µg/L", "ng/mL": "µg/L", "ug_L": "µg/L", "mg_L": "mg/L", "um3/mL": "µm³/mL",
              "g/cm2": "g/cm²", "W/m2": "W/m²", "ueq/L": "µeq/L"}
     catalog["unit_name"] = catalog["unit"].map(lambda u: SHORT.get(u, u) if isinstance(u, str) else None)
 

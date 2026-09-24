@@ -216,6 +216,7 @@ function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => st
 
 /** Tarjeta principal: gráfico por punto con el control de calidad marcado y resumen. */
 export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: DbSite[]; onClose: () => void }) {
+  const [vista, setVista] = useState<'grafica' | 'tabla'>('grafica')
   const codes = useMemo(() => Array.from(new Set(data.rows.map(r => r.site_code))), [data])
   const color = (code: string) => {
     const i = sites.findIndex(s => s.code === code)
@@ -269,10 +270,18 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
           {t('{n} medidas en {m} muestreos · {s} puntos', { n: data.rows.length, m: data.n_dates, s: codes.length })}
           {flagged.length > 0 && <> · <span className="qc-note">{t('{n} marcadas por control de calidad', { n: flagged.length })}</span></>}
         </p>
+        {data.rows.length > 0 && (
+          <div className="seg small dbres-vista">
+            <button className={vista === 'grafica' ? 'on' : ''} onClick={() => setVista('grafica')}>📈 {t('Gráfica')}</button>
+            <button className={vista === 'tabla' ? 'on' : ''} onClick={() => setVista('tabla')}>🧾 {t('Tabla')}</button>
+          </div>
+        )}
       </div>
 
       {data.rows.length === 0 ? (
         <p className="muted an-empty">{t('No hay datos de este parámetro con estos filtros.')}</p>
+      ) : vista === 'tabla' ? (
+        <DataTable data={data} color={color} qcLabel={qcLabel} goodFlag={goodFlag} />
       ) : data.depth === 'all' && data.rows.some(r => r.depth_m != null) ? (
         <WaterColumn data={data} color={color} />
       ) : (
@@ -302,14 +311,14 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
         </div>
       )}
 
-      {flagged.length > 0 && (
+      {flagged.length > 0 && vista === 'grafica' && (
         <p className="muted small">
           <span className="qc-ring" /> {t('Los puntos con aro rojo están marcados por control de calidad:')}{' '}
           {Array.from(new Set(flagged.map(r => r.qc_flag))).map(f => `${qcLabel(f)} (${flagged.filter(r => r.qc_flag === f).length})`).join(' · ')}
         </p>
       )}
 
-      {data.summary.length > 0 && (
+      {data.summary.length > 0 && vista === 'grafica' && (
         <div className="tbl-wrap" style={{ maxHeight: 220 }}>
           <table className="tbl">
             <thead><tr>
@@ -328,5 +337,88 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
         </div>
       )}
     </div>
+  )
+}
+
+
+/** Vista de tabla: el dato crudo, con orden, filtros y descarga. */
+function DataTable({ data, color, qcLabel, goodFlag }: {
+  data: DbSeries; color: (c: string) => string; qcLabel: (f: number | null) => string; goodFlag: number | null
+}) {
+  const [orden, setOrden] = useState<{ col: string; asc: boolean }>({ col: 'date', asc: false })
+  const [texto, setTexto] = useState('')
+  const [soloMarcadas, setSoloMarcadas] = useState(false)
+
+  const filas = useMemo(() => {
+    const q = texto.trim().toLowerCase()
+    let r = data.rows.filter(x =>
+      (!soloMarcadas || (goodFlag != null && x.qc_flag != null && x.qc_flag !== goodFlag)) &&
+      (!q || `${x.date} ${x.site_code} ${x.water_body} ${x.source_code ?? ''} ${x.value}`.toLowerCase().includes(q)))
+    const { col, asc } = orden
+    r = [...r].sort((a: any, b: any) => {
+      const va = a[col] ?? '', vb = b[col] ?? ''
+      const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb))
+      return asc ? c : -c
+    })
+    return r
+  }, [data, texto, soloMarcadas, orden, goodFlag])
+
+  const th = (col: string, label: string) => (
+    <th className="ord" onClick={() => setOrden(o => ({ col, asc: o.col === col ? !o.asc : true }))}>
+      {t(label)}{orden.col === col ? (orden.asc ? ' ▲' : ' ▼') : ''}
+    </th>
+  )
+
+  const descargar = () => {
+    const sep = ';'
+    const cab = ['fecha', 'punto', 'embalse', 'profundidad_m', 'valor', 'unidad', 'qc', 'fuente']
+    const cuerpo = filas.map(r => [r.date, r.site_code, r.water_body, r.depth_m ?? '', String(r.value).replace('.', ','),
+      data.unit ?? '', r.qc_flag == null ? '' : qcLabel(r.qc_flag), r.source_code ?? r.source_table].join(sep))
+    const csv = '﻿' + [cab.join(sep), ...cuerpo].join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = `hiblooms_${data.parameter}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  return (
+    <>
+      <div className="dbres-tools">
+        <input className="dbres-find" value={texto} onChange={e => setTexto(e.target.value)}
+          placeholder={t('Buscar por fecha, punto, embalse…')} />
+        <label className="dbres-chk">
+          <input type="checkbox" checked={soloMarcadas} onChange={e => setSoloMarcadas(e.target.checked)} />
+          {t('solo marcadas por calidad')}
+        </label>
+        <span className="muted small">{t('{n} filas', { n: filas.length })}</span>
+        <button className="ghost small" onClick={descargar}>⤓ {t('Descargar CSV')}</button>
+      </div>
+      <div className="tbl-wrap" style={{ maxHeight: 420 }}>
+        <table className="tbl">
+          <thead><tr>
+            {th('date', 'Fecha')}{th('site_code', 'Punto')}{th('water_body', 'Embalse')}
+            {th('depth_m', 'Prof. (m)')}{th('value', 'Valor')}{th('qc_flag', 'Calidad')}{th('source_code', 'Fuente')}
+          </tr></thead>
+          <tbody>
+            {filas.slice(0, 2000).map((r, i) => {
+              const mala = goodFlag != null && r.qc_flag != null && r.qc_flag !== goodFlag
+              return (
+                <tr key={i} className={mala ? 'fila-mala' : ''}>
+                  <td>{fmtDate(r.date)}</td>
+                  <td><span className="dot" style={{ background: color(r.site_code) }} />{r.site_code}</td>
+                  <td>{r.water_body}</td>
+                  <td>{r.depth_m == null ? '' : fmt(r.depth_m, 1)}</td>
+                  <td><b>{fmt(r.value, 4)}</b></td>
+                  <td>{r.qc_flag == null ? '' : <span className={mala ? 'qc-note' : 'muted'}>{qcLabel(r.qc_flag)}</span>}</td>
+                  <td className="muted">{r.source_code ?? r.source_table}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {filas.length > 2000 && <p className="muted small">{t('Se muestran las 2.000 primeras filas; descarga el CSV para verlas todas.')}</p>}
+    </>
   )
 }
