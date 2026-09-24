@@ -349,8 +349,11 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     grp = base.map(pinfo["parameter_group"]).map(lambda g: GROUP_NAMES.get(g, g) if isinstance(g, str) else "Otros")
     catalog["group"] = [g if m == "water" else f"{mnames.get(m, m)} · {g}" for g, m in zip(grp, mtx)]
     # Símbolo corto para los ejes y el desplegable (el nombre largo es para el catálogo)
+    # mg/m³ y ng/mL equivalen exactamente a µg/L: se muestran así, que es lo que se usa
+    # en calidad de aguas (no se convierte ningún valor, solo cambia la etiqueta)
     SHORT = {"degC": "°C", "percent": "%", "permil": "‰", "uS/cm": "µS/cm", "ug/L": "µg/L",
-             "ug/g": "µg/g", "mg/m3": "mg/m³", "um3/mL": "µm³/mL", "g/cm2": "g/cm²", "W/m2": "W/m²"}
+             "ug/g": "µg/g", "mg/m3": "µg/L", "ng/mL": "µg/L", "um3/mL": "µm³/mL",
+             "g/cm2": "g/cm²", "W/m2": "W/m²", "ueq/L": "µeq/L"}
     catalog["unit_name"] = catalog["unit"].map(lambda u: SHORT.get(u, u) if isinstance(u, str) else None)
 
     return {"points": points, "obs": obs, "catalog": catalog, "qc": qc,
@@ -806,7 +809,7 @@ def core(core_id: int) -> dict:
     base = d["catalog"]["parameter_code"].str.split(":").str[-1]
     for code, name in zip(base, cat["name"]):
         pinfo.setdefault(code, name)
-    SHORT = {"percent": "%", "permil": "‰", "ug/g": "µg/g", "g/cm2": "g/cm²"}
+    SHORT = {"percent": "%", "permil": "‰", "ug/g": "µg/g", "g/cm2": "g/cm²", "mg/m3": "µg/L", "ng/mL": "µg/L"}
     params = []
     for pc, gg in g.groupby("parameter_code"):
         u = gg["unit_code"].dropna().iloc[0] if gg["unit_code"].notna().any() else None
