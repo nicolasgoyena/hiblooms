@@ -320,6 +320,7 @@ export function LabPC() {
   const [soloVerano, setSoloVerano] = useState(false)
   const [sinExtremos, setSinExtremos] = useState(false)
   const [fuera, setFuera] = useState<number[]>([])
+  const [quitados, setQuitados] = useState<string[]>([])   // fechas excluidas a mano
 
   useEffect(() => { api.labPairs().then(setData).catch(() => setError(true)) }, [])
 
@@ -327,7 +328,7 @@ export function LabPC() {
 
   const res = useMemo(() => {
     if (!data) return null
-    let filas = data.rows.filter(r => (r as any)[indice] != null && !fuera.includes(r.year))
+    let filas = data.rows.filter(r => (r as any)[indice] != null && !fuera.includes(r.year) && !quitados.includes(r.date))
     if (soloVerano) filas = filas.filter(r => r.doy >= 121 && r.doy <= 304)     // may–oct
     if (sinExtremos && filas.length > 10) {
       const orden = [...filas].sort((a, b) => a.pc - b.pc)
@@ -378,8 +379,9 @@ export function LabPC() {
       return { x: v, y: inv(pred(coef, v)) }
     }) : []
 
+    const hayVal = val.some(v => Number.isFinite(v))
     return {
-      pocos: false, n: filas.length, años: Array.from(new Set(filas.map(r => r.year))).sort(),
+      pocos: false, hayVal, n: filas.length, años: Array.from(new Set(filas.map(r => r.year))).sort(),
       puntos: filas.map((r, i) => ({ x: x[i], y: r.pc, date: r.date, year: r.year })),
       curva,
       serie: filas.filter((_, i) => ok[i]).map((r, i) => ({ date: r.date, obs: r.pc, pred: inv(pv[i]) })),
@@ -390,7 +392,7 @@ export function LabPC() {
       auc: auc(alto, pv),
       p90,
     }
-  }, [data, indice, forma, trans, soloVerano, sinExtremos, fuera])
+  }, [data, indice, forma, trans, soloVerano, sinExtremos, fuera, quitados])
 
   if (error) return <p className="muted an-empty">{t('No se han podido cargar los pares de calibración.')}</p>
   if (!data) return <p className="muted an-empty"><span className="spin" /> {t('Cargando pares imagen–sonda…')}</p>
@@ -401,8 +403,10 @@ export function LabPC() {
     </>
   )
 
-  const buena = res.r2_val > 0.3 && res.r2_val > res.r2_est
-  const veredicto = buena
+  const buena = res.hayVal && res.r2_val > 0.3 && res.r2_val > res.r2_est
+  const veredicto = !res.hayVal
+    ? t('Con un solo año no se puede validar: para comprobar el modelo hay que ajustarlo sin un año y probarlo en ese año. Activa al menos dos años y compara el R² del ajuste con el validado.')
+    : buena
     ? t('El modelo aguanta la validación con estos filtros. Antes de creértelo, comprueba que no dependa de un solo año ni de unos pocos puntos extremos.')
     : res.r2_ajuste > 0.2
       ? t('Ojo: el ajuste parece razonable, pero al validarlo en un año que el modelo no ha visto se cae. Eso es sobreajuste: el índice no lleva información de ficocianina.')
@@ -430,6 +434,13 @@ export function LabPC() {
         </div>
       </div>
 
+      {quitados.length > 0 && (
+        <p className="lab-quitados">
+          {t('{n} puntos excluidos a mano', { n: quitados.length })}: {quitados.join(' · ')}
+          <button className="ghost small" onClick={() => setQuitados([])}>{t('restaurar todos')}</button>
+          <br /><span className="muted">{t('Quitar puntos cambia el resultado: hazlo solo si sabes por qué esa medida es mala, y déjalo escrito. Si de verdad es un fallo de la sonda, lo correcto es marcarla en la base de datos con su bandera de calidad.')}</span>
+        </p>
+      )}
       <p className={'lab-veredicto' + (buena ? ' ok' : '')}>{buena ? '✓ ' : '⚠ '}{veredicto}</p>
 
       <div className="lab-charts">
@@ -443,20 +454,37 @@ export function LabPC() {
                 label={{ value: data.indices.find(i => i.key === indice)?.name, position: 'bottom', fontSize: 11, offset: 2 }} />
               <YAxis type="number" dataKey="y" tick={{ fontSize: 11 }} width={44}
                 label={{ value: 'µg/L', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-              <ZAxis range={[24, 24]} />
-              <Tooltip content={({ payload }: any) => {
-                const p = payload?.[0]?.payload
-                return p?.date ? <div className="tt">{p.date}<br />{t('Sonda')}: <b>{fmt(p.y, 1)}</b> µg/L</div> : null
+              <ZAxis range={[26, 26]} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ payload }: any) => {
+                const p = payload?.find((x: any) => x?.payload?.date)?.payload
+                return p ? <div className="tt">{p.date}<br />{t('Sonda')}: <b>{fmt(p.y, 1)}</b> µg/L · {t('índice')} {fmt(p.x, 3)}<br /><span className="muted">{t('pincha para excluirlo')}</span></div> : null
               }} />
-              <Scatter data={res.puntos} shape={(pr: any) => (
-                <circle cx={pr.cx} cy={pr.cy} r={3.4} fill="#0E7C86" fillOpacity={0.55} stroke="#0C2B33" strokeWidth={0.3} />
-              )} />
+              <Scatter data={res.puntos} onClick={(p: any) => p?.date && setQuitados(q => [...q, p.date])}
+                cursor="pointer" shape={(pr: any) => (
+                  <circle cx={pr.cx} cy={pr.cy} r={3.8} fill="#0E7C86" fillOpacity={0.55} stroke="#0C2B33" strokeWidth={0.3}>
+                    <title>{`${pr.payload.date} · ${fmt(pr.payload.y, 1)} µg/L · ${t('índice')} ${fmt(pr.payload.x, 3)}\n${t('pincha para excluirlo')}`}</title>
+                  </circle>
+                )} />
               <Line data={res.curva} dataKey="y" stroke="#A8540C" strokeWidth={2} dot={false} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
+          <details className="lab-top">
+            <summary>{t('Ver los 8 valores más altos (con su fecha)')}</summary>
+            <ul>
+              {[...res.puntos].sort((a: any, b: any) => b.y - a.y).slice(0, 8).map((p: any) => (
+                <li key={p.date}>
+                  <code>{p.date}</code> · <b>{fmt(p.y, 1)}</b> µg/L · {t('índice')} {fmt(p.x, 3)}
+                  <button className="ghost small" onClick={() => setQuitados(q => [...q, p.date])}>✕ {t('excluir')}</button>
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
         <div>
           <p className="lbl">{t('En el tiempo: sonda y estimación validada')}</p>
+          {!res.hayVal ? (
+            <p className="muted an-empty lab-sinval">{t('Sin estimación validada: hace falta más de un año activado.')}</p>
+          ) : (
           <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={res.serie} margin={{ top: 8, right: 12, bottom: 18, left: 0 }}>
               <CartesianGrid stroke="#E3ECEC" />
@@ -471,6 +499,7 @@ export function LabPC() {
               <Line dataKey="pred" name={t('Modelo')} stroke="#A8540C" strokeWidth={1.6} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
+          )}
         </div>
       </div>
 
