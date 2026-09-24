@@ -357,7 +357,8 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .poi-chip.db-chip:hover { border-color: var(--teal); }
 .dl-link { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }
 /* Cinco pestañas: que quepan */
-.seg.dark.big button { min-width: 0; padding: 8px 2px; font-size: 12px; }
+.seg.dark.big { flex-wrap: wrap; gap: 2px; }
+.seg.dark.big button { min-width: 0; flex: 1 1 46%; padding: 8px 6px; font-size: 12.5px; line-height: 1.25; text-align: center; }
 /* La tarjeta de Datos deja ver el mapa con los puntos */
 .card.calres.dbres { top: auto; height: 58%; }
 @media (max-height: 760px) { .card.calres.dbres { height: 64%; } }

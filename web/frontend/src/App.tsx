@@ -401,7 +401,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         <header className="brand">
           <img src="/logo_hiblooms.png" alt="HIBLOOMS" />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1>{t('Visor satelital')}</h1>
+            <h1>{t('Visor HIBLOOMS')}</h1>
             <p>{t('Sentinel-2 · floraciones algales en embalses')}</p>
           </div>
           <LangToggle lang={lang} setLang={setLang} />
@@ -417,10 +417,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
         <div className="seg dark big">
           <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}>ℹ️ {t('Proyecto')}</button>
-          <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Monitor')}</button>
-          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor')}</button>
-          <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos')}</button>
-          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos')}</button>
+          <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Seguimiento actual')}</button>
+          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor satelital')}</button>
+          <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos del proyecto')}</button>
+          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos y calibraciones')}</button>
         </div>
 
         {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
@@ -459,10 +459,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         {appMode === 'info' ? (
           <div className="pj-nav">
             <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
-            <p>📊 <b>{t('Monitor')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
-            <p>🛰️ <b>{t('Visor')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
-            <p>🗄️ <b>{t('Datos')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
-            <p>🧪 <b>{t('Modelos')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
+            <p>📊 <b>{t('Seguimiento actual')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
+            <p>🛰️ <b>{t('Visor satelital')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
+            <p>🗄️ <b>{t('Datos del proyecto')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
+            <p>🧪 <b>{t('Modelos y calibraciones')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
             <button className="primary" onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }}>{t('Empezar')}</button>
           </div>
         ) : appMode === 'db' ? (
