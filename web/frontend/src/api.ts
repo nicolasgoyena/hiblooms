@@ -51,10 +51,14 @@ export type ModelCard = { id: string; index_id: string; reservoir: string; reser
   training: { pairs: number; period: string; ground_truth: string; matching: string }
   validation: { method: string; metrics: { label: string; value: string; help: string }[]; compared: string }
   limits: string[]; pairs: { date: string; obs: number; pred: number; ndci: number }[]
-  kind?: 'satellite' | 'seasonal' | 'trend'
+  kind?: 'satellite' | 'seasonal' | 'trend' | 'lab'
   curve?: { doy: number; p: number; obs: number | null }[]; levels?: { medio: number; alto: number }
   high_season?: string | null; today?: RiskToday
   history?: { date: string; value: number }[]; forecast?: TrendPoint[] }
+export type LabRow = { date: string; doy: number; year: number; pc: number
+  pci: number | null; ndci: number | null; tbda: number | null; ci: number | null }
+export type LabPairs = { reservoir_label: string; station: string
+  indices: { key: string; name: string }[]; rows: LabRow[] }
 export type RiskToday = { doy: number; p: number; level: 'bajo' | 'medio' | 'alto' }
 export type TrendPoint = { h: number; date: string; value: number; lo: number; hi: number }
 export type LiveVar = { key: string; name: string; unit: string; decimals: number; value: number; time: string
@@ -158,6 +162,7 @@ export const api = {
     req<SensorSeries>(`/api/db/sensors/${id}?variable=${variable}&layer=${layer}`),
   models: () => req<{ models: ModelCard[] }>('/api/models'),
   elvalLive: () => req<ElValLive>('/api/db/elval/live'),
+  labPairs: () => req<LabPairs>('/api/db/lab/pc'),
   dbExportUrl: (parameter?: string, wb?: string) => {
     const q = new URLSearchParams()
     if (parameter) q.set('parameter', parameter)

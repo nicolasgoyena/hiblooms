@@ -491,3 +491,17 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .tbl th.ord { cursor: pointer; user-select: none; }
 .tbl th.ord:hover { color: var(--teal); }
 .tbl tr.fila-mala td { background: #FDF3F2; }
+
+/* Modelos: laboratorio de calibración */
+.lab-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); font-size: 12px; }
+.lab-ctrl label { display: inline-flex; align-items: center; gap: 6px; color: var(--soft); }
+.lab-ctrl select { padding: 5px 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.lab-ctrl label.chk { gap: 5px; }
+.lab-years { display: inline-flex; align-items: center; gap: 5px; color: var(--soft); }
+.lab-years .tag { cursor: pointer; padding: 3px 8px; }
+.model-metrics.lab-kpis .kpi.ok b { color: #1C6B4B; }
+.model-metrics.lab-kpis .kpi.mal b { color: #C0392B; }
+.lab-veredicto { font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 10px; background: #FBF0C7; color: #6B560A; margin: 0; }
+.lab-veredicto.ok { background: #DCF0E4; color: #1C6B4B; }
+.lab-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1100px) { .lab-charts { grid-template-columns: 1fr; } }

@@ -1530,6 +1530,13 @@ def db_sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: st
     return _pdb(pdb.sensor_series, reservoir_id, variable, layer)
 
 
+@app.get("/api/db/lab/pc")
+def db_lab_pc():
+    """Pares índice Sentinel-2 ↔ ficocianina de la sonda (laboratorio de calibración)."""
+    import sonda_val
+    return _pdb(sonda_val.pares_pc)
+
+
 @app.get("/api/db/elval/live")
 def db_elval_live():
     """Últimos datos de la sonda SAICA de El Val + riesgo estacional y tendencia."""

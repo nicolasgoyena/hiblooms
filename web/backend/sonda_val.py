@@ -310,9 +310,80 @@ def _tendencia() -> dict:
     }
 
 
+# ── 4. Laboratorio de calibración de ficocianina ────────────────────────────
+
+def pares_pc() -> dict:
+    """Pares índice de Sentinel-2 ↔ ficocianina de la sonda, para el laboratorio de la web."""
+    return _cached("pares_pc", 6 * 3600, _pares_pc)
+
+
+def _pares_pc() -> dict:
+    if pdb.is_mock():
+        rng = np.random.default_rng(3)
+        t = pd.date_range(pd.Timestamp.now().normalize() - pd.Timedelta(days=900), periods=120, freq="7D")
+        doy = t.dayofyear.values
+        pc = np.exp(1.1 * np.cos(2 * np.pi * (doy - 250) / 365.25) + rng.normal(0, .5, len(t)))
+        d = pd.DataFrame({"date": t, "pci": 1.1 + rng.normal(0, .12, len(t)),
+                          "tbda": rng.normal(1, .2, len(t)), "ci": rng.normal(0, .05, len(t)), "pc": pc})
+    else:
+        d = pdb.q(f"""
+          SELECT c.date::date AS date,
+                 COALESCE(c.pci, i.pci) AS pci, COALESCE(c.tbda, i.tbda) AS tbda, COALESCE(c.ci, i.ci) AS ci,
+                 c.phycocyanin AS pc
+          FROM calibration_pairs c
+          LEFT JOIN indices_sentinel i ON i.date = c.date AND i.reservoir_id = c.reservoir_id
+          WHERE c.reservoir_id = {RES_ID} AND c.phycocyanin IS NOT NULL
+          ORDER BY 1""")
+        if d is None:
+            d = pd.DataFrame(columns=["date", "pci", "tbda", "ci", "pc"])
+    d = d[d["pc"] > 0].copy()
+    d["date"] = pd.to_datetime(d["date"])
+    # NDCI es el PCI en otra escala: NDCI = (PCI - 1) / (PCI + 1)
+    d["ndci"] = (d["pci"] - 1) / (d["pci"] + 1)
+    filas = []
+    for r in d.to_dict("records"):
+        fila = {"date": r["date"].strftime("%Y-%m-%d"), "doy": int(r["date"].dayofyear),
+                "year": int(r["date"].year), "pc": round(float(r["pc"]), 3)}
+        for k in ("pci", "ndci", "tbda", "ci"):
+            v = r.get(k)
+            fila[k] = None if v is None or not np.isfinite(v) else round(float(v), 5)
+        filas.append(fila)
+    return {"reservoir_label": "El Val", "station": "SAICA 945 · CHE",
+            "indices": [{"key": "pci", "name": "PCI (B5/B4)"}, {"key": "ndci", "name": "NDCI"},
+                        {"key": "tbda", "name": "TBDA (tres bandas)"}, {"key": "ci", "name": "CI"}],
+            "rows": filas}
+
+
+def _ficha_lab() -> dict:
+    p = pares_pc()
+    r = p["rows"]
+    años = sorted({x["year"] for x in r})
+    return {
+        "id": "lab_pc_val", "kind": "lab", "index_id": "", "reservoir": "VAL", "reservoir_label": "El Val",
+        "variable": "Laboratorio: ficocianina y Sentinel-2", "unit": "µg/L", "status": "laboratorio",
+        "version": pd.Timestamp.now().strftime("%Y-%m"),
+        "description": "Espacio para probar por tu cuenta si algún índice de Sentinel-2 sirve para estimar la ficocianina en El Val. Cambia el índice, la forma del ajuste y los años, y compara el R² del ajuste con el R² validado dejando fuera un año.",
+        "formula": "PC = f(índice) · la forma la eliges tú",
+        "index_formula": "PCI = B5/B4 · NDCI = (B5 − B4)/(B5 + B4) = (PCI − 1)/(PCI + 1) · TBDA y CI, índices de tres bandas",
+        "training": {"pairs": len(r), "period": f"{años[0]}–{años[-1]}" if años else "—",
+                     "ground_truth": "Sonda SAICA 945 de la CHE (ficocianina a las 11:00, misma fecha que la imagen)",
+                     "matching": "Un par por fecha con imagen despejada de Sentinel-2 y dato de sonda"},
+        "validation": {
+            "method": "El laboratorio calcula a la vez el R² del ajuste (con todos los datos) y el R² validado (ajustando sin un año y comprobando en ese año). Si el segundo baja al complicar el modelo, es sobreajuste.",
+            "metrics": [], "compared": "",
+        },
+        "limits": [
+            "No es un modelo publicado: es una herramienta para explorar.",
+            "Sentinel-2 no tiene banda en 620 nm, donde absorbe la ficocianina; estos índices miden biomasa.",
+            "Un R² de ajuste alto no significa nada si el validado no lo acompaña.",
+        ],
+        "pairs": [],
+    }
+
+
 def cards() -> list:
     out = []
-    for fn in (riesgo, tendencia):
+    for fn in (riesgo, tendencia, _ficha_lab):
         try:
             out.append(fn())
         except Exception as e:  # noqa: BLE001
