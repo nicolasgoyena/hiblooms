@@ -311,6 +311,16 @@ const auc = (alto: boolean[], score: number[]) => {
   return (sp - np * (np + 1) / 2) / (np * nn)
 }
 
+/** Ecuación del ajuste actual, en el formato que se usa en las fichas de modelo. */
+function ecuacion(c: number[], forma: Forma, trans: Trans, indiceNombre: string): string {
+  const n = (v: number, d = 3) => fmt(v, d)
+  const sg = (v: number, d = 3) => (v >= 0 ? '+ ' : '− ') + fmt(Math.abs(v), d)
+  const x = indiceNombre.split(' ')[0]
+  let eq = `${n(c[0])} ${sg(c[1])}·${x}`
+  if (forma === 'cuadratica' && c.length > 2) eq += ` ${sg(c[2])}·${x}²`
+  return trans === 'log' ? `log10(PC) = ${eq}` : `PC = ${eq}`
+}
+
 export function LabPC() {
   const [data, setData] = useState<LabPairs | null>(null)
   const [error, setError] = useState(false)
@@ -381,7 +391,7 @@ export function LabPC() {
 
     const hayVal = val.some(v => Number.isFinite(v))
     return {
-      pocos: false, hayVal, n: filas.length, años: Array.from(new Set(filas.map(r => r.year))).sort(),
+      pocos: false, hayVal, coef, n: filas.length, años: Array.from(new Set(filas.map(r => r.year))).sort(),
       puntos: filas.map((r, i) => ({ x: x[i], y: r.pc, date: r.date, year: r.year })),
       curva,
       serie: filas.filter((_, i) => ok[i]).map((r, i) => ({ date: r.date, obs: r.pc, pred: inv(pv[i]) })),
@@ -415,6 +425,13 @@ export function LabPC() {
   return (
     <>
       <LabControles {...{ data, indice, setIndice, forma, setForma, trans, setTrans, soloVerano, setSoloVerano, sinExtremos, setSinExtremos, años, fuera, setFuera }} />
+
+      {res.coef && (
+        <div className="lab-eq">
+          <code>{ecuacion(res.coef, forma, trans, data.indices.find(i => i.key === indice)?.name || indice)}</code>
+          <small className="muted">{t('Ajustada con los puntos visibles ahora mismo; cambia con cada filtro.')}</small>
+        </div>
+      )}
 
       <div className="model-metrics lab-kpis">
         <div className="kpi" title={t('Con todos los datos a la vez. Siempre mejora al complicar el modelo.')}>
