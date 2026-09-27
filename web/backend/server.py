@@ -538,7 +538,9 @@ class DownloadReq(BaseModel):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
-@app.get("/api/health")
+# HEAD además de GET: los servicios de monitorización (UptimeRobot y similares) comprueban
+# con HEAD por defecto, y FastAPI no lo añade solo a las rutas GET (devolvería 405).
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     return {"ok": True, "mode": "demo" if MOCK else "gee", "gee_error": GEE_ERROR, "auth": bool(USERS)}
 
