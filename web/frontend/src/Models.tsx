@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { api, fmt, LabPairs, LabRow, ModelCard } from './api'
 import { locale, t } from './i18n'
+import Icon from './Icon'
 
 const TROFICO = [
   { lo: 0.1, hi: 2.5, label: 'oligotrófico', color: '#E0EDF8' },
@@ -121,7 +122,7 @@ export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: ()
           <h4>{t('Limitaciones')}</h4>
           <ul>{m.limits.map(l => <li key={l}>{t(l)}</li>)}</ul>
           {m.index_id
-            ? <button className="primary" onClick={onOpen}>🛰️ {t('Ver en el visor')}</button>
+            ? <button className="primary" onClick={onOpen}><Icon name="satelite" /> {t('Ver en el visor')}</button>
             : m.kind === 'lab'
               ? <p className="muted small">{t('Los pares salen de la base del proyecto y se actualizan con ella. Nada de lo que pruebes aquí modifica el visor: es un banco de pruebas.')}</p>
               : <p className="muted small">{t('Se calcula con los datos de la sonda y se actualiza solo cuando llegan datos nuevos. El valor de hoy aparece en la pestaña Monitor, junto a El Val.')}</p>}
@@ -141,7 +142,7 @@ const doyLabel = (d: number) => {
 
 function Status({ s, small }: { s: string; small?: boolean }) {
   const exp = s !== 'validado'
-  return <span className={(small ? 'model-status' : 'model-badge') + (exp ? ' exp' : '')}>{exp ? '⚗' : '✓'} {t(s)}</span>
+  return <span className={(small ? 'model-status' : 'model-badge') + (exp ? ' exp' : '')}><Icon name={exp ? 'ensayo' : 'ok'} size={13} /> {t(s)}</span>
 }
 
 /** Curva anual de riesgo, con la frecuencia observada de picos y el día de hoy. */
@@ -452,9 +453,9 @@ export function LabPC() {
       </div>
 
       {quitados.length > 0 && (
-        <button className="ghost small lab-restaurar" onClick={() => setQuitados([])}>↺ {t('restaurar puntos')}</button>
+        <button className="ghost small lab-restaurar" onClick={() => setQuitados([])}><Icon name="reset" /> {t('restaurar puntos')}</button>
       )}
-      <p className={'lab-veredicto' + (buena ? ' ok' : '')}>{buena ? '✓ ' : '⚠ '}{veredicto}</p>
+      <p className={'lab-veredicto' + (buena ? ' ok' : '')}><Icon name={buena ? 'ok' : 'aviso'} /> {veredicto}</p>
 
       <div className="lab-charts">
         <div>
@@ -487,7 +488,7 @@ export function LabPC() {
               {[...res.puntos].sort((a: any, b: any) => b.y - a.y).slice(0, 8).map((p: any) => (
                 <li key={p.date}>
                   <code>{p.date}</code> · <b>{fmt(p.y, 1)}</b> µg/L · {t('índice')} {fmt(p.x, 3)}
-                  <button className="ghost small" onClick={() => setQuitados(q => [...q, p.date])}>✕ {t('excluir')}</button>
+                  <button className="ghost small" onClick={() => setQuitados(q => [...q, p.date])}><Icon name="cerrar" size={13} /> {t('excluir')}</button>
                 </li>
               ))}
             </ul>

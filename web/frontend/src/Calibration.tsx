@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import { api, CalResult, CsvPreview, downloadBlob, fmt, Poi, POI_COLORS, toCsv } from './api'
 import { locale, t } from './i18n'
+import Icon from './Icon'
 
 const MODEL_LABEL: Record<string, string> = {
   linear: 'Lineal', ridge: 'Ridge', lasso: 'Lasso', elastic_net: 'ElasticNet', logistic: 'Logística (saturación)',
@@ -119,7 +120,7 @@ export function CalibrationForm(p: {
       <section>
         <label className="lbl">{t('Datos in situ (CSV)')}</label>
         <button className="ghost solid wide" onClick={() => ref.current?.click()}>
-          {file ? `📄 ${file.name} · ${t('{n} filas', { n: prev?.n_rows ?? 0 })}` : t('Subir CSV de muestras o sonda')}
+          {file ? <><Icon name="archivo" /> {file.name} · {t('{n} filas', { n: prev?.n_rows ?? 0 })}</> : t('Subir CSV de muestras o sonda')}
         </button>
         <input ref={ref} className="file-in" type="file" accept=".csv,.txt,text/csv" onChange={e => onFile(e.target.files?.[0])} />
         {!file && <p className="muted small" style={{ marginTop: 6 }}>{t('Necesita una columna de fecha (y a ser posible hora) y otra con el valor medido.')}</p>}
@@ -171,8 +172,8 @@ export function CalibrationForm(p: {
           {!perRow && <section>
             <label className="lbl">{t('Punto de medida')}</label>
             <select value={where} onChange={e => setWhere(e.target.value)}>
-              {pois.map(x => <option key={x.name} value={x.name}>📍 {x.name}</option>)}
-              <option value="__xy">📍 {t('Otras coordenadas…')}</option>
+              {pois.map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
+              <option value="__xy">{t('Otras coordenadas…')}</option>
               <option value="__aoi">▭ {t('Media de todo el embalse')}</option>
             </select>
             {where === '__xy' && (
@@ -214,11 +215,11 @@ export function CalibrationForm(p: {
                   {(opts?.models ?? []).map(x => (
                     <button key={x} title={RASTER.includes(x) ? t('Se puede pintar en el mapa') : t('No se puede pintar en el mapa')}
                       className={'tag nice' + (models.includes(x) ? ' on' : '')} onClick={() => toggle(models, x, setModels)}>
-                      {MODEL_LABEL[x] ? t(MODEL_LABEL[x]) : x}{RASTER.includes(x) ? ' 🗺️' : ''}
+                      {MODEL_LABEL[x] ? t(MODEL_LABEL[x]) : x}{RASTER.includes(x) ? ' ◆' : ''}
                     </button>
                   ))}
                 </div>
-                <p className="muted small" style={{ marginTop: 6 }}>🗺️ = {t('se puede pintar como índice en el mapa. La logística usa un solo índice por modelo.')}</p>
+                <p className="muted small" style={{ marginTop: 6 }}>◆ = {t('se puede pintar como índice en el mapa. La logística usa un solo índice por modelo.')}</p>
               </section>
               <section className="row2">
                 <div><label className="lbl">{t('Escala')}</label>
@@ -286,7 +287,7 @@ export function CalibrationResult(p: {
     <div className="card calres">
       <div className="series-head">
         <div>
-          <p className="eyebrow">{t('Calibración')} · {p.reservoirLabel} · {s.sites.length > 1 ? `📍 ${t('{n} puntos', { n: s.sites.length })}` : s.point ? `📍 ${s.point.name ?? t('punto')}` : s.sites[0]?.lat != null ? `📍 ${s.sites[0].site}` : t('media del embalse')} · {r.mode === 'demo' ? t('datos simulados') : 'Sentinel-2'}</p>
+          <p className="eyebrow">{t('Calibración')} · {p.reservoirLabel} · {s.sites.length > 1 ? `${t('{n} puntos', { n: s.sites.length })}` : s.point ? `📍 ${s.point.name ?? t('punto')}` : s.sites[0]?.lat != null ? `📍 ${s.sites[0].site}` : t('media del embalse')} · {r.mode === 'demo' ? t('datos simulados') : 'Sentinel-2'}</p>
           <h2 className="serif">{p.target} ~ {s.model_label}</h2>
           <p className="muted small">{t('Índices')}: {s.predictors.map(predName).join(' · ')}</p>
         </div>
@@ -304,7 +305,7 @@ export function CalibrationResult(p: {
         {t('Métricas honestas: la selección del modelo se repite dentro de cada bloque de entrenamiento y se evalúa en un periodo que el modelo no ha visto.')}{' '}
         {t('Con todos los datos (optimista) el R² sería {r2}. Criterio: {crit}.', { r2: fmt(r.fit_all.r2, 2), crit: s.criterion_label })}{' '}
         {t('Incertidumbre: el valor real suele estar entre ×{lo} y ×{hi} de (1 + predicción) en 8 de cada 10 casos.', { lo: fmt(r.uncertainty.factor_lo, 2), hi: fmt(r.uncertainty.factor_hi, 2) })}
-        {s.selection_stability < 0.6 && ' ⚠️ ' + t('El modelo elegido cambia entre bloques: con más datos podría variar.')}
+        {s.selection_stability < 0.6 && ' · ' + t('El modelo elegido cambia entre bloques: con más datos podría variar.')}
       </p>
 
       {r.per_site.length > 1 && (
@@ -386,8 +387,8 @@ export function CalibrationResult(p: {
 
       <div className="calactions">
         {r.rasterizable && r.calibration_id
-          ? <button className="primary" onClick={() => p.onUse(r.calibration_id!)}>🗺️ {t('Usar como índice en el mapa')}</button>
-          : <p className="muted small">{t('El modelo elegido no se puede pintar en el mapa (no es lineal ni logístico). Incluye un modelo 🗺️ en el modo experto si lo necesitas en el mapa.')}</p>}
+          ? <button className="primary" onClick={() => p.onUse(r.calibration_id!)}><Icon name="mapa" /> {t('Usar como índice en el mapa')}</button>
+          : <p className="muted small">{t('El modelo elegido no se puede pintar en el mapa (no es lineal ni logístico). Incluye un modelo marcado con ◆ en el modo experto si lo necesitas en el mapa.')}</p>}
         <div className="dl">
           <button onClick={dl.pairs}>{t('Pares satélite–in situ')}</button>
           <button onClick={dl.preds}>{t('Predicciones validación')}</button>

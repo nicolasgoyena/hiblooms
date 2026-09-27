@@ -1,5 +1,6 @@
 import { Lang, t } from './i18n'
 import LangToggle from './LangToggle'
+import Icon from './Icon'
 
 const TEAM_RESEARCH = [
   ['David Elustondo', 'DEV', 'BIOMA/UNAV', 'Calidad del agua, QA/QC y biogeoquímica'],
@@ -25,11 +26,11 @@ const TEAM_WORK = [
 ]
 
 const FLOW = [
-  { icon: '🛰️', t: 'Sentinel-2', s: 'Imagen cada 2–5 días, 10–20 m' },
-  { icon: '☁️', t: 'Google Earth Engine', s: 'Filtrado de nubes y máscara de agua' },
-  { icon: '📐', t: 'Índices espectrales', s: 'Clorofila-a (algas) y ficocianina (cianobacterias)' },
-  { icon: '🗺️', t: 'Mapas y series', s: 'Concentración por píxel, puntos y embalse' },
-  { icon: '🚨', t: 'Posible floración', s: 'Detección temprana, con aviso de floraciones tóxicas' },
+  { icon: 'satelite', t: 'Sentinel-2', s: 'Imagen cada 2–5 días, 10–20 m' },
+  { icon: 'nube', t: 'Google Earth Engine', s: 'Filtrado de nubes y máscara de agua' },
+  { icon: 'indice', t: 'Índices espectrales', s: 'Clorofila-a (algas) y ficocianina (cianobacterias)' },
+  { icon: 'mapa', t: 'Mapas y series', s: 'Concentración por píxel, puntos y embalse' },
+  { icon: 'alerta', t: 'Posible floración', s: 'Detección temprana, con aviso de floraciones tóxicas' },
 ]
 
 function Team({ title, rows }: { title: string; rows: string[][] }) {
@@ -69,7 +70,7 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
         <h1>{t('Vigilancia satelital de')} <em>{t('floraciones algales')}</em> {t('en embalses')}</h1>
         <p>{t('Reconstrucción histórica y monitorización en tiempo casi real de las floraciones algales en embalses españoles mediante teledetección Sentinel-2, con especial atención a las algas tóxicas como las cianobacterias.')}</p>
         <div className="pj-chips">
-          <span>🛰️ {t('31 embalses por defecto')}</span><span>📅 {t('Desde 2017')}</span><span>🧪 {t('Clorofila-a y ficocianina')}</span><span>🔬 {t('Calibración con datos in situ')}</span>
+          <span><Icon name="satelite" /> {t('31 embalses por defecto')}</span><span><Icon name="calendario" /> {t('Desde 2017')}</span><span><Icon name="modelos" /> {t('Clorofila-a y ficocianina')}</span><span><Icon name="lupa" /> {t('Calibración con datos in situ')}</span>
         </div>
         <button className="primary pj-cta" onClick={onStart}>{t('Ver el estado de los embalses →')}</button>
       </section>
@@ -79,7 +80,7 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
         <div className="pj-steps">
           {FLOW.map((f, i) => (
             <div key={f.t} className="pj-step">
-              <span className="pj-ic">{f.icon}</span><b>{t(f.t)}</b><small>{t(f.s)}</small>
+              <span className="pj-ic"><Icon name={f.icon} size={26} /></span><b>{t(f.t)}</b><small>{t(f.s)}</small>
               {i < FLOW.length - 1 && <span className="pj-arrow">→</span>}
             </div>
           ))}

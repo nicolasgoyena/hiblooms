@@ -518,3 +518,9 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .lab-eq { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 3px; }
 .lab-eq code { font-size: 14px; color: var(--ink); }
 .lab-eq small { font-size: 11px; }
+
+/* Iconos de línea (Icon.tsx): alineados con el texto y del color del texto */
+.ico { display: inline-block; vertical-align: -0.16em; flex: none; }
+.seg .ico, .db-views .ico { vertical-align: -0.2em; }
+.pj-ic .ico { vertical-align: 0; }
+.mon-cy .ico, .mon-warn .ico, .elval-old .ico, .model-status .ico, .model-badge .ico { vertical-align: -0.12em; }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, colorAt, CoreData, CoreMeta, fmt, PhytoResp, SensorRes, SensorSeries } from './api'
 import { locale, t } from './i18n'
+import Icon from './Icon'
 
 const fmtDate = (s: string | null) => s ? new Date(s.slice(0, 10) + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 const fmtShort = (s: string) => new Date(s.slice(0, 10) + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: '2-digit' })
@@ -90,7 +91,7 @@ export function PhytoResult({ body, sites, onClose }: { body: string; sites: str
                 <b>{s.code}</b> · {fmtDate(s.date)}{s.depth_m != null ? ` · ${fmt(s.depth_m, 1)} m` : ''}
                 <span className="muted"> · {s.n_taxa} {t('taxones')} · {t('total')} {big(s.total)} {unit}</span>
                 {s.cyano_pct != null && <span className={'phy-cy' + (s.cyano_pct >= 50 ? ' hi' : '')}>{fmt(s.cyano_pct, 0)}% {t('cianobacterias')}</span>}
-                {s.toxic_pct != null && s.toxic_pct > 0 && <span className="phy-tox">☣ {fmt(s.toxic_pct, 0)}% {t('potencialmente tóxicas')}</span>}
+                {s.toxic_pct != null && s.toxic_pct > 0 && <span className="phy-tox"><Icon name="toxico" /> {fmt(s.toxic_pct, 0)}% {t('potencialmente tóxicas')}</span>}
               </div>
               <table className="tbl">
                 <thead><tr><th>{t('Taxón')}</th><th>{t('Grupo')}</th><th>{t('Densidad')} (cél/mL)</th><th>{t('Biovolumen')} (µm³/mL)</th><th>%</th></tr></thead>
@@ -99,7 +100,7 @@ export function PhytoResult({ body, sites, onClose }: { body: string; sites: str
                     const v = metric === 'density' ? x.density : x.biovolume
                     return (
                       <tr key={x.name}>
-                        <td><i>{x.name}</i>{x.toxic && <span className="phy-toxtag" title={t('Potencialmente tóxica')}> ☣</span>}</td>
+                        <td><i>{x.name}</i>{x.toxic && <span className="phy-toxtag" title={t('Potencialmente tóxica')}> <Icon name="toxico" size={13} /></span>}</td>
                         <td><span className="gdot" style={{ background: groupColor(x.group, data.groups.indexOf(x.group)) }} />{x.group}</td>
                         <td>{big(x.density)}</td><td>{big(x.biovolume)}</td>
                         <td>{v != null && s.total ? fmt(100 * v / s.total, 1) : '—'}</td>
@@ -169,10 +170,10 @@ export function CoresResult({ body, onClose }: { body: string; onClose: () => vo
       )}
       {meta && (
         <p className="core-meta small">
-          {meta.length_cm != null && <span>📏 {fmt(meta.length_cm, 1)} cm</span>}
-          {meta.water_depth_m != null && <span>🌊 {fmt(meta.water_depth_m, 1)} m {t('de columna de agua')}</span>}
-          {meta.interval_cm != null && <span>🔪 {t('cortes cada {n} cm', { n: fmt(meta.interval_cm, 1) })}</span>}
-          {meta.site_code && <span>📍 {meta.site_code}</span>}
+          {meta.length_cm != null && <span><Icon name="regla" /> {fmt(meta.length_cm, 1)} cm</span>}
+          {meta.water_depth_m != null && <span><Icon name="agua" /> {fmt(meta.water_depth_m, 1)} m {t('de columna de agua')}</span>}
+          {meta.interval_cm != null && <span><Icon name="corte" /> {t('cortes cada {n} cm', { n: fmt(meta.interval_cm, 1) })}</span>}
+          {meta.site_code && <span><Icon name="punto" /> {meta.site_code}</span>}
           {meta.notes && <span className="muted core-notes">{meta.notes}</span>}
         </p>
       )}

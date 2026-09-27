@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { colorAt, DbDepth, DbParam, DbSeries, DbSite, DbStatus, fmt, POI_COLORS } from './api'
 import { locale, t } from './i18n'
+import Icon from './Icon'
 
 const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -33,9 +34,9 @@ export function DataForm(p: {
       )}
 
       <div className="db-views">
-        {([['measures', '📈', 'Medidas'], ['campaigns', '🗓️', 'Campañas'], ['phyto', '🦠', 'Fitoplancton'],
-          ['sensors', '📡', 'Sondas'], ['cores', '🧱', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
-          <button key={k} className={p.view === k ? 'on' : ''} onClick={() => p.setView(k)}><span>{ic}</span>{t(lb)}</button>
+        {([['measures', 'serie', 'Medidas'], ['campaigns', 'calendario', 'Campañas'], ['phyto', 'fitoplancton', 'Fitoplancton'],
+          ['sensors', 'sonda', 'Sondas'], ['cores', 'testigo', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
+          <button key={k} className={p.view === k ? 'on' : ''} onClick={() => p.setView(k)}><span><Icon name={ic} size={18} /></span>{t(lb)}</button>
         ))}
       </div>
 
@@ -82,7 +83,7 @@ export function DataForm(p: {
       <SiteChips {...p} />
 
       <a className="ghost solid wide dl-link" href={p.exportUrl} download>
-        ⬇ {p.param ? t('Descargar este parámetro (CSV)') : t('Descargar datos (CSV)')}
+        <Icon name="descargar" /> {p.param ? t('Descargar este parámetro (CSV)') : t('Descargar datos (CSV)')}
       </a>
       </>}
     </>
@@ -272,8 +273,8 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
         </p>
         {data.rows.length > 0 && (
           <div className="seg small dbres-vista">
-            <button className={vista === 'grafica' ? 'on' : ''} onClick={() => setVista('grafica')}>📈 {t('Gráfica')}</button>
-            <button className={vista === 'tabla' ? 'on' : ''} onClick={() => setVista('tabla')}>🧾 {t('Tabla')}</button>
+            <button className={vista === 'grafica' ? 'on' : ''} onClick={() => setVista('grafica')}><Icon name="serie" /> {t('Gráfica')}</button>
+            <button className={vista === 'tabla' ? 'on' : ''} onClick={() => setVista('tabla')}><Icon name="tabla" /> {t('Tabla')}</button>
           </div>
         )}
       </div>

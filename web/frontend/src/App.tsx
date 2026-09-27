@@ -17,6 +17,7 @@ import {
 } from './api'
 import { locale, t, useLang } from './i18n'
 import LangToggle from './LangToggle'
+import Icon from './Icon'
 
 // Estado inicial de la URL: se lee una sola vez, antes de que nada la reescriba.
 const INITIAL_HASH = new URLSearchParams(location.hash.slice(1))
@@ -408,7 +409,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         </header>
         {onLogout && (
           <div className="userbar">
-            <span>👤 {user}</span>
+            <span><Icon name="usuario" /> {user}</span>
             <button className="link" onClick={onLogout}>{t('Cerrar sesión')}</button>
           </div>
         )}
@@ -416,11 +417,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         {mode === 'demo' && <div className="badge warn">{t('Modo demo · datos simulados (sin credenciales GEE)')}</div>}
 
         <div className="seg dark big">
-          <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}>ℹ️ {t('Proyecto')}</button>
-          <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}>📊 {t('Seguimiento actual')}</button>
-          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}>🛰️ {t('Visor satelital')}</button>
-          <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}>🗄️ {t('Datos del proyecto')}</button>
-          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}>🧪 {t('Modelos y calibraciones')}</button>
+          <button className={appMode === 'info' ? 'on' : ''} onClick={() => setAppMode('info')} title={t('Información del proyecto')}><Icon name="info" /> {t('Proyecto')}</button>
+          <button className={appMode === 'mon' ? 'on' : ''} onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }} title={t('Estado de todos los embalses')}><Icon name="monitor" /> {t('Seguimiento actual')}</button>
+          <button className={appMode === 'visor' ? 'on' : ''} onClick={() => setAppMode('visor')}><Icon name="satelite" /> {t('Visor satelital')}</button>
+          <button className={appMode === 'db' ? 'on' : ''} onClick={() => setAppMode('db')} title={t('Datos de campo y laboratorio del proyecto')}><Icon name="datos" /> {t('Datos del proyecto')}</button>
+          <button className={appMode === 'cal' ? 'on' : ''} onClick={() => setAppMode('cal')} title={t('Modelos validados y calibración con tus datos')}><Icon name="modelos" /> {t('Modelos y calibraciones')}</button>
         </div>
 
         {appMode !== 'info' && appMode !== 'mon' && appMode !== 'db' && !(appMode === 'cal' && calView === 'models') && (
@@ -442,7 +443,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             </button>
             {reservoir?.startsWith('u:') && (
               <button className="link upl del" onClick={() => removeUpload(reservoir)}>
-                🗑 {t('Quitar este shapefile')}
+                <Icon name="papelera" /> {t('Quitar este shapefile')}
               </button>
             )}
             <input ref={shpRef} className="file-in" type="file" accept=".zip,application/zip" onChange={e => onShapefile(e.target.files?.[0])} />
@@ -459,10 +460,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         {appMode === 'info' ? (
           <div className="pj-nav">
             <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
-            <p>📊 <b>{t('Seguimiento actual')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
-            <p>🛰️ <b>{t('Visor satelital')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
-            <p>🗄️ <b>{t('Datos del proyecto')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
-            <p>🧪 <b>{t('Modelos y calibraciones')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
+            <p><Icon name="monitor" /> <b>{t('Seguimiento actual')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
+            <p><Icon name="satelite" /> <b>{t('Visor satelital')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
+            <p><Icon name="datos" /> <b>{t('Datos del proyecto')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
+            <p><Icon name="modelos" /> <b>{t('Modelos y calibraciones')}</b>: {t('modelos validados de la plataforma y calibración con tus propias medidas in situ, que se pinta como índice en el mapa.')}</p>
             <button className="primary" onClick={() => { setAppMode('mon'); if (!mon) runMonitor() }}>{t('Empezar')}</button>
           </div>
         ) : appMode === 'db' ? (
@@ -485,8 +486,8 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         ) : appMode === 'cal' ? (
           <>
             <div className="seg dark depth-seg">
-              <button className={calView === 'models' ? 'on' : ''} onClick={() => { setCalView('models'); setModelShow(true) }}>📐 {t('Modelos de la plataforma')}</button>
-              <button className={calView === 'calibrate' ? 'on' : ''} onClick={() => setCalView('calibrate')}>🧪 {t('Calibra tu embalse')}</button>
+              <button className={calView === 'models' ? 'on' : ''} onClick={() => { setCalView('models'); setModelShow(true) }}><Icon name="indice" /> {t('Modelos de la plataforma')}</button>
+              <button className={calView === 'calibrate' ? 'on' : ''} onClick={() => setCalView('calibrate')}><Icon name="ensayo" /> {t('Calibra tu embalse')}</button>
             </div>
             {calView === 'models' ? (
               <>
@@ -559,12 +560,12 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             {hits.length > 0 && (
               <div className="poi-actions">
                 <button className="ghost solid" onClick={() => { setTab('serie'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>
-                  {loadingSeries ? t('Calculando…') : '📈 ' + t('Serie temporal')}
+                  {loadingSeries ? t('Calculando…') : <><Icon name="serie" /> {t('Serie temporal')}</>}
                 </button>
                 <button className="ghost solid" onClick={() => { setTab('tabla'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>{t('Tabla')}</button>
                 <button className="ghost solid" onClick={runClasses} disabled={!img}>{t('Clases')}</button>
-                <button className="ghost solid" onClick={() => runClim()}>📊 {t('Climatología')}</button>
-                <button className="ghost solid" onClick={copyLink}>{copied ? '✓ ' + t('Enlace copiado') : '🔗 ' + t('Copiar enlace')}</button>
+                <button className="ghost solid" onClick={() => runClim()}><Icon name="monitor" /> {t('Climatología')}</button>
+                <button className="ghost solid" onClick={copyLink}>{copied ? <><Icon name="ok" /> {t('Enlace copiado')}</> : <><Icon name="enlace" /> {t('Copiar enlace')}</>}</button>
               </div>
             )}
             {hits.length === 0 && <p className="muted">{t('Sin imágenes con esos filtros. Prueba a subir la nubosidad o ampliar el rango.')}</p>}
@@ -642,7 +643,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <p className="muted small" style={{ margin: 0 }}>{t('Rango probable (80 %): {lo} – {hi} {unit}', { lo: fmt(img.interval80[0], 1), hi: fmt(img.interval80[1], 1), unit: meta.unit })}</p>
           )}
           {img?.extrapolation_pct != null && img.extrapolation_pct > 5 && (
-            <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}>⚠️ {t('{pct} % del embalse está fuera del rango de índices con el que se calibró: esos valores son extrapolación.', { pct: fmt(img.extrapolation_pct, 0) })}</div>
+            <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}><Icon name="aviso" /> {t('{pct} % del embalse está fuera del rango de índices con el que se calibró: esos valores son extrapolación.', { pct: fmt(img.extrapolation_pct, 0) })}</div>
           )}
           {pois.length > 0 && (
             <div className="pt-vals">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ElValLive, fmt, LiveVar, MonitorRow } from './api'
 import { t } from './i18n'
+import Icon from './Icon'
 
 export const LEVELS: Record<string, { color: string; bg: string }> = {
   'muy alto': { color: '#8E1B15', bg: '#F7D9D6' },
@@ -79,7 +80,7 @@ export function MonitorResult({ data, onOpen, onClose }: {
         {nCombined > 0 && (
           <button className={'mon-pill mon-warn' + (onlyCombined ? ' on' : '')} onClick={() => setOnlyCombined(v => !v)}
             title={t('Señal alta de algas y lámina por debajo del 60 % de la habitual')}>
-            <b>{nCombined}</b> ⚠ {t('señal alta + embalse bajo')}
+            <b>{nCombined}</b> <Icon name="aviso" size={13} /> {t('señal alta + embalse bajo')}
           </button>
         )}
       </div>
@@ -90,7 +91,7 @@ export function MonitorResult({ data, onOpen, onClose }: {
             title={t('Abrir en el visor')}>
             <span className="mon-bar" style={{ background: LEVELS[r.level].color }} />
             <span className="mon-name">
-              <b>{r.combined ? '⚠ ' : ''}{r.label}</b>
+              <b>{r.combined && <Icon name="aviso" size={13} />} {r.label}</b>
               <small>{r.date ? r.date : t('sin imagen despejada')}{r.water_ha !== null ? ` · ${fmt(r.water_ha, 0)} ha` : ''}</small>
               <Fill row={r} />
             </span>
@@ -99,7 +100,7 @@ export function MonitorResult({ data, onOpen, onClose }: {
             </span>
             <span className="mon-tags">
               <span className="mon-lvl" style={{ background: LEVELS[r.level].bg, color: LEVELS[r.level].color }}>{t(r.level)}</span>
-              {r.cyano && <span className="mon-cy" title={t('Biomasa algal alta (NDCI ≥ 0,15): posible floración. Confirmar con muestreo o sonda.')}>🌿 {t('biomasa alta')}</span>}
+              {r.cyano && <span className="mon-cy" title={t('Biomasa algal alta (NDCI ≥ 0,15): posible floración. Confirmar con muestreo o sonda.')}><Icon name="biomasa" size={13} /> {t('biomasa alta')}</span>}
             </span>
           </button>
         ))}
@@ -179,7 +180,7 @@ function ElValPanel({ onOpen }: { onOpen: () => void }) {
         <div>
           <b>{t('El Val · sonda en tiempo real')}</b>
           <small className="muted"> · {d.station} · {t('último dato')} {d.last}</small>
-          {viejo && <small className="elval-old"> ⚠ {t('hace {n} días', { n: fmt((d.hours_ago ?? 0) / 24, 0) })}</small>}
+          {viejo && <small className="elval-old"> <Icon name="aviso" size={13} /> {t('hace {n} días', { n: fmt((d.hours_ago ?? 0) / 24, 0) })}</small>}
         </div>
         <button className="link" onClick={onOpen}>{t('Abrir en el visor')} →</button>
       </div>
@@ -195,7 +196,7 @@ function ElValPanel({ onOpen }: { onOpen: () => void }) {
         )}
         {tr.length > 0 && (
           <span className="elval-trend" title={t('Experimental: persistencia + estacionalidad. Banda del 80 % de los casos en años anteriores.')}>
-            ⚗ {t('Tendencia ficocianina')}: {tr.map(p => (
+            <Icon name="ensayo" size={13} /> {t('Tendencia ficocianina')}: {tr.map(p => (
               <span key={p.h}>+{p.h}d <b>{fmt(p.value, 1)}</b> <small>({fmt(p.lo, 1)}–{fmt(p.hi, 1)})</small></span>
             ))} µg/L
           </span>
