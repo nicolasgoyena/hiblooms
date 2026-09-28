@@ -54,8 +54,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 INDICES = [
     {"id": "PC_Val_cal", "label": "Ficocianina · El Val (experimental)", "unit": "µg/L", "min": 0, "max": 100, "group": "Experimentales", "reservoir": "VAL"},
     {"id": "Chla_Val_cal", "label": "Clorofila-a · El Val", "unit": "µg/L", "min": 0, "max": 60, "group": "Calibrados", "reservoir": "VAL"},
-    {"id": "PC_Bellus_cal", "label": "Ficocianina · Bellús (experimental)", "unit": "µg/L", "min": 0, "max": 800, "group": "Experimentales", "reservoir": "BELLUS"},
-    {"id": "Chla_Bellus_cal", "label": "Clorofila-a calibrada · Bellús", "unit": "µg/L", "min": 0, "max": 80, "group": "Calibrados", "reservoir": "BELLUS"},
+    # Modelos de la Universitat de València calibrados en Bellús (Delegido et al.).
+    # Solo se ofrecen con Bellús seleccionado: fuera de ese embalse no están validados.
+    {"id": "PC_Bellus_cal", "label": "Ficocianina · Bellús (UV)", "unit": "µg/L", "min": 0, "max": 800, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
+    {"id": "Chla_Bellus_cal", "label": "Clorofila-a · Bellús (UV)", "unit": "µg/L", "min": 0, "max": 80, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
+    {"id": "SDD_Bellus_UV", "label": "Transparencia, disco de Secchi · Bellús (UV)", "unit": "m", "min": 0, "max": 6, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
+    {"id": "TSM_Bellus_UV", "label": "Sólidos en suspensión · Bellús (UV)", "unit": "mg/L", "min": 0, "max": 40, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
     {"id": "UV_PC_Gral_cal", "label": "Ficocianina general (UV, experimental)", "unit": "µg/L", "min": 0, "max": 100, "group": "Experimentales"},
     {"id": "PCI_B5/B4", "label": "PCI (B5/B4, experimental)", "unit": "", "min": 0.5, "max": 3, "group": "Experimentales"},
     {"id": "NDCI_ind", "label": "NDCI", "unit": "", "min": -0.2, "max": 0.5, "group": "Espectrales"},

@@ -373,6 +373,7 @@ def _build_indices_image(
     scaled = clipped.addBands(optical, overwrite=True)
     scaled = _add_calibration_feature_bands(scaled)
 
+    b2 = scaled.select("B2")
     b3 = scaled.select("B3")
     b4 = scaled.select("B4")
     b5 = scaled.select("B5")
@@ -420,6 +421,24 @@ def _build_indices_image(
             .max(0)
             .updateMask(cloud_mask)
             .rename("Chla_Bellus_cal")
+        ),
+        # Transparencia (disco de Secchi) · UV, Bellús: 0,5614·TBDO + 0,779
+        # TBDO = R496·(1/R705 − 1/R665) → B2 (492 nm), B5 (705 nm), B4 (665 nm)
+        "SDD_Bellus_UV": lambda: (
+            b2.multiply(ee.Image(1).divide(b5).subtract(ee.Image(1).divide(b4)))
+            .multiply(0.5614).add(0.779)
+            .max(0)
+            .updateMask(cloud_mask)
+            .rename("SDD_Bellus_UV")
+        ),
+        # Sólidos en suspensión · UV, Bellús: 16,382·e^(−1,061·NDI)
+        # NDI = (R665 − R496)/(R665 + R496) → B4 y B2
+        "TSM_Bellus_UV": lambda: (
+            b4.subtract(b2).divide(b4.add(b2))
+            .multiply(-1.061).exp().multiply(16.382)
+            .max(0)
+            .updateMask(cloud_mask)
+            .rename("TSM_Bellus_UV")
         ),
         "UV_PC_Gral_cal": lambda: (
             ee.Image(24.665)
