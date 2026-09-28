@@ -178,7 +178,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
   const [copied, setCopied] = useState(false)
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(location.href) } catch { /* sin permiso: la URL ya está en la barra */ }
+    try { await navigator.clipboard.writeText(enlaceActual()) } catch { /* sin permiso para el portapapeles */ }
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
@@ -200,17 +200,19 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       if (d) { setStart(d); setTimeout(() => searchFrom(e, d), 200) }
     }
     booted.current = true
+    if (location.hash) history.replaceState(null, '', location.pathname)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!booted.current) return
+  // La barra de direcciones se deja limpia: el estado solo se añade al copiar el enlace
+  // (los enlaces antiguos con #e=…&d=…&i=… se siguen leyendo al arrancar).
+  const enlaceActual = () => {
     const q = new URLSearchParams()
     q.set('m', appMode)
     if (reservoir) q.set('e', reservoir)
     if (activeDate) q.set('d', activeDate)
     if (indexId) q.set('i', indexId)
-    history.replaceState(null, '', '#' + q.toString())
-  }, [appMode, reservoir, activeDate, indexId])
+    return location.origin + location.pathname + '#' + q.toString()
+  }
 
   useEffect(() => {
     api.health().then(h => setMode(h.mode)).catch(() => setError(t('No se puede conectar con el backend (¿está arrancado en :8000?)')))
