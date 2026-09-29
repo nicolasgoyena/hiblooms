@@ -39,7 +39,9 @@ export default function Climatology({ data }: { data: ClimResp }) {
 
   return (
     <div className="clima">
+      <p className="lbl">{t('Contexto histórico')}</p>
       <p className="muted small">
+        {t('Compara el año en curso con el rango habitual de los años anteriores, quincena a quincena.')}{' '}
         {t('Rango habitual de {a}–{b} (mitad central de los años anteriores) frente a {y}, por quincenas.', {
           a: data.years[0], b: year - 1, y: year })}{' '}
         {conDato > 0 && (alto > bajo

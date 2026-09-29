@@ -566,7 +566,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
                 </button>
                 <button className="ghost solid" onClick={() => { setTab('tabla'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>{t('Tabla')}</button>
                 <button className="ghost solid" onClick={runClasses} disabled={!img}>{t('Clases')}</button>
-                <button className="ghost solid" onClick={() => runClim()}><Icon name="monitor" /> {t('Climatología')}</button>
+                <button className="ghost solid" onClick={() => runClim()}><Icon name="calendario" /> {t('Contexto histórico')}</button>
                 <button className="ghost solid" onClick={copyLink}>{copied ? <><Icon name="ok" /> {t('Enlace copiado')}</> : <><Icon name="enlace" /> {t('Copiar enlace')}</>}</button>
               </div>
             )}
@@ -681,7 +681,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
               <button className={tab === 'serie' ? 'on' : ''} onClick={() => { setTab('serie'); runSeries() }}>{t('Serie temporal')}</button>
               <button className={tab === 'tabla' ? 'on' : ''} onClick={() => { setTab('tabla'); runSeries() }}>{t('Tabla')}</button>
               <button className={tab === 'clases' ? 'on' : ''} onClick={runClasses} disabled={!activeDate}>{t('Clases')}</button>
-              <button className={tab === 'clima' ? 'on' : ''} onClick={() => runClim()}>{t('Climatología')}</button>
+              <button className={tab === 'clima' ? 'on' : ''} onClick={() => runClim()}>{t('Contexto histórico')}</button>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {(tab === 'serie' || tab === 'tabla') && series && <button className="link dark" onClick={csvSeries}>{t('Descargar CSV')}</button>}
