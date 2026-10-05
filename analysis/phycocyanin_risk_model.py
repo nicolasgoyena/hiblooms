@@ -1,22 +1,22 @@
 """
-Modelo de RIESGO de picos de ficocianina en El Val (HIBLOOMS) · prueba rápida.
+RISK model for phycocyanin peaks in El Val (HIBLOOMS) · quick test.
 
-Objetivo: ¿se puede avisar de los días con ficocianina alta usando SOLO datos que la web
-tiene cada día en cualquier embalse? (época del año, meteorología ERA5-Land, NDCI de
-Sentinel-2 y nivel del embalse). La sonda SAICA 945 solo se usa como verdad de campo.
+Goal: can we warn of high-phycocyanin days using ONLY data the web tool has every day
+for any reservoir? (time of year, ERA5-Land weather, Sentinel-2 NDCI and reservoir
+level). The SAICA 945 buoy is only used as ground truth.
 
-Diseño honesto:
-  · Variable objetivo: media diaria de ficocianina en superficie (SAICA 945, sin datos erróneos).
-    "Pico" = día por encima del percentil 90 de la serie.
-  · Predictores del día anterior hacia atrás (lo que sabríamos esa mañana): nada del mismo día.
-  · Validación dejando fuera un año completo (2024 / 2025 / 2026).
-  · Se compara siempre con "solo estacionalidad": el modelo solo vale si la mejora.
+Honest design:
+  · Target variable: daily mean surface phycocyanin (SAICA 945, without flagged data).
+    "Peak" = day above the 90th percentile of the series.
+  · Predictors from the previous day backwards (what we would know that morning): nothing from the same day.
+  · Validation leaving one full year out (2024 / 2025 / 2026).
+  · Always compared with "seasonality only": the model is only useful if it beats it.
 
-Uso (Anaconda Prompt, carpeta del repo; tras haber ejecutado validacion_sonda.py):
-    set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
+Usage (Anaconda Prompt, repo folder; after running validate_buoy.py):
+    set "DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python analisis\\modelo_riesgo.py
-Resultados en analisis/resultados/riesgo/.
+    python analysis\\phycocyanin_risk_model.py
+Results in analysis/results/risk_model/.
 """
 from __future__ import annotations
 
@@ -34,14 +34,14 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validacion_sonda import BOYA, RES_ID, auc, init_gee  # noqa: E402
+from validate_buoy import BOYA, RES_ID, auc, init_gee  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "analisis" / "resultados" / "riesgo"
+OUT = ROOT / "analysis" / "results" / "risk_model"
 SOURCE = "che_saica_945"
 
 
-# ── Datos ───────────────────────────────────────────────────────────────────
+# ── Data ────────────────────────────────────────────────────────────────────
 
 def ficocianina_diaria(url: str) -> pd.DataFrame:
     from sqlalchemy import create_engine, text
@@ -54,11 +54,11 @@ def ficocianina_diaria(url: str) -> pd.DataFrame:
     with create_engine(url).connect() as c:
         d = pd.read_sql(q, c, params={"r": RES_ID, "s": SOURCE})
     d["fecha"] = pd.to_datetime(d["fecha"])
-    return d[d.n >= 12]          # días con al menos medio día de registros
+    return d[d.n >= 12]          # days with at least half a day of records
 
 
 def meteo_gee(ee, lon, lat, desde: str, hasta: str) -> pd.DataFrame:
-    """ERA5-Land diario en el punto: temperatura, radiación, viento, precipitación."""
+    """Daily ERA5-Land at the point: temperature, radiation, wind, precipitation."""
     pt = ee.Geometry.Point([lon, lat])
     col = (ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR").filterDate(desde, hasta)
            .select(["temperature_2m", "surface_solar_radiation_downwards_sum",
@@ -83,10 +83,10 @@ def meteo_gee(ee, lon, lat, desde: str, hasta: str) -> pd.DataFrame:
 
 
 def ndci_diario(fechas: pd.DatetimeIndex) -> pd.DataFrame:
-    """Último NDCI válido de Sentinel-2 (≤ 15 días de antigüedad), del CSV de validacion_sonda.py."""
-    f = ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv"
+    """Latest valid Sentinel-2 NDCI (≤ 15 days old), from the validate_buoy.py CSV."""
+    f = ROOT / "analysis" / "results" / "buoy_validation" / "s2_boya_todas.csv"
     if not f.exists():
-        print("   (no hay analisis/resultados/validacion/s2_boya_todas.csv: sin NDCI)")
+        print("   (no hay analysis/results/buoy_validation/s2_boya_todas.csv: sin NDCI)")
         return pd.DataFrame({"fecha": fechas})
     s = pd.read_csv(f)
     s = s[(s.agua >= 0.99) & (s.nubes300 <= 0.01) & (s.B4 > 0)].copy()
@@ -95,7 +95,7 @@ def ndci_diario(fechas: pd.DatetimeIndex) -> pd.DataFrame:
     s = s.groupby("fecha", as_index=False)["ndci"].mean().sort_values("fecha")
     s["fecha_img"] = s["fecha"]
     base = pd.DataFrame({"fecha": fechas}).sort_values("fecha")
-    # imagen de como muy tarde el día anterior (lo que sabríamos esa mañana)
+    # image from the previous day at the latest (what we would know that morning)
     base["fecha_ref"] = base["fecha"] - pd.Timedelta(days=1)
     j = pd.merge_asof(base, s.rename(columns={"fecha": "fecha_ref"}), on="fecha_ref", direction="backward")
     j["edad_ndci"] = (j["fecha"] - j["fecha_img"]).dt.days
@@ -104,7 +104,7 @@ def ndci_diario(fechas: pd.DatetimeIndex) -> pd.DataFrame:
 
 
 def nivel_diario(fechas: pd.DatetimeIndex) -> pd.DataFrame:
-    f = ROOT / "data" / "boletin_historico_hiblooms.csv"
+    f = ROOT / "data" / "reservoir_bulletin_history.csv"
     base = pd.DataFrame({"fecha": fechas})
     if not f.exists():
         return base
@@ -121,7 +121,7 @@ def construir(pc, met, ndci, niv) -> pd.DataFrame:
     d = pc.merge(met, on="fecha", how="left").merge(ndci, on="fecha", how="left").merge(niv, on="fecha", how="left")
     d = d.sort_values("fecha").set_index("fecha")
     m = met.set_index("fecha").sort_index()
-    # meteorología de los días ANTERIORES (ventanas que terminan ayer)
+    # weather from PREVIOUS days (windows ending yesterday)
     for w in (3, 7, 14, 30):
         d[f"t_aire_{w}d"] = m["t_aire"].shift(1).rolling(w).mean().reindex(d.index)
     for w in (7, 14):
@@ -131,7 +131,7 @@ def construir(pc, met, ndci, niv) -> pd.DataFrame:
     d["calentamiento_7d"] = d["t_aire_7d"] - d["t_aire_30d"]
     doy = d.index.dayofyear
     d["sin_doy"], d["cos_doy"] = np.sin(2 * np.pi * doy / 365.25), np.cos(2 * np.pi * doy / 365.25)
-    d["temp_agua_ayer"] = d["temp_agua"].shift(1)       # solo referencia: la web no la tiene en otros embalses
+    d["temp_agua_ayer"] = d["temp_agua"].shift(1)       # reference only: the web tool does not have it for other reservoirs
     return d.reset_index()
 
 
@@ -141,7 +141,7 @@ CONJUNTOS = {
     "1 · solo estacionalidad": ["sin_doy", "cos_doy"],
     "2 · + meteorología": ["sin_doy", "cos_doy", "t_aire_7d", "t_aire_14d", "t_aire_30d", "calentamiento_7d",
                            "rad_7d", "rad_14d", "viento_7d", "viento_14d", "lluvia_7d", "lluvia_14d"],
-    "3 · + NDCI satélite": None,   # se rellena abajo (2 + NDCI)
+    "3 · + NDCI satélite": None,   # filled in below (2 + NDCI)
     "4 · + nivel embalse": None,   # 3 + nivel
     "ref · + temperatura del agua (sonda)": None,
 }
@@ -180,7 +180,7 @@ def validar(d: pd.DataFrame, umbral: float):
             k = np.isfinite(p)
             if k.sum() < 50:
                 continue
-            # ¿cuántos picos caen en el 10 % de días con más riesgo?
+            # how many peaks fall in the 10 % of days with the highest risk?
             top = p[k] >= np.quantile(p[k], 0.9)
             filas.append({"predictores": nombre, "modelo": tipo, "n_dias": int(k.sum()), "picos": int(y[k].sum()),
                           "AUC": round(auc(y[k], p[k]), 3),

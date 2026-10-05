@@ -1,6 +1,6 @@
 @echo off
-REM Arranca backend (puerto 8000) y frontend (puerto 5173) en dos ventanas.
-REM Doble clic desde la carpeta web\ o ejecútalo desde cualquier sitio.
+REM Starts the backend (port 8000) and frontend (port 5173) in two windows.
+REM Double-click from the web\ folder or run it from anywhere.
 set WEB=%~dp0
 set REPO=%WEB%..
 

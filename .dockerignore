@@ -4,5 +4,5 @@ web/frontend/dist
 web/backend/_uploads
 **/__pycache__
 .streamlit
-analisis
+analysis
 scripts

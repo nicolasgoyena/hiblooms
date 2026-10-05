@@ -72,7 +72,7 @@ export type ClassRow = { low: number; high: number | null; area_ha: number; pct:
 
 const BASE = (import.meta as any).env?.VITE_API_URL ?? ''
 
-// ── Sesión (login) ──
+// ── Session (login) ──
 const TOKEN_KEY = 'hiblooms-token'
 let token: string | null = (() => { try { return localStorage.getItem(TOKEN_KEY) } catch { return null } })()
 export const getToken = () => token
@@ -80,7 +80,7 @@ export function setToken(t: string | null) {
   token = t
   try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY) } catch { /* noop */ }
 }
-/** Se dispara cuando el backend responde 401 (sesión caducada) */
+/** Fired when the backend answers 401 (session expired) */
 export const onUnauthorized = { cb: () => {} }
 
 async function req<T>(path: string, body?: unknown, method?: string): Promise<T> {
@@ -104,7 +104,7 @@ async function req<T>(path: string, body?: unknown, method?: string): Promise<T>
 export type Prog = (p: { progress: number; step: string; seconds: number }) => void
 export type JobState = { status: 'running' | 'done' | 'error'; progress: number; step: string; seconds: number; detail?: string; result?: any }
 
-/** Lanza una tarea larga y sondea hasta que termina, informando del progreso. */
+/** Launch a long job and poll until it finishes, reporting progress. */
 async function job<T>(path: string, body: unknown, onProgress?: (p: { progress: number; step: string; seconds: number }) => void): Promise<T> {
   const { job_id } = await req<{ job_id: string }>(path, body)
   for (;;) {
@@ -206,7 +206,7 @@ export const niceName = (n: string) => {
 
 export const POI_COLORS = ['#F29A5B', '#7FB8E0', '#C7E07A', '#E58FC7', '#FFD166', '#A78BFA', '#FF8A80', '#80CBC4']
 
-/** CSV → puntos. Acepta cabeceras nombre/name, lat/latitud, lon/longitud (coma o punto y coma). */
+/** CSV → points. Accepts headers nombre/name, lat/latitud, lon/longitud (comma or semicolon). */
 export function parsePoisCsv(text: string): Poi[] {
   const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim())
   if (lines.length < 2) return []

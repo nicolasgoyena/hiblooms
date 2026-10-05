@@ -1,16 +1,16 @@
 """
-Modelo final de clorofila-a de El Val para la web (HIBLOOMS).
+Final chlorophyll-a model for El Val, used by the web tool (HIBLOOMS).
 
-Configuración elegida con exprimir_clorofila.py:
-  · Sentinel-2 L1C (sin corrección atmosférica) · media 5×5 píxeles (≈100 m)
-  · clorofila de la sonda en 0–3 m
-  · log10(Chl) = a + b·NDCI + c·NDCI² + d·sen(2π·día/365,25) + e·cos(2π·día/365,25)
+Configuration chosen with chlorophyll_input_variants.py:
+  · Sentinel-2 L1C (no atmospheric correction) · 5×5 pixel mean (≈100 m)
+  · buoy chlorophyll at 0–3 m
+  · log10(Chl) = a + b·NDCI + c·NDCI² + d·sin(2π·day/365.25) + e·cos(2π·day/365.25)
 
-Lee analisis/resultados/exprimir/pares_variantes.csv (no consulta GEE), valida dejando fuera cada
-año, ajusta con todos los datos y actualiza la ficha data/modelos/chla_val.json, de donde
-el visor lee los coeficientes (hiblooms_core.py).
+Reads analysis/results/chlorophyll_inputs/pares_variantes.csv (no GEE queries), validates leaving
+one year out at a time, fits with all the data and updates the model card data/models/chla_val.json,
+from which the viewer reads the coefficients (hiblooms_core.py).
 
-Uso:  python analisis\\ajustar_clorofila_final.py
+Usage:  python analysis\\fit_final_chlorophyll.py
 """
 from __future__ import annotations
 
@@ -30,10 +30,10 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from mejorar_clorofila import metricas  # noqa: E402
+from chlorophyll_model_search import metricas  # noqa: E402
 
 ROOT = HERE.parent
-FICHA = ROOT / "data" / "modelos" / "chla_val.json"
+FICHA = ROOT / "data" / "models" / "chla_val.json"
 
 
 def rasgos(ndci, doy, estacional=True, cuadratico=True):
@@ -44,9 +44,9 @@ def rasgos(ndci, doy, estacional=True, cuadratico=True):
 
 
 def main():
-    f = ROOT / "analisis" / "resultados" / "exprimir" / "pares_variantes.csv"
+    f = ROOT / "analysis" / "results" / "chlorophyll_inputs" / "pares_variantes.csv"
     if not f.exists():
-        sys.exit("Falta analisis/resultados/exprimir\\pares_variantes.csv: ejecuta antes exprimir_clorofila.py")
+        sys.exit("Falta analysis/results/chlorophyll_inputs\\pares_variantes.csv: ejecuta antes chlorophyll_input_variants.py")
     m = pd.read_csv(f)
     m["t"] = pd.to_datetime(m["t"], format="ISO8601", utc=True)
     b4, b5 = m["toa_5x5_B4"], m["toa_5x5_B5"]
@@ -74,7 +74,7 @@ def main():
             p[te] = LinearRegression().fit(X[tr], ly[tr]).predict(X[te])
         lr = LinearRegression().fit(X, ly)
         b, c = lr.coef_[0], lr.coef_[1]
-        monotono = bool(np.all(b + 2 * c * grid > 0))       # la clorofila sube siempre con el NDCI
+        monotono = bool(np.all(b + 2 * c * grid > 0))       # chlorophyll always increases with NDCI
         preds[nombre], fits[nombre] = 10 ** p, (lr, est)
         res[nombre] = {**metricas(y, 10 ** p), "sube_siempre": monotono, "complejidad": int(cuad) + int(est)}
     t = pd.DataFrame(res).T

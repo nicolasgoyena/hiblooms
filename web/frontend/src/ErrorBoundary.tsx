@@ -1,6 +1,6 @@
 import { Component, ReactNode } from 'react'
 
-/** Si una parte de la web falla, enseña el error en vez de dejar la página en blanco. */
+/** If part of the web app fails, show the error instead of leaving the page blank. */
 export default class ErrorBoundary extends Component<{ children: ReactNode; label?: string; onReset?: () => void }, { err: Error | null }> {
   state = { err: null as Error | null }
   static getDerivedStateFromError(err: Error) { return { err } }

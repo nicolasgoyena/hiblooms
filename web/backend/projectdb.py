@@ -1,23 +1,23 @@
 """
-Acceso de SOLO LECTURA a la base de datos del proyecto (PostgreSQL/PostGIS,
-unav_water_sampling) para la pestaña «Datos» del visor.
+READ-ONLY access to the project database (PostgreSQL/PostGIS,
+unav_water_sampling) for the viewer's "Data" tab.
 
-Conexión: variable de entorno DATABASE_URL, por ejemplo
-    postgresql+psycopg2://hiblooms_ro:CLAVE@host:5432/unav_water_sampling
-Conviene usar un rol que solo tenga permisos SELECT. Además, cada transacción
-se abre en modo READ ONLY, así que aunque el rol tuviera más permisos la web
-no podría modificar nada.
+Connection: DATABASE_URL environment variable, for example
+    postgresql+psycopg2://hiblooms_ro:PASSWORD@host:5432/unav_water_sampling
+Use a role with SELECT permissions only. In addition, every transaction is
+opened in READ ONLY mode, so even if the role had more permissions the web tool
+could not modify anything.
 
-La físico-química está repartida en tres tablas con formatos distintos:
-  · insitu_sampling        (ancha: una columna por parámetro, una fila por muestreo)
-  · insitu_determinations  (ancha, con profundidad: sonda multiparamétrica)
-  · lab_measurements       (larga: parameter_code + value, vía lab_samples)
-Aquí se unifican en una tabla larga de observaciones:
-  punto · fecha · profundidad · parámetro · valor · unidad · qc_flag · origen
-Son pocas miles de filas, así que se cargan una vez y se cachean unos minutos.
+Physico-chemistry is spread over three tables with different layouts:
+  · insitu_sampling        (wide: one column per parameter, one row per sampling)
+  · insitu_determinations  (wide, with depth: multiparameter probe)
+  · lab_measurements       (long: parameter_code + value, via lab_samples)
+Here they are unified into one long table of observations:
+  site · date · depth · parameter · value · unit · qc_flag · source
+It is a few thousand rows, so it is loaded once and cached for a few minutes.
 
-Sin DATABASE_URL (o con HIBLOOMS_DB_MOCK=1) se generan datos simulados que
-respetan el esquema, para desarrollar y probar sin la base real.
+Without DATABASE_URL (or with HIBLOOMS_DB_MOCK=1) simulated data following the
+schema is generated, to develop and test without the real database.
 """
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ from typing import Optional
 
 import pandas as pd
 
-CACHE_TTL = 6 * 3600  # s: pasado este tiempo se refresca en segundo plano
+CACHE_TTL = 6 * 3600  # s: after this time it is refreshed in the background
 
-# Columnas numéricas de las tablas anchas que NO son parámetros
+# Numeric columns of the wide tables that are NOT parameters
 NOT_PARAMS = {
     "extraction_point_id", "qc_flag", "depth_m", "water_depth_meters",
 }
@@ -56,19 +56,19 @@ def engine():
     if _engine is None:
         from sqlalchemy import create_engine
         url = db_url()
-        if url.startswith("postgres://"):  # Neon/Heroku dan a veces este prefijo
+        if url.startswith("postgres://"):  # Neon/Heroku sometimes give this prefix
             url = "postgresql+psycopg2://" + url[len("postgres://"):]
         elif url.startswith("postgresql://"):
             url = "postgresql+psycopg2://" + url[len("postgresql://"):]
         _engine = create_engine(
             url, pool_pre_ping=True, pool_size=2, max_overflow=2,
-            # toda sesión en solo lectura, pase lo que pase con los permisos del rol
-            # (sin "options": el pooler de Neon no admite parámetros de arranque)
+            # every session is read-only, whatever the role's permissions
+            # (no "options": the Neon pooler does not accept startup parameters)
         )
         from sqlalchemy import event
 
         @event.listens_for(_engine, "connect")
-        def _ro(dbapi_conn, _rec):  # toda sesión en solo lectura, pase lo que pase con el rol
+        def _ro(dbapi_conn, _rec):  # every session is read-only, whatever the role
             cur = dbapi_conn.cursor()
             cur.execute("SET default_transaction_read_only = on")
             cur.execute("SET statement_timeout = 120000")
@@ -83,7 +83,7 @@ def q(sql: str, **params) -> pd.DataFrame:
         return pd.read_sql(text(sql), c, params=params)
 
 
-# ── Carga desde la base real ────────────────────────────────────────────────
+# ── Loading from the real database ──────────────────────────────────────────
 
 def _numeric_cols(table: str) -> list[str]:
     df = q("""SELECT column_name FROM information_schema.columns
@@ -95,10 +95,10 @@ def _numeric_cols(table: str) -> list[str]:
 
 def _unpivot(table: str, depth_expr: str, date_expr: Optional[str] = None,
              exclude: tuple = (), rename: Optional[dict] = None) -> str:
-    """SQL que pasa una tabla ancha a formato largo con LATERAL (VALUES ...).
-    depth_expr: expresión SQL de la profundidad de la medida (o '0' si es de superficie).
-    date_expr: fecha propia de la tabla; si no, se toma de samples vía extraction_id.
-    rename: columnas que se publican con otro código (p. ej. dos conductividades distintas)."""
+    """SQL that turns a wide table into long format with LATERAL (VALUES ...).
+    depth_expr: SQL expression for the measurement depth (or '0' if it is surface).
+    date_expr: the table's own date; otherwise it is taken from samples via extraction_id.
+    rename: columns published under a different code (e.g. two different conductivities)."""
     rename = rename or {}
     cols = [c for c in _numeric_cols(table) if c not in exclude]
     if not cols:
@@ -122,7 +122,7 @@ def _unpivot(table: str, depth_expr: str, date_expr: Optional[str] = None,
 
 
 def _load_real() -> dict:
-    # Puntos: agrupamos las extracciones por punto de muestreo fijo cuando lo tienen
+    # Sites: extractions are grouped by fixed sampling point when they have one
     points = q("""
       SELECT ep.extraction_point_id, ep.sampling_point_id, ep.campaign_id,
              ep.water_body_name, ep.location_code, ep.reservoir_id, ep.river_id,
@@ -137,19 +137,19 @@ def _load_real() -> dict:
       LEFT JOIN campaigns c ON c.campaign_id = ep.campaign_id""")
 
     parts = [p for p in (
-        # insitu_sampling: medidas de SUPERFICIE. Su water_depth_meters es la profundidad
-        # TOTAL de la columna en el punto, no la de la medida.
+        # insitu_sampling: SURFACE measurements. Its water_depth_meters is the TOTAL depth
+        # of the water column at the site, not the measurement depth.
         _unpivot("insitu_sampling", "0", exclude=("chlorophyll_volume_estimation",)),
-        # Sonda multiparamétrica (Hanna): perfiles con profundidad real. Sus dos
-        # conductividades no son la misma magnitud: se publican por separado.
+        # Multiparameter probe (Hanna): profiles with real depth. Its two
+        # conductivities are not the same quantity: they are published separately.
         _unpivot("insitu_determinations", "t.depth_m", rename={"conduc_uscm_2": "conduc_uscm_2"}),
-        # Sonda de fluorescencia (FluoroProbe): perfiles finos de clorofila por grupo algal.
-        # Su temperatura se omite para no mezclar dos instrumentos en el mismo perfil.
+        # Fluorescence probe (FluoroProbe): fine chlorophyll profiles by algal group.
+        # Its temperature is omitted so as not to mix two instruments in the same profile.
         _unpivot("profiles_data", "t.depth_m", date_expr="t.datetime::date",
                  exclude=("sample_temperature_celsius",)),
     ) if p]
-    # Laboratorio: agua, material en suspensión y sedimento superficial. Los testigos
-    # de sedimento (secciones en cm) quedan fuera: su profundidad no es la del agua.
+    # Laboratory: water, suspended material and surface sediment. Sediment
+    # cores (sections in cm) are left out: their depth is not water depth.
     parts.append("""
       SELECT ls.extraction_point_id, ls.sample_date AS date,
              CASE WHEN ls.matrix_code = 'water' THEN COALESCE(ls.depth_m, 0) END::double precision AS depth_m,
@@ -160,7 +160,7 @@ def _load_real() -> dict:
       WHERE m.value IS NOT NULL AND COALESCE(ls.matrix_code, 'water') <> 'sediment_core'""")
     obs = q(" UNION ALL ".join(parts))
 
-    # Vocabulario: columna de tabla ancha → parámetro normalizado y unidad
+    # Vocabulary: wide-table column → normalised parameter and unit
     vocab = q("SELECT table_name, column_name, parameter_code, unit_code FROM variable_vocabulary")
     params = q("SELECT parameter_code, name, parameter_group, default_unit FROM parameters")
     units = q("SELECT unit_code, name AS unit_name FROM units")
@@ -169,7 +169,7 @@ def _load_real() -> dict:
                       FROM reservoirs_spain r JOIN extraction_points ep ON ep.reservoir_id = r.reservoir_id""")
     sources = q("SELECT source_code, name, provider, licence, citation FROM data_sources")
     matrices = q("SELECT matrix_code, name FROM matrices")
-    # Visitas: qué se tomó en cada extracción (incluye tablas que el visor aún no dibuja)
+    # Visits: what was taken in each extraction (includes tables the viewer does not plot yet)
     samples = q("""
       SELECT s.extraction_point_id, MIN(s.sample_date) AS date, MIN(s.sample_time)::text AS time,
              split_part(s.extraction_id, '_' || s.extraction_point_id || '_', 1) AS source_table,
@@ -190,7 +190,7 @@ def _load_real() -> dict:
 
 
 def _try(sql: str) -> Optional[pd.DataFrame]:
-    """Consulta opcional: si la tabla no existe o falla, se sigue sin ella."""
+    """Optional query: if the table does not exist or fails, carry on without it."""
     try:
         return q(sql)
     except Exception as e:  # noqa: BLE001
@@ -216,7 +216,7 @@ def _load_extra_real() -> dict:
              m.unit_code, m.qc_flag, COALESCE(m.below_lod, false) AS below_lod
       FROM lab_measurements m JOIN lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
       WHERE ls.matrix_code = 'sediment_core' AND m.value IS NOT NULL""")
-    # Sondas fijas: media diaria por metro de profundidad (solo datos no erróneos)
+    # Fixed probes: daily mean per metre of depth (non-flagged data only)
     sensors = _try("""
       SELECT reservoir_id, source_code, (date_time::timestamptz AT TIME ZONE 'Europe/Madrid')::date AS date,
              COALESCE(FLOOR(depth), 0)::int AS dbin,
@@ -237,7 +237,7 @@ def _load_extra_real() -> dict:
             "sat": sat, "idx": idx, "res_names": names}
 
 
-# Caja aproximada de España (península, Baleares y Canarias) en grados
+# Approximate bounding box of Spain (mainland, Balearic and Canary Islands) in degrees
 _ES = (-19.0, 26.5, 5.0, 44.5)  # lon_min, lat_min, lon_max, lat_max
 _UTM = None
 
@@ -247,10 +247,9 @@ def _in_es(lon, lat) -> bool:
 
 
 def _fix_coord(lat, lon):
-    """Devuelve (lat, lon) en grados WGS84 o (None, None).
-    Corrige los dos errores habituales en datos de campo: latitud y longitud
-    cruzadas, y coordenadas en UTM 30N ETRS89 (EPSG:25830) guardadas como si
-    fueran grados."""
+    """Return (lat, lon) in WGS84 degrees or (None, None).
+    Fixes the two usual errors in field data: swapped latitude and longitude,
+    and UTM 30N ETRS89 (EPSG:25830) coordinates stored as if they were degrees."""
     global _UTM
     try:
         lat, lon = float(lat), float(lon)
@@ -262,7 +261,7 @@ def _fix_coord(lat, lon):
         return lat, lon
     if _in_es(lat, lon):                      # cruzadas
         return lon, lat
-    # ¿UTM? x ~ 100 000–1 000 000 m, y ~ 3 000 000–4 900 000 m (en cualquier orden)
+    # UTM? x ~ 100 000–1 000 000 m, y ~ 3 000 000–4 900 000 m (in any order)
     for x, y in ((lon, lat), (lat, lon)):
         if 100_000 <= x <= 1_000_000 and 3_000_000 <= y <= 4_900_000:
             if _UTM is None:
@@ -280,7 +279,7 @@ def _fix_cols(df: pd.DataFrame, lat: str, lon: str) -> None:
     df[lon] = [f[1] for f in fixed]
 
 
-# Nombres legibles de los grupos de parameters.parameter_group
+# Readable names of the parameters.parameter_group groups
 GROUP_NAMES = {
     "field": "Campo", "pigments": "Pigmentos", "nutrients": "Nutrientes y carbono",
     "toxins": "Toxinas", "icp_ms": "Metales y elementos (ICP-MS)", "optics": "Óptica",
@@ -290,14 +289,14 @@ GROUP_NAMES = {
     "spm": "Material en suspensión", "meteorology": "Meteorología",
     "remote_sensing": "Teledetección",
 }
-# Parámetros que no están en variable_vocabulary con su propio código
+# Parameters that are not in variable_vocabulary under their own code
 EXTRA_PARAMS = {
     "conduc_uscm_2": ("Conductividad eléctrica (2)", "field", "uS/cm"),
 }
 
 
 def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices=None) -> dict:
-    # Sitio = punto de muestreo fijo si existe; si no, la propia extracción
+    # Site = fixed sampling point if there is one; otherwise the extraction itself
     points = points.copy()
     _fix_cols(points, "lat", "lon")
     _fix_cols(points, "sp_lat", "sp_lon")
@@ -308,8 +307,8 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     points["site_lon"] = points["sp_lon"].fillna(points["lon"])
     ep2site = dict(zip(points.extraction_point_id, points.site))
 
-    # Parámetro normalizado
-    # (vectorizado: con decenas de miles de filas, un apply fila a fila tarda minutos en Render)
+    # Normalised parameter
+    # (vectorised: with tens of thousands of rows, a row-by-row apply takes minutes on Render)
     obs = obs.copy()
     v = vocab.rename(columns={"table_name": "source_table", "parameter_code": "_pc", "unit_code": "_uc"})
     v = v.drop_duplicates(["source_table", "column_name"])
@@ -335,7 +334,7 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     if "matrix_code" not in obs:
         obs["matrix_code"] = "water"
     obs["matrix_code"] = obs["matrix_code"].fillna("water")
-    # Un mismo código en agua y en sedimento son parámetros distintos para el visor
+    # The same code in water and in sediment are different parameters for the viewer
     obs.loc[obs.matrix_code != "water", "parameter_code"] = (
         obs.loc[obs.matrix_code != "water", "matrix_code"] + ":" + obs.loc[obs.matrix_code != "water", "parameter_code"])
     catalog = (obs.groupby("parameter_code")
@@ -348,9 +347,9 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     catalog["name"] = base.map(pinfo["name"]).fillna(base)
     grp = base.map(pinfo["parameter_group"]).map(lambda g: GROUP_NAMES.get(g, g) if isinstance(g, str) else "Otros")
     catalog["group"] = [g if m == "water" else f"{mnames.get(m, m)} · {g}" for g, m in zip(grp, mtx)]
-    # Símbolo corto para los ejes y el desplegable (el nombre largo es para el catálogo)
-    # mg/m³ y ng/mL equivalen exactamente a µg/L: se muestran así, que es lo que se usa
-    # en calidad de aguas (no se convierte ningún valor, solo cambia la etiqueta)
+    # Short symbol for axes and the dropdown (the long name is for the catalogue)
+    # mg/m³ and ng/mL are exactly equivalent to µg/L: shown that way, as is usual
+    # in water quality (no value is converted, only the label changes)
     SHORT = {"degC": "°C", "percent": "%", "permil": "‰", "uS/cm": "µS/cm", "ug/L": "µg/L",
              "ug/g": "µg/g", "mg/m3": "µg/L", "mg_m3": "µg/L", "ng/mL": "µg/L", "ug_L": "µg/L", "mg_L": "mg/L", "um3/mL": "µm³/mL",
              "g/cm2": "g/cm²", "W/m2": "W/m²", "ueq/L": "µeq/L"}
@@ -360,7 +359,7 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
             "reservoirs": reservoirs, "sources": sources, "loaded": time.time()}
 
 
-# ── Datos simulados (mismo esquema) ─────────────────────────────────────────
+# ── Simulated data (same schema) ────────────────────────────────────────────
 
 def _load_mock() -> dict:
     rng = random.Random(7)
@@ -398,7 +397,7 @@ def _load_mock() -> dict:
     for r in points.itertuples():
         d0 = date(2024, 4, 1) + timedelta(days=45 * (r.campaign_id - 1) + rng.randint(0, 6))
         season = .5 + .5 * math.sin((d0.timetuple().tm_yday - 110) / 365 * 2 * math.pi)
-        # perfiles simulados de la sonda: temperatura y oxígeno cada metro, con termoclina
+        # simulated probe profiles: temperature and oxygen every metre, with a thermocline
         for z in range(0, 16):
             for code, surf, deep in (("WTEMP", 12 + 12 * season, 9.0), ("DOXY", 9 + rng.uniform(-.5, .5), 9 - 8 * season)):
                 w = 1 / (1 + math.exp((z - 6) * 1.2))
@@ -491,7 +490,7 @@ def _load() -> dict:
 
 
 def _refresh_bg() -> None:
-    """Relee la base sin bloquear: mientras tanto se sirven los datos anteriores."""
+    """Reload the database without blocking: the previous data is served meanwhile."""
     try:
         d = _load()
         with _lock:
@@ -514,7 +513,7 @@ def data(force: bool = False) -> dict:
 
 
 def warm() -> None:
-    """Precarga en segundo plano al arrancar el servidor."""
+    """Preload in the background when the server starts."""
     def _go():
         try:
             data()
@@ -565,8 +564,8 @@ def sites(water_body: Optional[str] = None) -> dict:
     return {"sites": _jsonable(s.sort_values(["water_body", "code"])), "water_bodies": _jsonable(bodies)}
 
 
-# Qué se tomó en una visita, a partir de la tabla de origen
-KINDS = [  # (clave, etiqueta, tablas de origen)
+# What was taken in a visit, from the source table
+KINDS = [  # (key, label, source tables)
     ("field", "Campo", ("insitu_sampling",)),
     ("probe", "Sonda multiparamétrica", ("insitu_determinations",)),
     ("fluoro", "FluoroProbe", ("profiles_data",)),
@@ -579,14 +578,14 @@ _KIND_OF = {src: k for k, _, srcs in KINDS for src in srcs}
 
 
 def campaigns(water_body: Optional[str] = None) -> dict:
-    """Campañas → visitas (una por punto y extracción) con lo que se tomó en cada una."""
+    """Campaigns → visits (one per site and extraction) with what was taken in each."""
     d = data()
     p = d["points"].copy()
     if water_body:
         p = p[p["water_body_name"] == water_body]
     o = d["obs"]
     o = o[o["extraction_point_id"].isin(p["extraction_point_id"])]
-    # Origen de cada visita: tabla samples/lab_samples si existe; si no, las observaciones
+    # Source of each visit: samples/lab_samples table if it exists; otherwise the observations
     smp = d.get("samples")
     if smp is not None and len(smp):
         smp = smp[smp["extraction_point_id"].isin(p["extraction_point_id"])].copy()
@@ -652,7 +651,7 @@ def t_nocode() -> str:
 
 
 def _depth_filter(o: pd.DataFrame, depth: str) -> pd.DataFrame:
-    """surface: ≤ 1 m (o sin profundidad) · bottom: la más profunda de cada muestreo · all: todas."""
+    """surface: ≤ 1 m (or no depth) · bottom: the deepest of each sampling · all: all of them."""
     if depth == "surface":
         return o[o["depth_m"].isna() | (o["depth_m"] <= 1.0)]
     if depth == "bottom":
@@ -735,7 +734,7 @@ def _site_filter(d: dict, df: pd.DataFrame, water_body: Optional[str], sites_: O
 
 
 def phyto(water_body: Optional[str] = None, sites_: Optional[list] = None, metric: str = "biovolume") -> dict:
-    """Una muestra por (punto, fecha, profundidad): total, reparto por grupos y taxones dominantes."""
+    """One sample per (site, date, depth): total, split by groups and dominant taxa."""
     d = data()
     ph = d.get("phyto")
     if ph is None or not len(ph):
@@ -770,7 +769,7 @@ def phyto(water_body: Optional[str] = None, sites_: Optional[list] = None, metri
     return {"samples": out, "groups": groups, "metric": metric}
 
 
-# ── Testigos de sedimento ──────────────────────────────────────────────────
+# ── Sediment cores ──────────────────────────────────────────────────────────
 
 def cores(water_body: Optional[str] = None) -> dict:
     d = data()
@@ -819,7 +818,7 @@ def core(core_id: int) -> dict:
             "rows": _jsonable(rows.sort_values(["parameter_code", "depth_cm"]))}
 
 
-# ── Sondas fijas + satélite ────────────────────────────────────────────────
+# ── Fixed probes + satellite ────────────────────────────────────────────────
 
 SENSOR_VARS = {"chlorophyll": ("Clorofila (sonda)", "µg/L"), "phycocyanin": ("Ficocianina (sonda)", "µg/L"),
                "water_temp": ("Temperatura del agua", "°C"), "ph": ("pH", ""), "turbidity": ("Turbidez", "NTU")}
@@ -871,13 +870,13 @@ def sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: str =
         g = s[(s["reservoir_id"] == reservoir_id) & s[variable].notna()].copy()
         g["date"] = pd.to_datetime(g["date"], errors="coerce")
         if len(g):
-            # capa: superficie (0–2 m), media de toda la columna, o por metro (diagrama)
+            # layer: surface (0–2 m), whole-column mean, or per metre (diagram)
             sub = g[g["dbin"] <= 1] if layer == "surface" else g
             w = sub.assign(vn=sub[variable] * sub["n"])
             agg = w.groupby("date").agg(vn=("vn", "sum"), n=("n", "sum"), zmax=("dbin", "max")).reset_index()
             agg["value"] = agg["vn"] / agg["n"]
             daily = _jsonable(agg[["date", "value", "n", "zmax"]].sort_values("date"))
-            # diagrama profundidad × tiempo: media semanal por metro (ligero para el navegador)
+            # depth × time diagram: weekly mean per metre (light for the browser)
             g["week"] = g["date"].dt.to_period("W").dt.start_time
             pw = g.assign(vn=g[variable] * g["n"]).groupby(["week", "dbin"]).agg(vn=("vn", "sum"), n=("n", "sum")).reset_index()
             pw["value"] = pw["vn"] / pw["n"]

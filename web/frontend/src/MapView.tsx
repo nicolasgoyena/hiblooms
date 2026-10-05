@@ -14,15 +14,15 @@ type Props = {
   rgbTileUrl: string | null
   showRgb: boolean
   opacity: number
-  demoFill: string | null // color de relleno en modo demo (media del embalse)
+  demoFill: string | null // fill colour in demo mode (reservoir mean)
   points: Poi[]
   addingPoint: boolean
   onMapClick: (lat: number, lon: number) => void
   onPoiClick: (name: string) => void
   lang?: Lang
-  compareTileUrl?: string | null   // segunda fecha, para el comparador
-  focus?: [[number, number], [number, number]] | null  // encuadre forzado (p. ej. puntos de la pestaña Datos)
-  swipe?: number                   // 0–1: posición de la cortinilla
+  compareTileUrl?: string | null   // second date, for the comparator
+  focus?: [[number, number], [number, number]] | null  // forced framing (e.g. points from the Data tab)
+  swipe?: number                   // 0–1: position of the swipe divider
 }
 
 const BASEMAPS: Record<Basemap, { tiles: string[]; attribution: string }> = {
@@ -30,7 +30,7 @@ const BASEMAPS: Record<Basemap, { tiles: string[]; attribution: string }> = {
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
     attribution: 'Imagery © Esri',
   },
-  // Esri World Light Gray Canvas: sin clave de API (CARTO ahora la exige fuera de su lista blanca)
+  // Esri World Light Gray Canvas: no API key (CARTO now requires one outside its allowlist)
   light: {
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
     attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors',
@@ -150,7 +150,7 @@ export default function MapView(p: Props) {
     const [[x0, y0], [x1, y1]] = p.focus
     if (![x0, y0, x1, y1].every(Number.isFinite) || Math.abs(y0) > 90 || Math.abs(y1) > 90) return
     const pad = Math.max(0.01, (x1 - x0) * 0.15, (y1 - y0) * 0.15)
-    try { m.fitBounds([[x0 - pad, y0 - pad], [x1 + pad, y1 + pad]], { padding: { top: 70, bottom: Math.round(window.innerHeight * 0.6), left: 440, right: 60 }, duration: 1000, maxZoom: 14 }) } catch { /* encuadre imposible: se ignora */ }
+    try { m.fitBounds([[x0 - pad, y0 - pad], [x1 + pad, y1 + pad]], { padding: { top: 70, bottom: Math.round(window.innerHeight * 0.6), left: 440, right: 60 }, duration: 1000, maxZoom: 14 }) } catch { /* impossible framing: ignored */ }
   }), [JSON.stringify(p.focus)]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // demo fill
@@ -168,7 +168,7 @@ export default function MapView(p: Props) {
       m.addSource(id, { type: 'raster', tiles: [url], tileSize: 256, attribution: 'Contains modified Copernicus Sentinel data · Google Earth Engine' })
       m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': opacity } }, m.getLayer('res-line') ? 'res-line' : undefined)
     }
-    // Las dos capas se cargan siempre; el conmutador decide cuál se ve.
+    // Both layers are always loaded; the toggle decides which one is shown.
     put('rgb', p.rgbTileUrl, true, 1)
     put('idx', p.indexTileUrl, true, p.opacity)
     if (m.getLayer('idx')) m.setLayoutProperty('idx', 'visibility', p.showRgb ? 'none' : 'visible')
@@ -178,12 +178,12 @@ export default function MapView(p: Props) {
     if (m.getLayer('idx')) m.setPaintProperty('idx', 'raster-opacity', p.opacity)
   }), [p.opacity])
 
-  // Índice ↔ color real sin volver a pedir teselas
+  // Index ↔ true colour without requesting tiles again
   useEffect(() => whenReady(m => {
     if (m.getLayer('idx')) m.setLayoutProperty('idx', 'visibility', p.showRgb ? 'none' : 'visible')
   }), [p.showRgb])
 
-  // puntos de interés (marcadores HTML: no necesitan glyphs)
+  // points of interest (HTML markers: no glyphs needed)
   const markers = useRef<maplibregl.Marker[]>([])
   useEffect(() => whenReady(m => {
     markers.current.forEach(mk => mk.remove())
@@ -200,7 +200,7 @@ export default function MapView(p: Props) {
 
   useEffect(() => whenReady(m => { m.getCanvas().style.cursor = p.addingPoint ? 'crosshair' : '' }), [p.addingPoint])
 
-  // ── Comparador: segundo mapa encima, recortado por la cortinilla y sincronizado ──
+  // ── Comparator: second map on top, clipped by the swipe divider and synchronised ──
   useEffect(() => whenReady(m => {
     if (!p.compareTileUrl) {
       mapB.current?.remove(); mapB.current = null

@@ -4,7 +4,7 @@ import LangToggle from './LangToggle'
 import { api, getToken, onUnauthorized, setToken } from './api'
 import { t, useLang } from './i18n'
 
-/** Puerta de acceso: si el backend tiene usuarios configurados, pide login antes de mostrar la app. */
+/** Login gate: if the backend has users configured, ask for login before showing the app. */
 export default function Gate() {
   const [lang, setLang] = useLang()
   const [state, setState] = useState<'loading' | 'login' | 'app'>('loading')
@@ -20,7 +20,7 @@ export default function Gate() {
       const m = await api.me()
       setUser(m.user); setState('app')
     } catch {
-      // 401 → onUnauthorized ya manda al login; backend caído → la app muestre su aviso
+      // 401 → onUnauthorized already sends to login; backend down → let the app show its notice
       if (getToken() !== null) setState('app')
       else setState(s => s === 'loading' ? 'app' : s)
     }

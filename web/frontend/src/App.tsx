@@ -19,7 +19,7 @@ import { locale, t, useLang } from './i18n'
 import LangToggle from './LangToggle'
 import Icon from './Icon'
 
-// Estado inicial de la URL: se lee una sola vez, antes de que nada la reescriba.
+// Initial URL state: read only once, before anything rewrites it.
 const INITIAL_HASH = new URLSearchParams(location.hash.slice(1))
 
 const today = new Date()
@@ -79,7 +79,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   useEffect(() => { if (panelOpen && tab === 'clima') runClim(indexId) }, [indexId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [appMode, setAppMode] = useState<'visor' | 'cal' | 'info' | 'mon' | 'db'>('info')
-  // ── Pestaña Datos (base de datos del proyecto) ──
+  // ── Data tab (project database) ──
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [dbBodies, setDbBodies] = useState<{ name: string; n_sites: number }[]>([])
   const [dbBody, setDbBody] = useState('')
@@ -164,7 +164,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     changeIndex(id)
   }
 
-  // ── Comparador de dos fechas ──
+  // ── Two-date comparator ──
   const [cmpDate, setCmpDate] = useState<string | null>(null)
   const [cmpImg, setCmpImg] = useState<ImageResult | null>(null)
   const [swipe, setSwipe] = useState(0.5)
@@ -178,7 +178,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
   const [copied, setCopied] = useState(false)
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(enlaceActual()) } catch { /* sin permiso para el portapapeles */ }
+    try { await navigator.clipboard.writeText(enlaceActual()) } catch { /* no clipboard permission */ }
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
@@ -186,7 +186,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [showRgb, setShowRgb] = useState(false)
   const [opacity, setOpacity] = useState(0.9)
 
-  // ── Enlace permanente: el estado va en la URL (#e=EMBALSE&d=FECHA&i=INDICE) ──
+  // ── Permalink: the state goes in the URL (#e=RESERVOIR&d=DATE&i=INDEX) ──
   const booted = useRef(false)
   useEffect(() => {
     const q = INITIAL_HASH
@@ -203,8 +203,8 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     if (location.hash) history.replaceState(null, '', location.pathname)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // La barra de direcciones se deja limpia: el estado solo se añade al copiar el enlace
-  // (los enlaces antiguos con #e=…&d=…&i=… se siguen leyendo al arrancar).
+  // The address bar is kept clean: the state is only added when copying the link
+  // (old links with #e=…&d=…&i=… are still read at startup).
   const enlaceActual = () => {
     const q = new URLSearchParams()
     q.set('m', appMode)
@@ -253,8 +253,8 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       setReservoir(null); resetResults(); setPois([])
     } catch (e: any) { setError(e.message) }
   }
-  // Los índices calibrados para un embalse concreto solo se ofrecen en ese embalse
-  // (o cuando aún no hay ninguno elegido, para que se vea que existen).
+  // Indices calibrated for a specific reservoir are only offered for that reservoir
+  // (or when none is selected yet, so users can see they exist).
   const allowed = useMemo(() => indices.filter(i => !i.reservoir || !reservoir || i.reservoir === reservoir), [indices, reservoir])
   const groups = useMemo(() => { const g = Array.from(new Set(allowed.map(i => i.group))); return [...g.filter(x => x !== 'Experimentales'), ...g.filter(x => x === 'Experimentales')] }, [allowed])
   useEffect(() => {
@@ -265,13 +265,13 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null); setCmpDate(null); setCmpImg(null) }
 
   const pickReservoir = (n: string) => {
-    if (n === reservoir) return // clic de nuevo en el mismo embalse: no borrar resultados
+    if (n === reservoir) return // clicking the same reservoir again: do not clear results
     if (!n) { setReservoir(null); resetResults(); setAdding(false); setPois([]); return }
     setReservoir(n); resetResults(); setAdding(false); setPois([])
     api.pois(n).then(r => setPois(r.points)).catch(() => {})
   }
 
-  // ── puntos de interés ──────────────────────
+  // ── points of interest ─────────────────────
   const addPoint = (lat: number, lon: number) => {
     const n = pois.filter(p => p.custom).length + 1
     setPois(ps => [...ps, { name: `P${n}`, lat: +lat.toFixed(6), lon: +lon.toFixed(6), custom: true }])
@@ -287,11 +287,11 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     } catch (e: any) { setError(e.message) }
     if (fileRef.current) fileRef.current.value = ''
   }
-  // recargar valores en puntos cuando cambian
+  // reload point values when they change
   useEffect(() => { if (activeDate) loadDate(activeDate) }, [pois])
   useEffect(() => { if (activeDate) { setSeries(null); setClasses(null); loadDate(activeDate) } }, [waterOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── búsqueda e imagen ──────────────────────
+  // ── search and image ───────────────────────
   const search = async () => {
     if (!reservoir) return
     resetResults(); setSearching(true)
@@ -302,7 +302,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     } catch (e: any) { setError(e.message) } finally { setSearching(false) }
   }
 
-  /** Búsqueda para un embalse concreto (desde el monitor, sin esperar al estado). */
+  /** Search for a specific reservoir (from the monitor, without waiting for state). */
   const searchFrom = async (res: string, from: string) => {
     setSearching(true); setError(null)
     try {
@@ -329,7 +329,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     if (activeDate) loadDate(activeDate, id)
   }
 
-  // ── análisis ───────────────────────────────
+  // ── analysis ───────────────────────────────
   const runSeries = async () => {
     if (!reservoir || !hits?.length) return
     setPanelOpen(true); setTab(t => (t === 'clases' ? 'serie' : t))
@@ -399,7 +399,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         compareTileUrl={cmpImg?.tile_url ?? null} swipe={swipe}
       />
 
-      {/* ── Panel de búsqueda ─────────────────────────── */}
+      {/* ── Search panel ──────────────────────────────── */}
       <aside className="panel">
         <header className="brand">
           <img src="/logo_hiblooms.png" alt="HIBLOOMS" />
@@ -608,7 +608,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         </div>
       )}
 
-      {/* ── Controles de capas ───────────────────────── */}
+      {/* ── Layer controls ────────────────────────────── */}
       <div className="layers">
         <div className="seg">
           <button className={basemap === 'satellite' ? 'on' : ''} onClick={() => setBasemap('satellite')}>{t('Satélite')}</button>
@@ -622,7 +622,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         )}
       </div>
 
-      {/* ── Tarjeta de imagen ────────────────────────── */}
+      {/* ── Image card ────────────────────────────────── */}
       {appMode === 'visor' && activeDate && meta && (
         <div className="card info">
           <div className="info-top">
@@ -673,7 +673,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         </div>
       )}
 
-      {/* ── Panel de análisis ────────────────────────── */}
+      {/* ── Analysis panel ────────────────────────────── */}
       {appMode === 'visor' && panelOpen && meta && (
         <div className="card series">
           <div className="series-head">

@@ -1,21 +1,21 @@
 """
-Validación rápida Sentinel-2 ↔ sondas de El Val (HIBLOOMS).
+Quick validation of Sentinel-2 ↔ El Val buoys (HIBLOOMS).
 
-Para cada imagen Sentinel-2 (2018–hoy) sobre la boya de El Val:
-  1. extrae la reflectancia media en ~3×3 píxeles alrededor de la boya (GEE),
-  2. descarta las que no son agua limpia (SCL) o tienen nubes cerca,
-  3. empareja con la sonda en ±2 h: clorofila (Aquadam, 2018–2024, 0–1,5 m)
-     y ficocianina (Aquadam y SAICA 945, 2024–hoy),
-  4. calcula correlaciones y capacidad de detección (AUC) por índice,
-  5. guarda tablas, figuras e informe en analisis/resultados/validacion/.
+For each Sentinel-2 image (2018–today) over the El Val buoy:
+  1. extracts the mean reflectance in ~3×3 pixels around the buoy (GEE),
+  2. discards those that are not clear water (SCL) or have clouds nearby,
+  3. matches with the buoy within ±2 h: chlorophyll (Aquadam, 2018–2024, 0–1.5 m)
+     and phycocyanin (Aquadam and SAICA 945, 2024–today),
+  4. computes correlations and detection skill (AUC) per index,
+  5. saves tables, figures and a report in analysis/results/buoy_validation/.
 
-Uso (Anaconda Prompt, en la carpeta del repo):
-    set DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling
-    python analisis\\validacion_sonda.py
-Opcional: --lon/--lat de la boya, --desde 2018-01-01, --ventana 2 (horas)
+Usage (Anaconda Prompt, in the repo folder):
+    set DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/unav_water_sampling
+    python analysis\\validate_buoy.py
+Optional: --lon/--lat of the buoy, --desde 2018-01-01, --ventana 2 (hours)
 
-Credenciales GEE: variable GEE_SERVICE_ACCOUNT_JSON (JSON o ruta) o .streamlit/secrets.toml,
-igual que la web.
+GEE credentials: GEE_SERVICE_ACCOUNT_JSON variable (JSON or path) or .streamlit/secrets.toml,
+same as the web tool.
 """
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "analisis" / "resultados" / "validacion"
-BOYA = (-1.7883, 41.8761)          # lon, lat de la boya de El Val (la de los scripts antiguos)
+OUT = ROOT / "analysis" / "results" / "buoy_validation"
+BOYA = (-1.7883, 41.8761)          # lon, lat of the El Val buoy (the one from the old scripts)
 RES_ID = 2351
 
 BANDAS = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B11"]
@@ -44,14 +44,14 @@ LAMBDA = {"B1": 443, "B2": 490, "B3": 560, "B4": 665, "B5": 705, "B6": 740, "B7"
           "B8": 842, "B8A": 865, "B11": 1610}
 
 INDICES = {
-    # nombre: (fórmula legible, función sobre un DataFrame de reflectancias)
+    # name: (readable formula, function over a reflectance DataFrame)
     "NDCI": ("(B5−B4)/(B5+B4)", lambda d: (d.B5 - d.B4) / (d.B5 + d.B4)),
     "PCI": ("B5/B4", lambda d: d.B5 / d.B4),
     "MCI": ("B5 − B4 − (B6−B4)·0,53", lambda d: d.B5 - d.B4 - (d.B6 - d.B4) * (705 - 665) / (740 - 665)),
     "3BDA": ("(1/B4 − 1/B5)·B6", lambda d: (1 / d.B4 - 1 / d.B5) * d.B6),
     "B5-B4": ("B5 − B4", lambda d: d.B5 - d.B4),
     "Turbidez(B4)": ("B4", lambda d: d.B4),
-    # índices de la bibliografía de cianobacterias/blooms adaptados a las bandas de S2
+    # indices from the cyanobacteria/bloom literature adapted to S2 bands
     "SABI": ("(B8−B4)/(B2+B3)", lambda d: (d.B8 - d.B4) / (d.B2 + d.B3)),
     "FAI": ("B8 − [B4 + (B11−B4)·0,19]", lambda d: d.B8 - (d.B4 + (d.B11 - d.B4) * (842 - 665) / (1610 - 665))),
     "CI_cyano": ("−[B5 − B4 − (B6−B4)·0,53] (Wynne)", lambda d: -(d.B5 - d.B4 - (d.B6 - d.B4) * (705 - 665) / (740 - 665))),
@@ -96,7 +96,7 @@ def extraer_s2(ee, lon: float, lat: float, desde: str) -> pd.DataFrame:
         refl = img.select(bands).divide(10000)
         m = refl.reduceRegion(ee.Reducer.mean(), cerca, 20, maxPixels=1e6)
         agua = scl.eq(6).reduceRegion(ee.Reducer.mean(), cerca, 20).get("SCL")
-        # nubes, sombras y cirros en 300 m (8,9,10 nubes · 3 sombra)
+        # clouds, shadows and cirrus within 300 m (8,9,10 clouds · 3 shadow)
         nub = scl.eq(3).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10)).reduceRegion(
             ee.Reducer.mean(), entorno, 20).get("SCL")
         return ee.Feature(None, m.set("agua", agua).set("nubes300", nub)
@@ -125,7 +125,7 @@ def extraer_s2(ee, lon: float, lat: float, desde: str) -> pd.DataFrame:
     return df
 
 
-# ── Sonda ───────────────────────────────────────────────────────────────────
+# ── Buoy ────────────────────────────────────────────────────────────────────
 
 def leer_sonda(url: str, fechas: list[str]) -> pd.DataFrame:
     from sqlalchemy import create_engine, text
@@ -143,9 +143,9 @@ def leer_sonda(url: str, fechas: list[str]) -> pd.DataFrame:
 
 def emparejar(s2: pd.DataFrame, sonda: pd.DataFrame, horas: float) -> pd.DataFrame:
     out = []
-    for row in s2.to_dict("records"):     # (itertuples renombraría "3BDA", "B5-B4"…)
+    for row in s2.to_dict("records"):     # (itertuples would rename "3BDA", "B5-B4"…)
         w = sonda[(sonda.t - row["t"]).abs() <= pd.Timedelta(hours=horas)]
-        sup = w[w.depth.isna() | (w.depth <= 1.5)]          # superficie (SAICA no da profundidad)
+        sup = w[w.depth.isna() | (w.depth <= 1.5)]          # surface (SAICA does not give depth)
         col3 = w[w.depth.isna() | (w.depth <= 3.0)]
         row["chl_sup"] = sup.chlorophyll.mean()
         row["chl_0_3"] = col3.chlorophyll.mean()
@@ -159,10 +159,10 @@ def emparejar(s2: pd.DataFrame, sonda: pd.DataFrame, horas: float) -> pd.DataFra
     return pd.DataFrame(out)
 
 
-# ── Estadística ─────────────────────────────────────────────────────────────
+# ── Statistics ──────────────────────────────────────────────────────────────
 
 def auc(y_true: np.ndarray, score: np.ndarray) -> float:
-    """AUC por Mann-Whitney (sin sklearn). >0,5 = el índice sube con el bloom."""
+    """AUC via Mann-Whitney (no sklearn). >0.5 = the index rises with the bloom."""
     pos, neg = score[y_true], score[~y_true]
     if len(pos) < 3 or len(neg) < 3:
         return np.nan
@@ -180,7 +180,7 @@ def evaluar(m: pd.DataFrame) -> pd.DataFrame:
         if len(d) < 8:
             filas.append({"variable": nombre, "indice": "—", "n": len(d), "nota": "muy pocos pares"})
             continue
-        if umbrales is None:   # ficocianina: sin umbral oficial → percentiles propios
+        if umbrales is None:   # phycocyanin: no official threshold → own percentiles
             umbrales = [round(float(d[col].quantile(q)), 2) for q in (0.75, 0.9)]
         for ind in INDICES:
             x, y = d[ind].values, d[col].values
@@ -217,7 +217,7 @@ def figuras(m: pd.DataFrame):
         fig.colorbar(sc, ax=axs, label="mes", shrink=.6)
         fig.suptitle(f"El Val · Sentinel-2 vs sonda (n={len(d)})")
         fig.savefig(OUT / fn, dpi=140, bbox_inches="tight"); plt.close(fig)
-    # Serie temporal: sonda diaria + índice en fechas de satélite
+    # Time series: daily buoy + index on satellite dates
     fig, axs = plt.subplots(2, 1, figsize=(13, 7), sharex=True)
     for ax, col, ind, nombre in ((axs[0], "chl_sup", "NDCI", "Clorofila"), (axs[1], "pc_sup", "PCI", "Ficocianina")):
         d = m.dropna(subset=[col])
@@ -228,10 +228,10 @@ def figuras(m: pd.DataFrame):
     fig.savefig(OUT / "serie_temporal.png", dpi=140, bbox_inches="tight"); plt.close(fig)
 
 
-# ── Búsqueda exhaustiva de índices (con validación honesta) ─────────────────
-# Probar cientos de combinaciones y quedarse con la mejor sobreajusta: alguna sale buena
-# por azar. Por eso se valida "dejando fuera un año": se elige el mejor índice con los
-# demás años y se evalúa en el año que no se ha visto. Lo que sobreviva a eso es real.
+# ── Exhaustive index search (with honest validation) ───────────────────────
+# Testing hundreds of combinations and keeping the best one overfits: some look good
+# by chance. That is why validation is "leave one year out": the best index is chosen with
+# the other years and evaluated on the unseen year. Whatever survives that is real.
 
 def combinaciones(d: pd.DataFrame) -> pd.DataFrame:
     b = [x for x in BANDAS if x in d]
@@ -276,7 +276,7 @@ def explorar(m: pd.DataFrame, col: str, nombre: str) -> tuple[pd.DataFrame, dict
     res["candidatos"] = C.shape[1]
     res["mejor_en_muestra"] = f"{top.index[0]} (rho {rho[top.index[0]]:.2f})"
 
-    # Validación dejando fuera un año
+    # Leave-one-year-out validation
     years = d["t"].dt.year
     thr = [float(y.quantile(q)) for q in (0.75, 0.9)]
     oof, elegidos = pd.Series(np.nan, index=d.index), []
@@ -300,7 +300,7 @@ def explorar(m: pd.DataFrame, col: str, nombre: str) -> tuple[pd.DataFrame, dict
             res[f"AUC_validado_p{q}"] = float(round(auc((y[ok] >= u).values, oof[ok].values), 3))
     res["elegido_por_año"] = "; ".join(elegidos)
 
-    # Techo de Sentinel-2: modelo con todas las bandas e índices (bosque aleatorio), mismo esquema
+    # Sentinel-2 ceiling: model with all bands and indices (random forest), same scheme
     try:
         from sklearn.ensemble import RandomForestRegressor
         from scipy import stats
@@ -332,7 +332,7 @@ def _tabla(res: pd.DataFrame) -> str:
         return "(sin resultados)"
     try:
         return res.to_markdown(index=False)
-    except ImportError:          # sin el paquete tabulate
+    except ImportError:          # without the tabulate package
         return "```\n" + res.to_string(index=False) + "\n```"
 
 

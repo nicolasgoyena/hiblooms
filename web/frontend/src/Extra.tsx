@@ -8,7 +8,7 @@ const fmtDate = (s: string | null) => s ? new Date(s.slice(0, 10) + 'T12:00:00')
 const fmtShort = (s: string) => new Date(s.slice(0, 10) + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: '2-digit' })
 const ms = (s: string) => new Date(s.slice(0, 10) + 'T12:00:00').getTime()
 const RAMP = ['#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#ffff8c', '#f9d057', '#f29e2e', '#e76818', '#d7191c']
-/** Números grandes legibles: 1,2 M · 35 k. */
+/** Readable large numbers: 1.2 M · 35 k. */
 const big = (v: number | null | undefined) => v == null ? '—' : Math.abs(v) >= 1e6 ? `${fmt(v / 1e6, 1)} M` : Math.abs(v) >= 1e4 ? `${fmt(v / 1e3, 0)} k` : fmt(v, v < 10 ? 2 : 0)
 
 function Empty({ text }: { text: string }) { return <p className="muted an-empty">{text}</p> }
@@ -125,7 +125,7 @@ export function PhytoResult({ body, sites, onClose }: { body: string; sites: str
   )
 }
 
-// ── Testigos de sedimento ───────────────────────────────────────────────────
+// ── Sediment cores ──────────────────────────────────────────────────────────
 
 export function CoresResult({ body, onClose }: { body: string; onClose: () => void }) {
   const [cores, setCores] = useState<CoreMeta[] | null>(null)
@@ -238,7 +238,7 @@ export function SensorsResult({ onClose }: { onClose: () => void }) {
     api.dbSensorSeries(rid, variable, layer).then(setD).catch(e => setErr(e.message))
   }, [rid, variable, layer])
 
-  // Serie combinada en tiempo continuo
+  // Combined series in continuous time
   const rows = useMemo(() => {
     if (!d) return []
     const m = new Map<number, Record<string, number | null>>()

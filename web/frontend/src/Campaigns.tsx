@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { DbCampaign, DbKind, fmt } from './api'
 import { locale, t } from './i18n'
 
-/** Color de cada tipo de muestra (mismo en leyenda, cronograma y visitas). */
+/** Colour of each sample type (same in legend, timeline and visits). */
 export const KIND_COLORS: Record<string, string> = {
   field: '#1D8A99', probe: '#2F6FB0', fluoro: '#3E9E6B', lab: '#8A6DC2',
   phyto: '#C9812E', sed: '#8B6B4A', core: '#5E4A3A', other: '#8A9A9C',
@@ -14,7 +14,7 @@ function KindDots({ kinds }: { kinds: string[] }) {
   return <span className="kdots">{kinds.map(k => <i key={k} style={{ background: KIND_COLORS[k] ?? KIND_COLORS.other }} />)}</span>
 }
 
-/** Cronograma: una fila por masa de agua, un punto por campaña. */
+/** Timeline: one row per water body, one dot per campaign. */
 function Timeline({ camps, onPick }: { camps: DbCampaign[]; onPick: (c: DbCampaign) => void }) {
   const dated = camps.filter(c => c.start)
   const bodies = Array.from(new Set(dated.map(c => c.water_body ?? '—'))).sort()
@@ -23,7 +23,7 @@ function Timeline({ camps, onPick }: { camps: DbCampaign[]; onPick: (c: DbCampai
   const t0 = Math.min(...ts) - 20 * 864e5, t1 = Math.max(...ts) + 20 * 864e5
   const W = 920, L = 136, R = 12, ROW = 22, H = bodies.length * ROW + 26
   const x = (ms: number) => L + (ms - t0) / (t1 - t0) * (W - L - R)
-  // marcas: principio de cada trimestre
+  // ticks: start of each quarter
   const ticks: Date[] = []
   const d = new Date(t0); d.setDate(1); d.setMonth(Math.floor(d.getMonth() / 3) * 3 + 3)
   while (d.getTime() < t1) { ticks.push(new Date(d)); d.setMonth(d.getMonth() + 3) }

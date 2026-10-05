@@ -1,9 +1,9 @@
 """
-Calibración satélite ↔ in situ para el visor React.
+Satellite ↔ in situ calibration for the React viewer.
 
-Extracción satelital: en vez de 4–6 llamadas a GEE por imagen,
-se calculan en el servidor de GEE los 12 índices + nubosidad + cobertura de TODAS las
-imágenes del periodo y se recogen con UNA sola llamada.
+Satellite extraction: instead of 4–6 GEE calls per image, the 12 indices + cloud cover +
+coverage of ALL images in the period are computed on the GEE server and collected with a
+SINGLE call.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-# Índices candidatos como predictores (mismos nombres de banda que hiblooms_core._add_calibration_feature_bands)
+# Candidate indices used as predictors (same band names as hiblooms_core._add_calibration_feature_bands)
 CANDIDATE_INDICES = [
     "NDCI_705_665", "MCI_705", "R705_R665", "R740_R665", "R783_R665", "TB_740",
     "TB_783", "NDRE_783_705", "NDRE_740_705", "B5_B4_diff", "B6_B5_diff", "B7_B5_diff",
@@ -28,9 +28,9 @@ RASTERIZABLE = ["linear", "ridge", "lasso", "elastic_net", "logistic"]
 S2 = "COPERNICUS/S2_SR_HARMONIZED"
 
 
-# ── Lectura del CSV in situ ─────────────────────────────────────────────────
+# ── Reading the in situ CSV ─────────────────────────────────────────────────
 def read_csv_text(text: str) -> pd.DataFrame:
-    """Lee CSV con separador , ; o tabulador y decimal . o ,"""
+    """Read a CSV with , ; or tab separator and . or , decimal mark."""
     best, best_score = None, -1
     for sep, dec in ((",", "."), (";", ","), (";", "."), ("\t", "."), ("\t", ","), (None, ".")):
         try:
@@ -70,16 +70,16 @@ def csv_preview(text: str) -> Dict[str, Any]:
 def to_insitu_frame(text: str, date_col: str, time_col: Optional[str], value_col: str, default_time: str = "11:00",
                     tz: str = "Europe/Madrid", site_col: Optional[str] = None, lat_col: Optional[str] = None,
                     lon_col: Optional[str] = None, start_hour: int = 0, end_hour: int = 23) -> pd.DataFrame:
-    """CSV in situ → DataFrame [datetime(UTC), date, value, site, lat, lon].
-    Las horas se interpretan en `tz` (hora local de la sonda) y se pasan a UTC (referencia de Sentinel-2).
-    Si hay columna de punto y/o lat-lon, cada fila conserva su ubicación."""
+    """In situ CSV → DataFrame [datetime(UTC), date, value, site, lat, lon].
+    Times are interpreted in `tz` (local time of the probe) and converted to UTC (Sentinel-2 reference).
+    If there is a site column and/or lat-lon, each row keeps its location."""
     df = read_csv_text(text)
     for c in [date_col, value_col] + [x for x in (time_col, site_col, lat_col, lon_col) if x]:
         if c not in df.columns:
             raise ValueError(f"La columna '{c}' no está en el CSV")
     dt = pd.to_datetime(df[date_col].astype(str), errors="coerce", dayfirst=True)
     if time_col:
-        # "11:00", "11:00:00", "11.00", "1100" o "2024-03-01 11:00" → HH:MM:SS (compatible con pandas 1.x y 2.x)
+        # "11:00", "11:00:00", "11.00", "1100" or "2024-03-01 11:00" → HH:MM:SS (works with pandas 1.x and 2.x)
         hm = df[time_col].astype(str).str.extract(r"(\d{1,2})[:.h]?(\d{2})(?:[:.](\d{2}))?\s*$")
         hhmmss = hm[0].str.zfill(2) + ":" + hm[1] + ":" + hm[2].fillna("00")
         dt = pd.to_datetime(dt.dt.strftime("%Y-%m-%d") + " " + hhmmss, errors="coerce", format="%Y-%m-%d %H:%M:%S")
@@ -105,7 +105,7 @@ def to_insitu_frame(text: str, date_col: str, time_col: Optional[str], value_col
 
 
 def resolve_sites(insitu: pd.DataFrame, pois: List[dict], single_point: Optional[dict]) -> tuple[pd.DataFrame, List[dict]]:
-    """Asigna coordenadas a cada fila. Devuelve (insitu con columna site, lista de sitios {site, lat, lon})."""
+    """Assign coordinates to each row. Returns (insitu with a site column, list of sites {site, lat, lon})."""
     df = insitu.copy()
     has_ll = df["lat"].notna().any() and df["lon"].notna().any()
     multi = df["site"].nunique() > 1 or df["site"].iloc[0] != "__single"
@@ -129,9 +129,9 @@ def resolve_sites(insitu: pd.DataFrame, pois: List[dict], single_point: Optional
     return df.reset_index(drop=True), sites
 
 
-# ── Extracción satelital en UNA llamada ──────────────────────────────────────
+# ── Satellite extraction in ONE call ─────────────────────────────────────────
 def _add_indices(img):
-    """Los 12 índices candidatos (mismas fórmulas que hiblooms_core._add_calibration_feature_bands)."""
+    """The 12 candidate indices (same formulas as hiblooms_core._add_calibration_feature_bands)."""
     b4 = img.select("B4").toFloat().divide(10000)
     b5 = img.select("B5").toFloat().divide(10000)
     b6 = img.select("B6").toFloat().divide(10000)
@@ -152,26 +152,26 @@ def _add_indices(img):
     ])
 
 
-POINT_BUFFER_M = 45  # radio alrededor de la sonda (≈ 3×3–4×4 píxeles de 20 m)
+POINT_BUFFER_M = 45  # radius around the probe (≈ 3×3–4×4 pixels of 20 m)
 
 
-SHORE_BUFFER_M = 20  # margen hacia dentro desde la orilla (píxeles mixtos / adyacencia)
+SHORE_BUFFER_M = 20  # inward margin from the shoreline (mixed pixels / adjacency)
 
 
 def clear_water_mask(scl, inner):
-    """Agua = dentro del embalse (a >20 m de la orilla) y píxel despejado.
-    NO se exige SCL = 6: Sen2Cor clasifica a menudo las floraciones intensas/espumas como
-    vegetación (4) o suelo (5), y eso eliminaría justo los píxeles de pico.
-    Se excluyen: sin datos/defectuosos (0,1), sombras de nube (3), nubes (8,9), cirros (10), nieve (11)."""
+    """Water = inside the reservoir (>20 m from the shore) and clear pixel.
+    SCL = 6 is NOT required: Sen2Cor often classifies intense blooms/scums as
+    vegetation (4) or bare soil (5), which would remove exactly the peak pixels.
+    Excluded: no data/defective (0,1), cloud shadows (3), clouds (8,9), cirrus (10), snow (11)."""
     import ee
     bad = scl.eq(0).Or(scl.eq(1)).Or(scl.eq(3)).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10)).Or(scl.eq(11))
     return bad.Not().And(ee.Image.constant(1).clip(inner).mask())
 
 
 def satellite_features(aoi, sites: List[dict], dates: List[str], window_days: int, scale_m: int = 20) -> List[dict]:
-    """UNA llamada a GEE: para cada imagen y sitio, los 12 índices promediados en agua despejada
-    (máscara del embalse reducida, no SCL=6) a ±45 m del punto (o en todo el embalse), la fracción
-    de agua despejada en esa zona y la nubosidad SCL sobre el embalse."""
+    """ONE GEE call: for each image and site, the 12 indices averaged over clear water
+    (shrunken reservoir mask, not SCL=6) within ±45 m of the point (or over the whole reservoir),
+    the clear-water fraction in that area and the SCL cloud cover over the reservoir."""
     import ee
     inner = aoi.buffer(-SHORE_BUFFER_M)
     fc = ee.FeatureCollection([
@@ -194,7 +194,7 @@ def satellite_features(aoi, sites: List[dict], dates: List[str], window_days: in
 
 
 def mock_satellite_features(insitu: pd.DataFrame) -> List[dict]:
-    """Modo demo: una "imagen" cada 5 días; índices ligados de forma NO lineal al valor in situ de cada sitio."""
+    """Demo mode: one "image" every 5 days; indices linked NON-linearly to each site's in situ value."""
     rng = random.Random(42)
     rows = []
     t_all = pd.date_range(insitu["datetime"].min().normalize(), insitu["datetime"].max().normalize(), freq="5D")
@@ -213,12 +213,12 @@ def mock_satellite_features(insitu: pd.DataFrame) -> List[dict]:
     return rows
 
 
-# ── Emparejamiento satélite ↔ in situ ────────────────────────────────────────
+# ── Satellite ↔ in situ matching ─────────────────────────────────────────────
 def _build_pairs_site(insitu: pd.DataFrame, rows: List[dict], max_cloud: float, min_water: float,
                 max_hours: float, window_days: int) -> tuple[pd.DataFrame, Dict[str, int]]:
-    """Una fila por IMAGEN válida (sin duplicados). y = media de las medidas in situ a ±max_hours
-    del paso del satélite; si no hay y window_days > 0, la medida más cercana en ±window_days.
-    Cada día in situ se usa como mucho una vez (con la imagen más próxima)."""
+    """One row per valid IMAGE (no duplicates). y = mean of in situ measurements within ±max_hours
+    of the satellite overpass; if none and window_days > 0, the closest measurement within ±window_days.
+    Each in situ day is used at most once (with the closest image)."""
     imgs = []
     for p in rows:
         if p.get("t") is None:
@@ -232,7 +232,7 @@ def _build_pairs_site(insitu: pd.DataFrame, rows: List[dict], max_cloud: float, 
           and all(i.get(k) is not None for k in ("R705_R665", "NDCI_705_665"))]
     stats["images_valid"] = len(ok)
     best_by_day: Dict[str, dict] = {}
-    for i in ok:  # una imagen por día (la menos nubosa)
+    for i in ok:  # one image per day (the least cloudy)
         d = i["dt"].strftime("%Y-%m-%d")
         if d not in best_by_day or i["cloud"] < best_by_day[d]["cloud"]:
             best_by_day[d] = i
@@ -258,7 +258,7 @@ def _build_pairs_site(insitu: pd.DataFrame, rows: List[dict], max_cloud: float, 
         row.update({k: i.get(k) for k in CANDIDATE_INDICES})
         out.append(row)
     df = pd.DataFrame(out)
-    if not df.empty and window_days > 0:  # cada medida in situ con una sola imagen
+    if not df.empty and window_days > 0:  # each in situ measurement with a single image
         df["_key"] = df["y"].round(6).astype(str) + "_" + df["n_obs"].astype(str)
         df = df.sort_values("lag_h").drop_duplicates("_key").drop(columns="_key")
     df = df.sort_values("date").reset_index(drop=True) if not df.empty else df
@@ -296,7 +296,7 @@ AUTO_POOLS = {
 
 
 class Cand:
-    """(predictores, modelo, transformación). transform='log' ajusta log(1+y) y deshace con exp(·)−1."""
+    """(predictors, model, transformation). transform='log' fits log(1+y) and back-transforms with exp(·)−1."""
 
     def __init__(self, preds, model, transform="none"):
         self.preds, self.model, self.transform = tuple(preds), model, transform
@@ -351,7 +351,7 @@ class Cand:
             return self
         self.est = self._make().fit(X, yt)
         self.smear = 1.0
-        if self.transform == "log":  # corrección de Duan (1983): E[y] = exp(ŷ_log)·mean(exp(residuos)) − 1
+        if self.transform == "log":  # Duan (1983) smearing correction: E[y] = exp(ŷ_log)·mean(exp(residuals)) − 1
             res = yt - self.est.predict(X)
             self.smear = float(np.clip(np.mean(np.exp(res)), 1.0, 5.0))
         self.resid_q = None
@@ -368,7 +368,7 @@ class Cand:
         return np.clip(yp, 0, None)
 
     def raster(self):
-        """Config para aplicar el modelo píxel a píxel en Earth Engine (o None si no es posible)."""
+        """Config to apply the model pixel by pixel in Earth Engine (or None if not possible)."""
         if self.model not in RASTER_MODELS:
             return None
         if self.model == "logistic":
@@ -388,10 +388,10 @@ class Cand:
         return f"{t}{MODEL_LABELS.get(self.model, self.model)}"
 
 
-# ── Validación temporal por bloques (anidada) ────────────────────────────────
+# ── Temporal block validation (nested) ──────────────────────────────────────
 def _blocks(df: pd.DataFrame, k: int) -> List[np.ndarray]:
-    """Bloques temporales contiguos. Todas las muestras de un mismo día (aunque sean de puntos
-    distintos) caen en el mismo bloque, para que el modelo nunca vea ese día al evaluarlo."""
+    """Contiguous temporal blocks. All samples from the same day (even from different
+    sites) fall in the same block, so the model never sees that day when evaluating it."""
     days = np.array(sorted(df["date"].unique()))
     out = []
     for chunk in np.array_split(days, min(k, len(days))):
@@ -439,7 +439,7 @@ def _score(y, yp, criterion: str, thr: float) -> float:
 
 
 def _cv_score(cand: Cand, df: pd.DataFrame, k: int, criterion: str = "balanced", thr: float = 0.0) -> tuple[float, np.ndarray]:
-    """Puntuación de validación cruzada temporal por bloques contiguos (sin barajar)."""
+    """Temporal cross-validation score over contiguous blocks (no shuffling)."""
     oof = np.full(len(df), np.nan)
     for b in _blocks(df, k):
         tr = np.setdiff1d(np.arange(len(df)), b)
@@ -488,7 +488,7 @@ def candidates_expert(preds: List[str], models: List[str], transform: str) -> Li
     return out
 
 
-# ── Ejecución completa ───────────────────────────────────────────────────────
+# ── Full run ────────────────────────────────────────────────────────────────
 def run(aoi, csv_text: str, cfg: Dict[str, Any], mock: bool, prog=None) -> Dict[str, Any]:
     p = prog or (lambda *_a, **_k: None)
     raw = to_insitu_frame(csv_text, cfg["date_col"], cfg.get("time_col"), cfg["value_col"], tz=cfg.get("tz", "Europe/Madrid"),
@@ -516,7 +516,7 @@ def run(aoi, csv_text: str, cfg: Dict[str, Any], mock: bool, prog=None) -> Dict[
     blocks = _blocks(pairs, K)
     crit = cfg.get("criterion", "balanced") if cfg.get("criterion") in CRITERIA else "balanced"
 
-    # 1) Estimación honesta: validación anidada (la selección se repite dentro de cada bloque de entrenamiento)
+    # 1) Honest estimate: nested validation (model selection is repeated inside each training block)
     oof = np.full(n, np.nan); chosen = []
     p(45, f"Validando {len(cands)} modelos candidatos")
     for i_b, b in enumerate(blocks):
@@ -530,7 +530,7 @@ def run(aoi, csv_text: str, cfg: Dict[str, Any], mock: bool, prog=None) -> Dict[
     honest = _metrics(pairs["y"], oof, thr)
     ok = np.isfinite(oof)
     y_ok, p_ok = pairs["y"].values[ok], oof[ok]
-    # Intervalo de predicción del 80 % (conformal, con residuos fuera de muestra): en escala log es multiplicativo
+    # 80 % prediction interval (conformal, with out-of-sample residuals): multiplicative in log scale
     lr = np.log1p(np.clip(y_ok, 0, None)) - np.log1p(np.clip(p_ok, 0, None))
     lo_q, hi_q = (float(np.quantile(lr, 0.10)), float(np.quantile(lr, 0.90))) if len(lr) >= 5 else (None, None)
     coverage = float(np.mean((lr >= lo_q) & (lr <= hi_q))) if lo_q is not None else None
@@ -543,7 +543,7 @@ def run(aoi, csv_text: str, cfg: Dict[str, Any], mock: bool, prog=None) -> Dict[
             m = (pairs["site"] == site).values
             per_site.append({"site": site, **_metrics(pairs["y"].values[m], oof[m], thr)})
 
-    # 2) Modelo final: selección con todos los datos + ajuste completo
+    # 2) Final model: selection with all the data + full fit
     p(90, "Ajustando el modelo final")
     ranking = _select(cands, pairs, K, criterion=crit, thr=thr)
     final = Cand(ranking[0][2].preds, ranking[0][2].model, ranking[0][2].transform).fit(pairs)
@@ -583,7 +583,7 @@ def run(aoi, csv_text: str, cfg: Dict[str, Any], mock: bool, prog=None) -> Dict[
 
 
 def clean(obj):
-    """Convierte NaN/inf/numpy a JSON válido."""
+    """Convert NaN/inf/numpy values to valid JSON."""
     if isinstance(obj, dict):
         return {k: clean(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
