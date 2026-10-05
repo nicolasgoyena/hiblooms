@@ -13,7 +13,7 @@ const TROFICO = [
 const MES = (d: string) => new Date(d + 'T12:00:00').getMonth()
 const MES_COL = ['#2c7bb6', '#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#f9d057', '#f29e2e', '#e76818', '#d7191c', '#f29e2e', '#00ccbc', '#2c7bb6']
 
-/** Lista de modelos, en el panel lateral. */
+/** List of models, in the side panel. */
 export function ModelList({ models, sel, onSel }: { models: ModelCard[]; sel: string | null; onSel: (id: string) => void }) {
   return (
     <section>
@@ -33,7 +33,7 @@ export function ModelList({ models, sel, onSel }: { models: ModelCard[]; sel: st
   )
 }
 
-/** Ficha grande del modelo. */
+/** Large model card. */
 export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: () => void; onClose: () => void }) {
   const pts = m.pairs.map(p => ({ ...p, lo: Math.log10(Math.max(p.obs, 0.1)), lp: Math.log10(Math.max(p.pred, 0.1)), mes: MES(p.date) }))
   const lg = (v: number) => Math.log10(v)
@@ -145,7 +145,7 @@ function Status({ s, small }: { s: string; small?: boolean }) {
   return <span className={(small ? 'model-status' : 'model-badge') + (exp ? ' exp' : '')}><Icon name={exp ? 'ensayo' : 'ok'} size={13} /> {t(s)}</span>
 }
 
-/** Curva anual de riesgo, con la frecuencia observada de picos y el día de hoy. */
+/** Annual risk curve, with the observed peak frequency and today's date. */
 function SeasonalChart({ m }: { m: ModelCard }) {
   const c = (m.curve || []).map(p => ({ ...p, pp: p.p * 100, oo: p.obs === null ? null : p.obs * 100 }))
   const hoy = m.today
@@ -184,7 +184,7 @@ function SeasonalChart({ m }: { m: ModelCard }) {
   )
 }
 
-/** Últimas semanas de la sonda y pronóstico a 1, 3 y 7 días con su rango. */
+/** Last weeks of the buoy and 1, 3 and 7-day forecast with its range. */
 function TrendChart({ m }: { m: ModelCard }) {
   const h = (m.history || []).map(p => ({ date: p.date, obs: p.value }))
   const f = (m.forecast || []).map(p => ({ date: p.date, pred: p.value, band: [p.lo, p.hi] as [number, number] }))
@@ -225,7 +225,7 @@ function TrendChart({ m }: { m: ModelCard }) {
   )
 }
 
-/** Tabla de validación año a año. */
+/** Year-by-year validation table. */
 function ByYear({ m }: { m: ModelCard }) {
   const rows: any[] = (m.validation as any).by_year || []
   if (!rows.length) return null
@@ -246,12 +246,12 @@ function ByYear({ m }: { m: ModelCard }) {
   )
 }
 
-/* ── Laboratorio: ajustar un índice de Sentinel-2 a la ficocianina de la sonda ── */
+/* ── Lab: fit a Sentinel-2 index to the buoy phycocyanin ── */
 
 type Forma = 'lineal' | 'cuadratica'
 type Trans = 'ninguna' | 'log'
 
-/** Mínimos cuadrados por ecuaciones normales (pocas columnas: resolución directa). */
+/** Least squares via normal equations (few columns: direct solve). */
 function ajustar(X: number[][], y: number[]): number[] | null {
   const k = X[0].length
   const A: number[][] = Array.from({ length: k }, () => new Array(k + 1).fill(0))
@@ -261,7 +261,7 @@ function ajustar(X: number[][], y: number[]): number[] | null {
       A[a][k] += X[i][a] * y[i]
     }
   }
-  for (let c = 0; c < k; c++) {                       // eliminación de Gauss con pivoteo
+  for (let c = 0; c < k; c++) {                       // Gaussian elimination with pivoting
     let piv = c
     for (let r = c + 1; r < k; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r
     if (Math.abs(A[piv][c]) < 1e-12) return null
@@ -282,7 +282,7 @@ const r2 = (y: number[], p: number[]) => {
   return ss > 0 ? 1 - sr / ss : NaN
 }
 
-const rangos = (v: number[]) => {                      // rangos medios, para Spearman
+const rangos = (v: number[]) => {                      // average ranks, for Spearman
   const idx = v.map((x, i) => [x, i] as [number, number]).sort((a, b) => a[0] - b[0])
   const r = new Array(v.length).fill(0)
   for (let i = 0; i < idx.length;) {
@@ -303,7 +303,7 @@ const spearman = (a: number[], b: number[]) => {
   return da > 0 && db > 0 ? num / Math.sqrt(da * db) : NaN
 }
 
-/** AUC por Mann-Whitney: ¿ordena el modelo los días de pico por encima del resto? */
+/** AUC via Mann-Whitney: does the model rank peak days above the rest? */
 const auc = (alto: boolean[], score: number[]) => {
   const r = rangos(score)
   const np = alto.filter(Boolean).length, nn = alto.length - np
@@ -312,7 +312,7 @@ const auc = (alto: boolean[], score: number[]) => {
   return (sp - np * (np + 1) / 2) / (np * nn)
 }
 
-/** Ecuación del ajuste actual, en el formato que se usa en las fichas de modelo. */
+/** Equation of the current fit, in the format used in the model cards. */
 function ecuacion(c: number[], forma: Forma, trans: Trans, indiceNombre: string): string {
   const n = (v: number, d = 3) => fmt(v, d)
   const sg = (v: number, d = 3) => (v >= 0 ? '+ ' : '− ') + fmt(Math.abs(v), d)
@@ -356,7 +356,7 @@ export function LabPC() {
     const pred = (c: number[], v: number) => base(v).reduce((s, b, i) => s + b * c[i], 0)
     const ajuste = coef ? x.map(v => pred(coef, v)) : null
 
-    // validado: se ajusta sin un año y se predice ese año
+    // validated: fitted without one year and that year is predicted
     const val = new Array(filas.length).fill(NaN)
     for (const yr of Array.from(new Set(filas.map(r => r.year)))) {
       const tr = filas.map((r, i) => [r, i] as [LabRow, number]).filter(([r]) => r.year !== yr)
@@ -365,7 +365,7 @@ export function LabPC() {
       if (!c) continue
       filas.forEach((r, i) => { if (r.year === yr) val[i] = pred(c, x[i]) })
     }
-    // línea base: solo estacionalidad (seno y coseno del día del año), misma validación
+    // baseline: seasonality only (sine and cosine of day of year), same validation
     const S = filas.map(r => [1, Math.sin(2 * Math.PI * r.doy / 365.25), Math.cos(2 * Math.PI * r.doy / 365.25)])
     const est = new Array(filas.length).fill(NaN)
     for (const yr of Array.from(new Set(filas.map(r => r.year)))) {

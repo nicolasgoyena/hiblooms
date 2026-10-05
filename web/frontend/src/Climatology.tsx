@@ -13,7 +13,7 @@ const pct = (xs: number[], p: number) => {
   return s[lo] + (s[hi] - s[lo]) * (i - lo)
 }
 
-/** Rango habitual de cada quincena (años anteriores) frente al año en curso. */
+/** Usual range for each half-month (previous years) vs the current year. */
 export default function Climatology({ data }: { data: ClimResp }) {
   const year = new Date().getFullYear()
   const rows = useMemo(() => Array.from({ length: 24 }, (_, k) => {

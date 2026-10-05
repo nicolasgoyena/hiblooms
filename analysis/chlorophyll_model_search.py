@@ -1,26 +1,26 @@
 """
-Mejor modelo posible de CLOROFILA-a en El Val con Sentinel-2 (HIBLOOMS).
+Best possible CHLOROPHYLL-a model for El Val with Sentinel-2 (HIBLOOMS).
 
-Parte de lo que ya descargó validacion_sonda.py (analisis/resultados/validacion/s2_boya_todas.csv),
-así que NO vuelve a consultar GEE: solo lee la sonda de la base local.
+Starts from what validate_buoy.py already downloaded (analysis/results/buoy_validation/s2_boya_todas.csv),
+so it does NOT query GEE again: it only reads the buoy from the local database.
 
-Qué prueba:
-  1. Cómo emparejar (ventana ±1/2/3 h · filtro de agua estricto o relajado) → más pares sin
-     meter ruido.
-  2. Modelos, todos sobre log10(clorofila) y validados dejando fuera un AÑO:
-       · modelo actual de la web (logística sobre NDCI, sin reajustar)  ← referencia
-       · lineal y cuadrático sobre NDCI
-       · mejor índice de la búsqueda exhaustiva (elegido DENTRO de cada pliegue)
-       · Lasso con bandas + índices
-       · bosque aleatorio y gradient boosting
-  3. Métricas en µg/L: RMSE, MAE, sesgo, R² (log), AUC ≥10 y ≥20 µg/L y acierto de clase
-     trófica (OCDE: <2,5 · 2,5–8 · 8–25 · >25 µg/L).
-  4. Ajusta el mejor modelo SENCILLO (fórmula) con todos los datos y lo guarda para la web.
+What it tests:
+  1. How to match (±1/2/3 h window · strict or relaxed water filter) → more pairs without
+     adding noise.
+  2. Models, all on log10(chlorophyll) and validated leaving one YEAR out:
+       · current web model (logistic on NDCI, not refitted)  ← reference
+       · linear and quadratic on NDCI
+       · best index from the exhaustive search (chosen WITHIN each fold)
+       · Lasso with bands + indices
+       · random forest and gradient boosting
+  3. Metrics in µg/L: RMSE, MAE, bias, R² (log), AUC ≥10 and ≥20 µg/L and trophic class
+     accuracy (OECD: <2.5 · 2.5–8 · 8–25 · >25 µg/L).
+  4. Fits the best SIMPLE model (formula) with all the data and saves it for the web tool.
 
-Uso:
-    set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
-    python analisis\\mejorar_clorofila.py
-Resultados en analisis/resultados/clorofila/.
+Usage:
+    set "DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/unav_water_sampling"
+    python analysis\\chlorophyll_model_search.py
+Results in analysis/results/chlorophyll_models/.
 """
 from __future__ import annotations
 
@@ -42,16 +42,16 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from validacion_sonda import BANDAS, INDICES, auc, combinaciones, emparejar, leer_sonda  # noqa: E402
+from validate_buoy import BANDAS, INDICES, auc, combinaciones, emparejar, leer_sonda  # noqa: E402
 
 ROOT = HERE.parent
-OUT = ROOT / "analisis" / "resultados" / "clorofila"
-CLASES = [0, 2.5, 8, 25, np.inf]            # OCDE: oligo · meso · eutro · hipereutrófico
+OUT = ROOT / "analysis" / "results" / "chlorophyll_models"
+CLASES = [0, 2.5, 8, 25, np.inf]            # OECD: oligo · meso · eutro · hypereutrophic
 NOMBRES_CLASE = ["oligotrófico", "mesotrófico", "eutrófico", "hipereutrófico"]
 
 
 def modelo_actual(ndci):
-    """Chla_Val_cal de la web: 450 / (1 + exp(−7,14·(NDCI − 0,46)))."""
+    """Web Chla_Val_cal: 450 / (1 + exp(−7.14·(NDCI − 0.46)))."""
     return 450 / (1 + np.exp(-7.14 * (ndci - 0.46)))
 
 
@@ -65,13 +65,13 @@ def metricas(y, p) -> dict:
     return {"n": int(len(y)), "R2_log": round(1 - ((ly - lp) ** 2).sum() / ss, 3) if ss else np.nan,
             "RMSE": round(float(np.sqrt(np.mean((y - p) ** 2))), 2), "MAE": round(float(np.mean(np.abs(y - p))), 2),
             "sesgo": round(float(np.mean(p - y)), 2),
-            "MAE_log(×)": round(float(10 ** np.mean(np.abs(ly - lp))), 2),   # error típico multiplicativo
+            "MAE_log(×)": round(float(10 ** np.mean(np.abs(ly - lp))), 2),   # typical multiplicative error
             "AUC≥10": round(float(auc(y >= 10, p)), 3), "AUC≥20": round(float(auc(y >= 20, p)), 3),
             "clase_trófica_ok": f"{100 * np.mean(cy == cp):.0f}%"}
 
 
 def pares(url: str, horas: float, agua_min: float) -> pd.DataFrame:
-    s2 = pd.read_csv(ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv")
+    s2 = pd.read_csv(ROOT / "analysis" / "results" / "buoy_validation" / "s2_boya_todas.csv")
     s2["t"] = pd.to_datetime(s2["t"], format="ISO8601", utc=True)
     s2 = s2[(s2.agua >= agua_min) & (s2.nubes300 <= 0.01) & (s2.B4 > 0)].copy()
     for k, (_, f) in INDICES.items():
@@ -107,7 +107,7 @@ def validar_modelos(m: pd.DataFrame):
         preds["lineal NDCI"][te] = 10 ** LinearRegression().fit(nd[tr], ly[tr]).predict(nd[te])
         q = make_pipeline(PolynomialFeatures(2), LinearRegression()).fit(nd[tr], ly[tr])
         preds["cuadrático NDCI"][te] = 10 ** q.predict(nd[te])
-        # mejor índice elegido solo con el entrenamiento
+        # best index chosen using training data only
         r = C[tr].rank().corrwith(pd.Series(ly[tr], index=C.index[tr]).rank()).dropna()
         best = r.abs().idxmax(); elegidos.append(best)
         xb = C[[best]].values
@@ -129,7 +129,7 @@ def ajustar_final(m: pd.DataFrame, indice: str, grado: int) -> dict:
     C = combinaciones(m)
     x, ly = C[indice].values, np.log10(m.chl_sup.values)
     k = np.isfinite(x)
-    coef = np.polyfit(x[k], ly[k], grado)          # log10(chl) = polinomio(índice)
+    coef = np.polyfit(x[k], ly[k], grado)          # log10(chl) = polynomial(index)
     return {"indice": indice, "grado": grado, "coef_log10": [float(c) for c in coef],
             "formula": f"log10(Chl-a µg/L) = " + " + ".join(
                 f"{c:.4g}·x^{grado - i}" if grado - i > 1 else (f"{c:.4g}·x" if grado - i == 1 else f"{c:.4g}")
@@ -156,11 +156,11 @@ def figura(m, preds, nombres):
 
 
 def actualizar_ficha(m, pred, fila, final, ok):
-    """Actualiza la ficha del modelo que muestra la web (data/modelos/chla_val.json):
-    métricas, fórmula y los pares observado–predicho (validación por años) para el gráfico."""
-    f = ROOT / "data" / "modelos" / "chla_val.json"
+    """Update the model card shown by the web tool (data/models/chla_val.json):
+    metrics, formula and observed–predicted pairs (year-out validation) for the chart."""
+    f = ROOT / "data" / "models" / "chla_val.json"
     if not f.exists():
-        print("   (no existe data/modelos/chla_val.json: no se actualiza la ficha de la web)")
+        print("   (no existe data/models/chla_val.json: no se actualiza la ficha de la web)")
         return
     card = json.loads(f.read_text(encoding="utf-8"))
     es = lambda v, d=2: f"{v:.{d}f}".replace(".", ",")  # noqa: E731
@@ -193,8 +193,8 @@ def main():
     url = os.getenv("DATABASE_URL")
     if not url:
         sys.exit("Falta DATABASE_URL.")
-    if not (ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv").exists():
-        sys.exit("Ejecuta antes analisis\\validacion_sonda.py (hace falta analisis/resultados/validacion\\s2_boya_todas.csv).")
+    if not (ROOT / "analysis" / "results" / "buoy_validation" / "s2_boya_todas.csv").exists():
+        sys.exit("Ejecuta antes analysis\\validate_buoy.py (hace falta analysis/results/buoy_validation\\s2_boya_todas.csv).")
     OUT.mkdir(exist_ok=True)
 
     print("1/3 ¿Cómo emparejar? (ventana y filtro de agua)")
@@ -211,7 +211,7 @@ def main():
             print(f"   ±{horas} h · agua ≥{agua:.0%}: {len(m)} pares · rho NDCI {rho:.3f}")
     v = pd.DataFrame(variantes)
     v.to_csv(OUT / "variantes_emparejado.csv", index=False)
-    # la más grande cuya correlación no empeore más de 0,02 respecto a la mejor
+    # the largest one whose correlation is no more than 0.02 worse than the best
     ok = v[v.rho_NDCI >= v.rho_NDCI.max() - 0.02].sort_values("n", ascending=False).iloc[0]
     print(f"   → elegido ±{int(ok.ventana_h)} h, agua ≥{ok.agua_min:.0%} ({int(ok.n)} pares)")
     m = pares(url, float(ok.ventana_h), float(ok.agua_min))
@@ -238,7 +238,7 @@ def main():
     figura(m, preds, ["actual web (sin reajustar)", sencillos.modelo, tabla.iloc[0].modelo]
            if tabla.iloc[0].modelo != sencillos.modelo else ["actual web (sin reajustar)", sencillos.modelo])
     print(f"\n   Modelo sencillo: {sencillos.modelo} · {final['formula']}  (x = {indice})")
-    # (la ficha de la web la actualiza ahora ajustar_clorofila_final.py)
+    # (the web model card is now updated by fit_final_chlorophyll.py)
     print(f"\nListo → {OUT}")
 
 

@@ -1,43 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep  4 11:43:42 2025
+HIBLOOMS - Core logic and processing (no UI)
 
-@author: ngoyenaserv
-"""
-
-# encoding: utf-8
-"""
-HIBLOOMS - Núcleo de lógica y procesamiento (sin UI)
-
-Requisitos:
+Requirements:
     pip install earthengine-api geopandas pandas numpy shapely
 
-Resumen:
-- init_ee(): inicializa Google Earth Engine (con o sin cuenta de servicio).
-- obtención y carga de embalses desde shapefile -> ee.Geometry.
-- cálculo de nubosidad/cobertura (S2 SR HARMONIZED).
-- construcción de índices (MCI, NDCI_ind, PCI_B5/B4, PC_Val_cal, Chla_Val_cal,
-  PC_Bellus_cal, Chla_Bellus_cal, UV_PC_Gral_cal).
-- medias diarias del embalse (solo píxeles de agua SCL==6; en 2018 también SCL==2).
-- valores medios en puntos de interés (buffer 30 m).
-- distribución de área por clases (bins).
-- generación de URL de descarga GeoTIFF multibanda.
-- procesamiento por lote (varias fechas) -> resultados listos para workflow.
+Summary:
+- init_ee(): initialises Google Earth Engine (with or without a service account).
+- loading reservoirs from a shapefile -> ee.Geometry.
+- cloud cover/coverage calculation (S2 SR HARMONIZED).
+- index building (MCI, NDCI_ind, PCI_B5/B4, PC_Val_cal, Chla_Val_cal,
+  PC_Bellus_cal, Chla_Bellus_cal, SDD_Bellus_UV, TSM_Bellus_UV, UV_PC_Gral_cal).
+- daily reservoir means (water pixels only, SCL==6; in 2018 also SCL==2).
+- mean values at points of interest (30 m buffer).
+- area distribution by classes (bins).
+- multiband GeoTIFF download URL generation.
+- batch processing (several dates) -> results ready for workflows.
 
-Ejemplo de uso mínimo:
+Minimal usage example:
     import hiblooms_core as hb
     hb.init_ee()
 
-    gdf = hb.load_reservoir_shapefile("El Val", "shapefiles/embalses_hiblooms.shp")
+    gdf = hb.load_reservoir_shapefile("VAL", "shapefiles/embalses_hiblooms.shp")
     aoi = hb.gdf_to_ee_geometry(gdf)
     dates = hb.get_available_dates(aoi, "2024-06-01", "2024-07-01", max_cloud_percentage=60)
 
     out = hb.run_batch_processing(
         aoi=aoi,
         available_dates=dates,
-        selected_indices=("PC_Val_cal","Chla_Val_cal"),
+        selected_indices=("Chla_Val_cal", "NDCI_ind"),
         max_cloud_percentage=60,
-        puntos_interes={"El Val":{"Sonda":(41.8761,-1.7883)}},
+        puntos_interes={"VAL": {"Buoy": (41.8761, -1.7883)}},
     )
 """
 import os
@@ -53,13 +46,13 @@ import ee
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Inicialización de Google Earth Engine
+# Google Earth Engine initialisation
 # ──────────────────────────────────────────────────────────────────────────────
 
 def init_ee(service_account_json: Optional[Union[str, dict]] = None) -> None:
     """
-    Inicializa Google Earth Engine.
-    - service_account_json: dict o string JSON (o ruta a archivo JSON). Si None, usa credenciales locales.
+    Initialise Google Earth Engine.
+    - service_account_json: dict or JSON string (or path to a JSON file). If None, uses local credentials.
     """
     try:
         if service_account_json is None:
@@ -69,7 +62,7 @@ def init_ee(service_account_json: Optional[Union[str, dict]] = None) -> None:
         if isinstance(service_account_json, dict):
             json_obj = service_account_json
         else:
-            # Puede ser ruta a archivo o un string JSON
+            # Can be a file path or a JSON string
             if os.path.exists(str(service_account_json)):
                 with open(str(service_account_json), "r", encoding="utf-8") as f:
                     json_obj = json.load(f)
@@ -83,11 +76,11 @@ def init_ee(service_account_json: Optional[Union[str, dict]] = None) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Utilidades de shapefile y geometrías
+# Shapefile and geometry utilities
 # ──────────────────────────────────────────────────────────────────────────────
 
 def obtener_nombres_embalses(shapefile_path: str = "shapefiles/embalses_hiblooms.shp") -> List[str]:
-    """Devuelve la lista ordenada de nombres de embalses (columna 'NOMBRE')."""
+    """Return the sorted list of reservoir names ('NOMBRE' column)."""
     if not os.path.exists(shapefile_path):
         raise FileNotFoundError(f"No se encontró el archivo {shapefile_path}.")
     gdf = gpd.read_file(shapefile_path)
@@ -99,7 +92,7 @@ def load_reservoir_shapefile(
     reservoir_name: str,
     shapefile_path: str = "shapefiles/embalses_hiblooms.shp"
 ) -> gpd.GeoDataFrame:
-    """Carga y filtra un embalse por nombre; reproyecta a EPSG:4326 si es necesario."""
+    """Load and filter a reservoir by name; reproject to EPSG:4326 if needed."""
     if not os.path.exists(shapefile_path):
         raise FileNotFoundError(f"No se encontró el archivo {shapefile_path}.")
     gdf = gpd.read_file(shapefile_path)
@@ -109,7 +102,7 @@ def load_reservoir_shapefile(
     if gdf.crs is None or (gdf.crs.to_epsg() or 0) != 4326:
         gdf = gdf.to_crs(epsg=4326)
 
-    # Normaliza nombre para robustez
+    # Normalise the name for robustness
     gdf["_N_"] = gdf["NOMBRE"].str.lower().str.replace(" ", "_", regex=False)
     key = reservoir_name.lower().replace(" ", "_")
     gdf_f = gdf[gdf["_N_"] == key].copy()
@@ -119,8 +112,8 @@ def load_reservoir_shapefile(
 
 def gdf_to_ee_geometry(gdf: gpd.GeoDataFrame) -> ee.Geometry:
     """
-    Convierte el GeoDataFrame (EPSG:4326) a ee.Geometry conservando la geometría
-    completa: todas las partes de un MultiPolygon y los huecos (islas) de cada una.
+    Convert the GeoDataFrame (EPSG:4326) to an ee.Geometry keeping the full
+    geometry: all parts of a MultiPolygon and the holes (islands) of each one.
     """
     if gdf.empty:
         raise ValueError("El GeoDataFrame está vacío.")
@@ -133,14 +126,14 @@ def gdf_to_ee_geometry(gdf: gpd.GeoDataFrame) -> ee.Geometry:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Cálculos de nubosidad y cobertura
+# Cloud cover and coverage calculations
 # ──────────────────────────────────────────────────────────────────────────────
 
 def calculate_cloud_percentage(image: ee.Image, aoi: ee.Geometry) -> Optional[ee.Number]:
     """
-    Calcula % de nubosidad combinando SCL (7,8,9,10) y MSK_CLDPRB (>=10).
-    Excluye vegetación (4) y suelo desnudo (5).
-    Devuelve ee.Number (0-100) o None si no es posible.
+    Compute cloud cover % combining SCL (7,8,9,10) and MSK_CLDPRB (>=10).
+    Excludes vegetation (4) and bare soil (5).
+    Returns ee.Number (0-100) or None if not possible.
     """
     scl = image.select("SCL")
     cloud_mask_scl = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
@@ -173,7 +166,7 @@ def calculate_cloud_percentage(image: ee.Image, aoi: ee.Geometry) -> Optional[ee
     return ee.Number(cloud_fraction_prob).multiply(100)
 
 def calculate_coverage_percentage(image: ee.Image, aoi: ee.Geometry) -> float:
-    """Devuelve el % de cobertura válida (por máscara de B4) sobre el AOI."""
+    """Return the % of valid coverage (by B4 mask) over the AOI."""
     try:
         total_pixels = ee.Image(1).clip(aoi).reduceRegion(
             reducer=ee.Reducer.count(), geometry=aoi, scale=20, maxPixels=1e13
@@ -191,7 +184,7 @@ def calculate_coverage_percentage(image: ee.Image, aoi: ee.Geometry) -> float:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Fechas disponibles (filtradas por nubosidad/cobertura)
+# Available dates (filtered by cloud cover/coverage)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def get_available_dates(
@@ -202,8 +195,8 @@ def get_available_dates(
     min_coverage_percentage: float = 50.0,
 ) -> List[str]:
     """
-    Devuelve fechas (YYYY-MM-DD) con imágenes S2_SR_HARMONIZED dentro del rango (UTC),
-    filtradas por nubosidad estimada y cobertura mínima.
+    Return dates (YYYY-MM-DD) with S2_SR_HARMONIZED images within the range (UTC),
+    filtered by estimated cloud cover and minimum coverage.
     """
     sentinel2 = (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -243,7 +236,7 @@ def get_available_dates(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Cálculo de índices e imágenes
+# Index and image calculation
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _ensure_bands_available(image: ee.Image, bands: Sequence[str], date_label: str = "") -> None:
@@ -308,15 +301,15 @@ def _apply_calibrated_model_band(image: ee.Image, raster_config: Optional[Dict])
     return expr.max(0).rename(str(band_name))
 
 
-# ── Clorofila-a de El Val (modelo validado, ver pestaña Modelos de la web) ─────
+# ── El Val chlorophyll-a (validated model, see the Models tab of the web tool) ─────
 _CHLA_VAL_DEFAULT = {"intercept": 1.159, "ndci": 1.089, "ndci2": 0.3174, "sin_doy": 0.0, "cos_doy": 0.0,
                      "fuente": "L2A", "ventana_m": 0, "ndci_rango": [-0.3, 0.7]}
 
 
 def _chla_val_coef() -> Dict:
-    """Coeficientes del modelo desde data/modelos/chla_val.json (así recalibrar no exige tocar código)."""
+    """Model coefficients from data/models/chla_val.json (so recalibrating does not require code changes)."""
     try:
-        f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "modelos", "chla_val.json")
+        f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "models", "chla_val.json")
         with open(f, encoding="utf-8") as fh:
             c = json.load(fh).get("coef")
         return c or _CHLA_VAL_DEFAULT
@@ -325,9 +318,9 @@ def _chla_val_coef() -> Dict:
 
 
 def _chla_val_image(base_image: ee.Image, aoi: ee.Geometry, cloud_mask: ee.Image) -> ee.Image:
-    """log10(Chl) = a + b·NDCI + c·NDCI² + d·sen(día) + e·cos(día)
-    NDCI sobre Sentinel-2 L1C (sin corrección atmosférica) del mismo paso, con media espacial
-    de ~100 m, como en la calibración. Si no hay L1C, usa la propia imagen L2A."""
+    """log10(Chl) = a + b·NDCI + c·NDCI² + d·sin(day) + e·cos(day)
+    NDCI on Sentinel-2 L1C (no atmospheric correction) from the same overpass, with a spatial mean
+    over ~100 m, as in the calibration. If there is no L1C, the L2A image itself is used."""
     c = _chla_val_coef()
     t = ee.Date(base_image.get("system:time_start"))
     src = base_image
@@ -337,7 +330,7 @@ def _chla_val_image(base_image: ee.Image, aoi: ee.Geometry, cloud_mask: ee.Image
         src = ee.Image(ee.Algorithms.If(l1c.size().gt(0), l1c.mosaic(), base_image))
     b4, b5 = src.select("B4").toFloat(), src.select("B5").toFloat()
     r = float(c.get("ventana_m") or 0)
-    if r > 0:  # media 5×5 píxeles de 20 m
+    if r > 0:  # 5×5 mean of 20 m pixels
         b4 = b4.focal_mean(r, "square", "meters")
         b5 = b5.focal_mean(r, "square", "meters")
     lo, hi = (c.get("ndci_rango") or [-0.3, 0.7])[:2]
@@ -359,8 +352,8 @@ def _build_indices_image(
     calibration_raster_config: Optional[Dict] = None,
 ) -> ee.Image:
     """
-    Construye una imagen con las bandas base + índices seleccionados.
-    Aplica máscara de nubes (SCL != 8,9,10) a los índices.
+    Build an image with the base bands + selected indices.
+    Applies a cloud mask (SCL != 8,9,10) to the indices.
     """
     scl = base_image.select("SCL")
     cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
@@ -380,7 +373,7 @@ def _build_indices_image(
     b6 = scaled.select("B6")
     b8A = scaled.select("B8A")
 
-    # Definición de índices (idéntica a tu app)
+    # Index definitions
     indices_functions = {
         "MCI": lambda: b5.subtract(b4).subtract((b6.subtract(b4).multiply(705 - 665).divide(740 - 665))).updateMask(cloud_mask).rename("MCI"),
         "PCI_B5/B4": lambda: b5.divide(b4).updateMask(cloud_mask).rename("PCI_B5/B4"),
@@ -396,7 +389,7 @@ def _build_indices_image(
             .updateMask(cloud_mask)
             .rename("PC_Val_cal")
         ),
-        # Clorofila-a en El Val: coeficientes en data/modelos/chla_val.json (ver _chla_val_image)
+        # El Val chlorophyll-a: coefficients in data/models/chla_val.json (see _chla_val_image)
         "Chla_Val_cal": lambda: _chla_val_image(base_image, aoi, cloud_mask),
         "PC_Bellus_cal": lambda: (
             ee.Image(16957)
@@ -422,7 +415,7 @@ def _build_indices_image(
             .updateMask(cloud_mask)
             .rename("Chla_Bellus_cal")
         ),
-        # Transparencia (disco de Secchi) · UV, Bellús: 0,5614·TBDO + 0,779
+        # Transparency (Secchi disk) · UV, Bellús: 0.5614·TBDO + 0.779
         # TBDO = R496·(1/R705 − 1/R665) → B2 (492 nm), B5 (705 nm), B4 (665 nm)
         "SDD_Bellus_UV": lambda: (
             b2.multiply(ee.Image(1).divide(b5).subtract(ee.Image(1).divide(b4)))
@@ -431,8 +424,8 @@ def _build_indices_image(
             .updateMask(cloud_mask)
             .rename("SDD_Bellus_UV")
         ),
-        # Sólidos en suspensión · UV, Bellús: 16,382·e^(−1,061·NDI)
-        # NDI = (R665 − R496)/(R665 + R496) → B4 y B2
+        # Suspended solids · UV, Bellús: 16.382·e^(−1.061·NDI)
+        # NDI = (R665 − R496)/(R665 + R496) → B4 and B2
         "TSM_Bellus_UV": lambda: (
             b4.subtract(b2).divide(b4.add(b2))
             .multiply(-1.061).exp().multiply(16.382)
@@ -456,7 +449,7 @@ def _build_indices_image(
         if idx in indices_functions:
             bands_to_add.append(indices_functions[idx]())
         else:
-            # Silencioso: si un índice no existe, no se añade.
+            # Silent: if an index does not exist, it is not added.
             pass
 
     calibrated_band = _apply_calibrated_model_band(scaled, calibration_raster_config)
@@ -464,7 +457,7 @@ def _build_indices_image(
         bands_to_add.append(calibrated_band.updateMask(cloud_mask))
 
     if not bands_to_add:
-        return scaled  # sin índices adicionales
+        return scaled  # no additional indices
     return scaled.addBands(bands_to_add)
 
 
@@ -477,9 +470,9 @@ def process_sentinel2(
     calibration_raster_config: Optional[Dict] = None,
 ) -> Tuple[Optional[ee.Image], Optional[ee.Image], Optional[str], Optional[float], Optional[float]]:
     """
-    Devuelve:
+    Returns:
       (scaled_image, indices_image, image_datetime_iso, cloud_pct, coverage_pct)
-    para la mejor imagen disponible en la fecha (UTC), cumpliendo umbrales.
+    for the best available image on the date (UTC) that meets the thresholds.
     """
     date_ee = ee.Date(selected_date)
     end_ee = date_ee.advance(1, "day")
@@ -495,7 +488,7 @@ def process_sentinel2(
 
     images = s2.toList(n)
 
-    # Seleccionar la imagen con menor nubosidad que cumpla cobertura/nubosidad
+    # Select the least cloudy image that meets coverage/cloud thresholds
     best = None
     best_cloud = None
     best_cov = None
@@ -524,8 +517,8 @@ def process_sentinel2(
     t0 = best.get("system:time_start").getInfo()
     image_iso = datetime.utcfromtimestamp(t0 / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Escalar bandas ópticas de DN (0-10000) a reflectancia (0-1)
-    # igual que hacía app.py originalmente
+    # Scale optical bands from DN (0-10000) to reflectance (0-1)
+    # as the original app.py did
     bandas_requeridas = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A"]
     clipped = best.clip(aoi)
     optical = clipped.select(bandas_requeridas).divide(10000)
@@ -537,15 +530,15 @@ def process_sentinel2(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Medias diarias, valores en punto y distribución por clases
+# Daily means, point values and class distribution
 # ──────────────────────────────────────────────────────────────────────────────
 
 def calcular_media_diaria_embalse(indices_image: ee.Image, index_name: str, aoi: ee.Geometry) -> Optional[float]:
     """
-    Media del índice en el embalse solo en SCL==6 (o SCL==2 también para 2018).
+    Mean of the index over the reservoir using only SCL==6 (also SCL==2 for 2018).
     """
     scl = indices_image.select("SCL")
-    # Extraer fecha
+    # Extract the date
     millis = indices_image.get("system:time_start").getInfo()
     year = datetime.utcfromtimestamp(millis / 1000).year if millis is not None else None
 
@@ -561,7 +554,7 @@ def calcular_media_diaria_embalse(indices_image: ee.Image, index_name: str, aoi:
 
 def get_values_at_point(lat: float, lon: float, indices_image: ee.Image, selected_indices: Sequence[str]) -> Dict[str, Optional[float]]:
     """
-    Valor medio en un buffer ~60x60 m (radio 30 m) sobre cada índice solicitado.
+    Mean value in a ~60x60 m buffer (30 m radius) for each requested index.
     """
     point = ee.Geometry.Point([lon, lat]).buffer(30)
     out: Dict[str, Optional[float]] = {}
@@ -582,8 +575,8 @@ def calcular_distribucion_area_por_clases(
     bins: Sequence[float]
 ) -> List[Dict[str, float]]:
     """
-    Devuelve una lista de dicts con: {"rango": "low–up", "area_ha": ha, "porcentaje": %}
-    calculada sobre píxeles de agua (regla SCL==6; en 2018 también SCL==2).
+    Return a list of dicts with: {"rango": "low–up", "area_ha": ha, "porcentaje": %}
+    computed over water pixels (rule SCL==6; in 2018 also SCL==2).
     """
     scl = indices_image.select("SCL")
     millis = indices_image.get("system:time_start").getInfo()
@@ -625,19 +618,19 @@ def calcular_distribucion_area_por_clases(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Exportación GeoTIFF multibanda (URL de descarga)
+# Multiband GeoTIFF export (download URL)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scale=20):
     """
-    Genera URL de descarga para un GeoTIFF multibanda,
-    con nombres de bandas seguros (sin caracteres conflictivos).
+    Generate a download URL for a multiband GeoTIFF,
+    with safe band names (no problematic characters).
     """
     try:
-        # Nombres seguros (sin caracteres conflictivos)
+        # Safe names (no problematic characters)
         safe_names = [name.replace("/", "_") for name in selected_indices]
 
-        # Seleccionar y renombrar al vuelo
+        # Select and rename on the fly
         export_img = indices_image.select(list(selected_indices), safe_names)
 
         url = export_img.getDownloadURL({
@@ -652,13 +645,13 @@ def generar_url_geotiff_multibanda(indices_image, selected_indices, region, scal
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Orquestación por lote (varias fechas)
+# Batch orchestration (several dates)
 # ──────────────────────────────────────────────────────────────────────────────
 
 @dataclass
 class BatchResult:
-    data_time: List[Dict]                  # series de puntos y medias de embalse
-    used_cloud_results: List[Dict]         # nubosidad por imagen usada
+    data_time: List[Dict]                  # point series and reservoir means
+    used_cloud_results: List[Dict]         # cloud cover per image used
     urls_exportacion: List[Dict]           # {"fecha": str, "url": str}
     processed_dates: List[str]             # fechas efectivamente procesadas
 
@@ -675,22 +668,22 @@ def run_batch_processing(
     calibration_raster_config: Optional[Dict] = None,
 ) -> BatchResult:
     """
-    Procesa múltiples fechas y devuelve:
-      - data_time: registros (puntos, medias) listos para tablas/series.
-      - used_cloud_results: nubosidad/cobertura de cada imagen usada.
-      - urls_exportacion: URLs de descarga GeoTIFF (multibanda en cada fecha).
-      - processed_dates: fechas para las que se obtuvo imagen válida.
+    Process multiple dates and return:
+      - data_time: records (points, means) ready for tables/series.
+      - used_cloud_results: cloud cover/coverage of each image used.
+      - urls_exportacion: GeoTIFF download URLs (multiband for each date).
+      - processed_dates: dates for which a valid image was obtained.
 
-    Nota:
-      - puntos_interes: dict opcional {reservoir_name: {point_name: (lat, lon)}}.
-        Si se especifica, se usa el subdict por 'reservoir_name_for_pois'.
+    Note:
+      - puntos_interes: optional dict {reservoir_name: {point_name: (lat, lon)}}.
+        If given, the sub-dict for 'reservoir_name_for_pois' is used.
     """
     data_time: List[Dict] = []
     used_cloud_results: List[Dict] = []
     urls_exportacion: List[Dict] = []
     processed_dates: List[str] = []
 
-    # Determina puntos de interés activos (si se pasan)
+    # Determine active points of interest (if given)
     pois: Dict[str, Tuple[float, float]] = {}
     if puntos_interes and reservoir_name_for_pois and (reservoir_name_for_pois in puntos_interes):
         pois = puntos_interes[reservoir_name_for_pois].copy()
@@ -716,12 +709,12 @@ def run_batch_processing(
                 "Cobertura (%)": round(float(cov_pct or 0.0), 2),
             })
 
-        # URL de exportación GeoTIFF multibanda
+        # Multiband GeoTIFF export URL
         url = generar_url_geotiff_multibanda(indices_img, selected_indices, aoi)
         if url:
             urls_exportacion.append({"fecha": day, "url": url})
 
-        # Valores en puntos de interés
+        # Values at points of interest
         if pois:
             for point_name, (lat, lon) in pois.items():
                 vals = get_values_at_point(lat, lon, indices_img, selected_indices)
@@ -732,19 +725,19 @@ def run_batch_processing(
                 if any(k in reg for k in selected_indices):
                     data_time.append(reg)
 
-        # Medias del embalse (por índice)
+        # Reservoir means (per index)
         for idx in selected_indices:
             media = calcular_media_diaria_embalse(indices_img, idx, aoi)
             if media is not None:
                 data_time.append({"Point": "Media_Embalse", "Date": day, idx: media, "Tipo": "Valor Estimado"})
 
-        # Distribuciones por clases (opcional)
+        # Class distributions (optional)
         if compute_distributions and distribution_bins_by_index:
             for idx, bins in distribution_bins_by_index.items():
                 try:
                     dist = calcular_distribucion_area_por_clases(indices_img, idx, aoi, bins)
-                    # Puedes capturar estas distribuciones aquí si las necesitas en salida;
-                    # por simplicidad, se podrían adjuntar a data_time con etiquetas específicas:
+                    # You can capture these distributions here if you need them in the output;
+                    # for simplicity, they could be attached to data_time with specific labels:
                     for d in dist:
                         data_time.append({
                             "Point": "Distribucion_Embalse",
@@ -767,12 +760,12 @@ def run_batch_processing(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Ejecución directa (demo CLI mínima)
+# Direct execution (minimal CLI demo)
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # Demo ligero: ajusta rutas/nombres si lo quieres probar rápidamente.
-    init_ee()  # Usa credenciales locales ya configuradas
+    # Lightweight demo: adjust paths/names if you want to try it quickly.
+    init_ee()  # Uses local credentials already configured
 
     shp = "shapefiles/embalses_hiblooms.shp"
     name = "El Val"
@@ -797,7 +790,7 @@ if __name__ == "__main__":
         },
     )
 
-    # Muestra un resumen rápido por consola
+    # Print a quick summary to the console
     print("Fechas procesadas:", result.processed_dates)
     print("Nubosidad usada (n):", len(result.used_cloud_results))
     print("URLs exportación (n):", len(result.urls_exportacion))

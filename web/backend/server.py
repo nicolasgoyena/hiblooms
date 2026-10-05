@@ -1,22 +1,22 @@
 """
-HIBLOOMS · backend ligero para el frontend React.
+HIBLOOMS · lightweight backend for the React frontend.
 
-Reutiliza hiblooms_core.py y expone
-endpoints síncronos sencillos para búsquedas satelitales:
+Reuses hiblooms_core.py and exposes
+simple synchronous endpoints for satellite searches:
 
   GET  /api/health
-  GET  /api/reservoirs            → GeoJSON de embalses (EPSG:4326)
-  GET  /api/indices               → catálogo de índices con rangos de color
-  POST /api/search                → fechas Sentinel-2 válidas (nubes/cobertura)
-  POST /api/image                 → teselas XYZ del índice + RGB + estadísticos
-  POST /api/timeseries            → media del índice en el embalse por fecha
+  GET  /api/reservoirs            → reservoir GeoJSON (EPSG:4326)
+  GET  /api/indices               → index catalogue with colour ranges
+  POST /api/search                → valid Sentinel-2 dates (clouds/coverage)
+  POST /api/image                 → XYZ tiles of the index + RGB + statistics
+  POST /api/timeseries            → index mean over the reservoir per date
 
-Credenciales GEE (por orden):
-  1. GEE_SERVICE_ACCOUNT_JSON  (contenido JSON o ruta a fichero)
-  2. credenciales locales de `earthengine authenticate`
-Si no hay credenciales o HIBLOOMS_MOCK=1 → modo demo con datos simulados.
+GEE credentials (in order):
+  1. GEE_SERVICE_ACCOUNT_JSON  (JSON content or path to a file)
+  2. local credentials from `earthengine authenticate`
+With no credentials or HIBLOOMS_MOCK=1 → demo mode with simulated data.
 
-Arranque (desde la raíz del repo):
+Start (from the repo root):
   uvicorn web.backend.server:app --reload --port 8000
 """
 from __future__ import annotations
@@ -50,12 +50,12 @@ import geopandas as gpd  # noqa: E402
 import numpy as np  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-# ── Catálogo de índices ──────────────────────────────────────────────────────
+# ── Index catalogue ──────────────────────────────────────────────────────────
 INDICES = [
     {"id": "PC_Val_cal", "label": "Ficocianina · El Val (experimental)", "unit": "µg/L", "min": 0, "max": 100, "group": "Experimentales", "reservoir": "VAL"},
     {"id": "Chla_Val_cal", "label": "Clorofila-a · El Val", "unit": "µg/L", "min": 0, "max": 60, "group": "Calibrados", "reservoir": "VAL"},
-    # Modelos de la Universitat de València calibrados en Bellús (Delegido et al.).
-    # Solo se ofrecen con Bellús seleccionado: fuera de ese embalse no están validados.
+    # Universitat de València models calibrated in Bellús (Delegido et al.).
+    # Only offered when Bellús is selected: outside that reservoir they are not validated.
     {"id": "PC_Bellus_cal", "label": "Ficocianina · Bellús (UV)", "unit": "µg/L", "min": 0, "max": 800, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
     {"id": "Chla_Bellus_cal", "label": "Clorofila-a · Bellús (UV)", "unit": "µg/L", "min": 0, "max": 80, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
     {"id": "SDD_Bellus_UV", "label": "Transparencia, disco de Secchi · Bellús (UV)", "unit": "m", "min": 0, "max": 6, "group": "Modelos UV · Bellús", "reservoir": "BELLUS"},
@@ -68,20 +68,20 @@ INDICES = [
 INDEX_BY_ID = {i["id"]: i for i in INDICES}
 PALETTE = ["#2c7bb6", "#00a6ca", "#00ccbc", "#90eb9d", "#ffff8c", "#f9d057", "#f29e2e", "#e76818", "#d7191c"]
 
-# Carpeta de datos de la instancia (shapefiles subidos, calibraciones, cachés).
-# Configurable con HIBLOOMS_DATA_DIR para poder desplegar en contenedores o en
-# infraestructuras externas (LifeWatch) con volumen propio. Si se pierde, la web
-# sigue funcionando: solo desaparecen los datos subidos por los usuarios.
+# Instance data folder (uploaded shapefiles, calibrations, caches).
+# Configurable with HIBLOOMS_DATA_DIR so it can be deployed in containers or on
+# external infrastructure (LifeWatch) with its own volume. If it is lost, the web tool
+# keeps working: only the data uploaded by users disappears.
 UPLOADS = Path(os.getenv("HIBLOOMS_DATA_DIR") or (Path(__file__).resolve().parent / "_uploads"))
 UPLOADS.mkdir(parents=True, exist_ok=True)
 
 
-# ── Inicialización GEE / modo demo ───────────────────────────────────────────
+# ── GEE initialisation / demo mode ──────────────────────────────────────────
 MOCK = os.getenv("HIBLOOMS_MOCK") == "1"
 
 
 def _secrets() -> dict:
-    """Lee .streamlit/secrets.toml si existe (credenciales en local, formato heredado)."""
+    """Read .streamlit/secrets.toml if it exists (local credentials, legacy format)."""
     try:
         import tomllib  # Python ≥ 3.11
     except ModuleNotFoundError:
@@ -104,17 +104,17 @@ if not MOCK:
         import hiblooms_core as core  # noqa: E402
 
         sa = os.getenv("GEE_SERVICE_ACCOUNT_JSON")
-        if not sa:  # .streamlit/secrets.toml en local
+        if not sa:  # local .streamlit/secrets.toml
             sec = _secrets()
             if "GEE_SERVICE_ACCOUNT_JSON" in sec:
                 sa = json.loads(sec["GEE_SERVICE_ACCOUNT_JSON"], strict=False)
         core.init_ee(sa if sa else None)
-    except Exception as e:  # sin credenciales → demo
+    except Exception as e:  # no credentials → demo
         GEE_ERROR = str(e)
         MOCK = True
 
 app = FastAPI(title="HIBLOOMS web API", version="0.1.0")
-# Respuestas comprimidas: las series y perfiles viajan 5–10 veces más ligeros
+# Compressed responses: series and profiles travel 5–10 times lighter
 from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -125,9 +125,9 @@ app.add_middleware(
 )
 
 # ── Acceso (login) ───────────────────────────────────────────────────────────
-# Usuarios: variable HIBLOOMS_USERS="user1:pass1,user2:pass2" o la sección [auth]
-# de secrets.toml (username1/password1, username2/password2…).
-# Si no hay usuarios configurados, la web queda abierta (sin login).
+# Users: HIBLOOMS_USERS="user1:pass1,user2:pass2" variable or the [auth] section
+# of secrets.toml (username1/password1, username2/password2…).
+# If no users are configured, the web tool is open (no login).
 import hashlib, hmac, secrets as _pysecrets, time  # noqa: E402
 
 
@@ -217,9 +217,9 @@ def _reservoirs_gdf() -> gpd.GeoDataFrame:
     return gdf
 
 
-# ── Embalses subidos por el usuario (shapefile ZIP) ──────────────────────────
-# Se guardan como GeoJSON en web/backend/_uploads/ para sobrevivir a reinicios.
-# Identificador de embalse propio: "u:<upload_id>:<n>" (n = nº de polígono).
+# ── User-uploaded reservoirs (shapefile ZIP) ─────────────────────────────────
+# Stored as GeoJSON in web/backend/_uploads/ to survive restarts.
+# Custom reservoir identifier: "u:<upload_id>:<n>" (n = polygon number).
 CUSTOM_PREFIX = "u:"
 
 
@@ -263,17 +263,17 @@ def _mock_rng(*parts) -> random.Random:
     return random.Random("|".join(map(str, parts)))
 
 
-# ── Imagen procesada (cacheada) ─────────────────────────────────────────────
+# ── Processed image (cached) ─────────────────────────────────────────────────
 ALL_INDEX_IDS = [i["id"] for i in INDICES]
-POIS_CSV = ROOT / "data" / "puntos_interes.csv"
+POIS_CSV = ROOT / "data" / "points_of_interest.csv"
 
 
 S2 = "COPERNICUS/S2_SR_HARMONIZED"
 
 
 def _image_stats(img, aoi):
-    """Nubosidad y cobertura de UNA imagen sobre el embalse, calculadas en el servidor de GEE
-    (misma fórmula que hiblooms_core.calculate_cloud_percentage / calculate_coverage_percentage)."""
+    """Cloud cover and coverage of ONE image over the reservoir, computed on the GEE server
+    (same formula as hiblooms_core.calculate_cloud_percentage / calculate_coverage_percentage)."""
     import ee
     scl = img.select("SCL")
     cloud_scl = scl.eq(7).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
@@ -299,14 +299,14 @@ def _image_stats(img, aoi):
     return cloud, cov
 
 
-# (reservoir, max_cloud, min_cov) -> {día: {"id", "time", "cloud", "cov"}}  mejor imagen de cada día
+# (reservoir, max_cloud, min_cov) -> {day: {"id", "time", "cloud", "cov"}}  best image per day
 _BEST: dict = {}
-# rangos ya consultados por (reservoir, max_cloud, min_cov): lista de (start, end)
+# ranges already queried per (reservoir, max_cloud, min_cov): list of (start, end)
 _SCANNED: dict = {}
 
 
 def _scan(reservoir: str, start: str, end: str, max_cloud: int, min_cov: float) -> dict:
-    """UNA sola llamada a GEE: estadísticas de todas las imágenes del rango → mejor imagen por día."""
+    """A SINGLE GEE call: statistics of all images in the range → best image per day."""
     import ee
     key = (reservoir, max_cloud, float(min_cov))
     best = _BEST.setdefault(key, {})
@@ -347,10 +347,10 @@ def _best_for(reservoir: str, day: str, max_cloud: int, min_cov: float = 50.0) -
 
 
 def _indices_image(image_id: str, aoi):
-    """Imagen escalada (RGB) + imagen de índices a partir del id de la imagen.
-    Nota: _build_indices_image ya divide entre 10000, así que se le pasa la imagen SIN escalar.
-    (process_sentinel2 le pasa la ya escalada → reflectancias /10000 dos veces; afecta a MCI y
-    PC_Bellus_cal y a los modelos calibrados con diferencias de bandas.)"""
+    """Scaled image (RGB) + index image from the image id.
+    Note: _build_indices_image already divides by 10000, so it is given the UNSCALED image.
+    (process_sentinel2 passes the already scaled one → reflectances /10000 twice; this affects MCI,
+    PC_Bellus_cal and calibrated models using band differences.)"""
     import ee
     img = ee.Image(f"{S2}/{image_id}")
     req = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A"]
@@ -361,19 +361,19 @@ def _indices_image(image_id: str, aoi):
 
 
 
-# ── Máscara de lámina de agua (evita falsos positivos de orilla) ─────────────
-# El polígono del embalse es el vaso lleno: con el embalse bajo, buena parte queda
-# en seco (suelo, limo, vegetación de ribera) y esos píxeles dan índices altísimos
-# que se confunden con una floración. Se resuelve en dos pasos:
-#   1. agua detectada en la propia imagen: MNDWI > 0 (SWIR, robusto en agua turbia)
-#      o NDWI > 0 (mantiene las natas de bloom, que suben el NIR y bajan el NDWI)
-#   2. erosión de 20 m (1 píxel) para tirar los píxeles mezclados del borde
+# ── Water surface mask (avoids false positives at the shore) ─────────────────
+# The reservoir polygon is the full basin: when the reservoir is low, much of it is
+# dry (soil, silt, riparian vegetation) and those pixels give very high indices
+# that are mistaken for a bloom. This is solved in two steps:
+#   1. water detected in the image itself: MNDWI > 0 (SWIR, robust in turbid water)
+#      or NDWI > 0 (keeps bloom scums, which raise NIR and lower NDWI)
+#   2. 20 m erosion (1 pixel) to drop mixed pixels at the edge
 SHORE_ERODE_M = 20
 
 
 def _water_mask(ind, erode_m: float = SHORE_ERODE_M):
     import ee
-    b3, b8a = ind.select("B3"), ind.select("B8A")           # ya escaladas (/10000)
+    b3, b8a = ind.select("B3"), ind.select("B8A")           # already scaled (/10000)
     b11 = ind.select("B11").divide(10000)
     ndwi = b3.subtract(b8a).divide(b3.add(b8a))
     mndwi = b3.subtract(b11).divide(b3.add(b11))
@@ -384,7 +384,7 @@ def _water_mask(ind, erode_m: float = SHORE_ERODE_M):
 
 
 def _apply_water(ind, on: bool):
-    """Deja solo la lámina de agua (sin orillas) en todas las bandas de índices."""
+    """Keep only the water surface (no shoreline) in all index bands."""
     if not on:
         return ind
     try:
@@ -393,7 +393,7 @@ def _apply_water(ind, on: bool):
         return ind
 
 
-# ── Calibraciones del usuario (índices extra) ────────────────────────────────
+# ── User calibrations (extra indices) ────────────────────────────────────────
 CALS: dict = {}  # id -> {"meta": {...}, "raster": {...}, "summary": {...}}
 CAL_PREFIX = "cal:"
 
@@ -421,7 +421,7 @@ def _band(index: str) -> str:
 
 
 def _raster_expr(ind, rc: dict):
-    """Aplica una calibración (lineal, lineal en log o logística) píxel a píxel."""
+    """Apply a calibration (linear, log-linear or logistic) pixel by pixel."""
     import ee
     if rc.get("type") == "logistic":
         x = ind.select(rc["predictor"]).unmask(float(rc.get("fill", 0)))
@@ -437,9 +437,9 @@ def _raster_expr(ind, rc: dict):
 
 
 def _with_index(ind, index: str, aoi=None):
-    """Añade la banda del modelo calibrado si el índice es una calibración del usuario, con la
-    misma máscara que en el entrenamiento (embalse −20 m, píxeles despejados). Añade también
-    la banda EXTRAP_* = 1 donde algún índice está fuera del rango con el que se calibró."""
+    """Add the calibrated model band if the index is a user calibration, with the
+    same mask as in training (reservoir −20 m, clear pixels). Also adds the
+    EXTRAP_* = 1 band where any index is outside the range it was calibrated on."""
     if not index.startswith(CAL_PREFIX):
         return ind
     import ee
@@ -467,11 +467,11 @@ def _processed(reservoir: str, day: str, max_cloud: int):
 
 
 def _values_dict(ind, index: str, aoi, points: list, time_ms: int, scale: int = 20, tile_scale: int = 1):
-    """ee.Dictionary con la media del embalse (agua SCL=6; en 2018 también SCL=2) y el valor en cada punto."""
+    """ee.Dictionary with the reservoir mean (water SCL=6; in 2018 also SCL=2) and the value at each point."""
     import ee
     scl = ind.select("SCL")
     water = scl.eq(6).Or(scl.eq(2)) if datetime.utcfromtimestamp(time_ms / 1000).year == 2018 else scl.eq(6)
-    if index.startswith("CAL_"):  # las calibraciones ya llevan su propia máscara de agua despejada
+    if index.startswith("CAL_"):  # calibrations already carry their own clear-water mask
         water = ee.Image(1)
     band = ind.select(index)
     d = {"mean": band.updateMask(water).reduceRegion(ee.Reducer.mean(), aoi, scale, maxPixels=1e13, tileScale=tile_scale).get(index)}
@@ -542,27 +542,27 @@ class DownloadReq(BaseModel):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
-# HEAD además de GET: los servicios de monitorización (UptimeRobot y similares) comprueban
-# con HEAD por defecto, y FastAPI no lo añade solo a las rutas GET (devolvería 405).
+# HEAD as well as GET: monitoring services (UptimeRobot and similar) check
+# with HEAD by default, and FastAPI does not add it to GET routes on its own (it would return 405).
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     return {"ok": True, "mode": "demo" if MOCK else "gee", "gee_error": GEE_ERROR, "auth": bool(USERS)}
 
 
-MODELOS_DIR = ROOT / "data" / "modelos"
+MODELOS_DIR = ROOT / "data" / "models"
 
 
 @app.get("/api/models")
 def models():
-    """Fichas de los modelos de la plataforma (data/modelos/*.json)."""
+    """Platform model cards (data/models/*.json)."""
     out = []
     for f in sorted(MODELOS_DIR.glob("*.json")) if MODELOS_DIR.exists() else []:
         try:
             out.append(json.loads(f.read_text(encoding="utf-8")))
         except Exception:  # noqa: BLE001
             continue
-    import sonda_val  # fichas calculadas en vivo con la sonda de El Val
-    out += sonda_val.cards()
+    import val_buoy  # cards computed live from the El Val buoy
+    out += val_buoy.cards()
     return {"models": out}
 
 
@@ -628,7 +628,7 @@ def delete_upload(upload_id: str, request: Request):
 
 @app.get("/api/pois")
 def pois(reservoir: str):
-    """Puntos de interés predefinidos (data/puntos_interes.csv) del embalse."""
+    """Predefined points of interest (data/points_of_interest.csv) for the reservoir."""
     import pandas as pd
     if not POIS_CSV.exists() or reservoir.startswith(CUSTOM_PREFIX):
         return {"points": []}
@@ -753,7 +753,7 @@ def timeseries(req: SeriesReq):
 
 @app.post("/api/classes")
 def classes(req: ClassesReq):
-    """Superficie del embalse por clases del índice (rangos iguales entre min y max)."""
+    """Reservoir area by index classes (equal ranges between min and max)."""
     _check(req.reservoir, req.index)
     meta = _meta(req.index)
     step = (meta["max"] - meta["min"]) / req.n_classes
@@ -783,7 +783,7 @@ def classes(req: ClassesReq):
 
 @app.post("/api/download")
 def download(req: DownloadReq):
-    """URL de descarga GeoTIFF multibanda (índices elegidos) para esa fecha."""
+    """Multiband GeoTIFF download URL (chosen indices) for that date."""
     _check(req.reservoir)
     bad = [i for i in req.indices if i not in INDEX_BY_ID and i not in CALS]
     if bad:
@@ -806,12 +806,12 @@ def download(req: DownloadReq):
 
 class UploadReq(BaseModel):
     filename: str
-    content_b64: str = Field(..., max_length=40_000_000)  # ~30 MB de ZIP
+    content_b64: str = Field(..., max_length=40_000_000)  # ~30 MB ZIP
 
 
 @app.post("/api/upload-shapefile")
 def upload_shapefile(req: UploadReq, request: Request):
-    """Recibe un ZIP con un shapefile (.shp/.shx/.dbf/.prj) y devuelve sus polígonos como embalses propios."""
+    """Receive a ZIP with a shapefile (.shp/.shx/.dbf/.prj) and return its polygons as custom reservoirs."""
     try:
         raw = base64.b64decode(req.content_b64)
         zf = zipfile.ZipFile(io.BytesIO(raw))
@@ -842,7 +842,7 @@ def upload_shapefile(req: UploadReq, request: Request):
     if len(gdf) > 200:
         raise HTTPException(400, "Máximo 200 polígonos por shapefile")
 
-    # Columna de nombre: NOMBRE, o la primera de texto razonable, o numeración
+    # Name column: NOMBRE, or the first reasonable text column, or numbering
     stem = Path(req.filename).stem
     cand = [c for c in gdf.columns if c.upper() in ("NOMBRE", "NAME", "NOM", "EMBALSE")]
     cand += [c for c in gdf.columns if c != "geometry" and gdf[c].dtype == object and c not in cand]
@@ -864,7 +864,7 @@ def upload_shapefile(req: UploadReq, request: Request):
             "geojson": json.loads(simple[["NOMBRE", "LABEL", "CUSTOM", "geometry"]].to_json())}
 
 
-# ── Calibración ──────────────────────────────────────────────────────────────
+# ── Calibration ──────────────────────────────────────────────────────────────
 import calibration as cal  # noqa: E402  (web/backend/calibration.py)
 
 _load_cals()
@@ -888,24 +888,24 @@ class CalibrateReq(BaseModel):
     value_col: str
     unit: str = ""
     tz: str = "Europe/Madrid"
-    point: Optional[CalPoint] = None          # None = media de todo el embalse (si el CSV no trae ubicación)
-    site_col: Optional[str] = None            # columna con el nombre del punto de cada fila
-    lat_col: Optional[str] = None             # columnas de coordenadas de cada fila
+    point: Optional[CalPoint] = None          # None = mean of the whole reservoir (if the CSV has no location)
+    site_col: Optional[str] = None            # column with the site name of each row
+    lat_col: Optional[str] = None             # coordinate columns of each row
     lon_col: Optional[str] = None
-    pois: List[Point] = Field(default_factory=list, max_length=200)  # puntos del embalse para resolver nombres
+    pois: List[Point] = Field(default_factory=list, max_length=200)  # reservoir points used to resolve names
     start_hour: int = Field(0, ge=0, le=23)
     end_hour: int = Field(23, ge=0, le=23)
-    max_cloud: int = Field(30, ge=0, le=100)  # nubosidad sobre el embalse (SCL)
-    min_water: int = Field(50, ge=0, le=100)  # % de píxeles de agua despejada en la zona de extracción
-    max_hours: float = Field(3, gt=0, le=24)  # ± horas entre medida in situ y paso del satélite
-    window_days: int = Field(0, ge=0, le=5)   # tolerancia en días si no hay medida en ±max_hours
+    max_cloud: int = Field(30, ge=0, le=100)  # cloud cover over the reservoir (SCL)
+    min_water: int = Field(50, ge=0, le=100)  # % of clear-water pixels in the extraction area
+    max_hours: float = Field(3, gt=0, le=24)  # ± hours between in situ measurement and satellite overpass
+    window_days: int = Field(0, ge=0, le=5)   # tolerance in days if there is no measurement within ±max_hours
     auto: bool = True
     kind: str = Field("other", pattern="^(phycocyanin|chlorophyll|other)$")
     predictors: List[str] = Field(default_factory=lambda: ["R705_R665"])
     models: List[str] = Field(default_factory=lambda: ["linear", "ridge"])
     transform: str = Field("auto", pattern="^(auto|none|log)$")
     criterion: str = Field("balanced", pattern="^(balanced|peaks|general|alerts)$")
-    threshold: Optional[float] = None          # umbral de alerta (por defecto P90 de los datos)
+    threshold: Optional[float] = None          # alert threshold (P90 of the data by default)
 
 
 @app.get("/api/calibration/options")
@@ -923,7 +923,7 @@ def calibration_preview(req: CsvReq):
 
 @app.post("/api/calibrate")
 def calibrate(req: CalibrateReq, wait: bool = False):
-    """Por defecto devuelve {job_id}; con ?wait=1 calcula y devuelve el resultado."""
+    """Returns {job_id} by default; with ?wait=1 it computes and returns the result."""
     if wait:
         return _do_calibrate(req, lambda *_a, **_k: None)
     return _start_job("calibrate", lambda prog: _do_calibrate(req, prog))
@@ -1006,20 +1006,20 @@ def calibration_delete(cid: str):
 
 
 
-# ── Tareas en segundo plano ─────────────────────────────────────────────────
-# Las operaciones largas (calibración, monitor, climatología) pueden tardar
-# minutos y los servidores donde se despliega esto cortan las peticiones al
-# minuto o dos. Se lanzan en un hilo y el cliente pregunta por el resultado.
-# Sin base de datos: viven en memoria; si el servidor se reinicia, se repiten.
+# ── Background jobs ──────────────────────────────────────────────────────────
+# Long operations (calibration, monitor, climatology) can take
+# minutes and the servers this is deployed on cut requests after
+# a minute or two. They run in a thread and the client polls for the result.
+# No database: they live in memory; if the server restarts, they are rerun.
 import threading  # noqa: E402
 
 JOBS: dict = {}
-JOB_TTL = 3600          # segundos que se guarda un resultado ya terminado
+JOB_TTL = 3600          # seconds a finished result is kept
 JOB_MAX = 40
 
 
 class Progress:
-    """Se pasa a la función de cálculo para que informe de por dónde va."""
+    """Passed to the computing function so it can report progress."""
 
     def __init__(self, job: dict):
         self.job = job
@@ -1041,7 +1041,7 @@ def _gc_jobs():
 
 
 def _start_job(kind: str, fn) -> dict:
-    """fn(progress) -> resultado. Devuelve {job_id} al instante."""
+    """fn(progress) -> result. Returns {job_id} immediately."""
     _gc_jobs()
     jid = uuid.uuid4().hex[:12]
     job = {"id": jid, "kind": kind, "status": "running", "progress": 0, "step": "",
@@ -1078,13 +1078,13 @@ def job_status(jid: str):
     return out
 
 
-# ── Monitorización general (todos los embalses de un vistazo) ────────────────
-# Estado orientativo: no usa calibraciones locales (solo existen en algunos embalses),
-# sino dos índices espectrales generalistas sobre el píxel despejado más reciente
-# de cada embalse en los últimos N días:
-#   NDCI  (B5−B4)/(B5+B4) → proxy de clorofila-a: biomasa algal en general
-#   PCI   B5/B4           → proxy de ficocianina: sospecha de cianobacterias
-# Umbrales orientativos, pensados para comparar embalses y priorizar, no para dar cifras.
+# ── General monitoring (all reservoirs at a glance) ──────────────────────────
+# Indicative status: it does not use local calibrations (they only exist for some reservoirs),
+# but two general spectral indices on the most recent clear pixel
+# of each reservoir in the last N days:
+#   NDCI  (B5−B4)/(B5+B4) → chlorophyll-a proxy: algal biomass in general
+#   PCI   B5/B4           → phycocyanin proxy: suspected cyanobacteria
+# Indicative thresholds, meant to compare reservoirs and prioritise, not to give figures.
 NDCI_LEVELS = [(0.00, "bajo"), (0.10, "moderado"), (0.20, "alto"), (0.35, "muy alto")]
 PCI_SUSPECT = 1.35
 
@@ -1099,10 +1099,10 @@ def _level(ndci_p90: Optional[float]) -> str:
     return lvl
 
 
-# ── Volumen embalsado oficial (Boletín Hidrológico Semanal, MITECO) ─────────
-# data/boletin_embalses.csv lo genera scripts/actualizar_boletin.py. Solo cubre
-# embalses de más de 5 hm³, así que el resto se queda con la lámina por satélite.
-BOLETIN_CSV = ROOT / "data" / "boletin_embalses.csv"
+# ── Official stored volume (Weekly Hydrological Bulletin, MITECO) ───────────
+# data/reservoir_bulletin.csv is generated by scripts/update_reservoir_bulletin.py. It only covers
+# reservoirs over 5 hm³, so the rest rely on the satellite water surface.
+BOLETIN_CSV = ROOT / "data" / "reservoir_bulletin.csv"
 
 
 def _boletin() -> dict:
@@ -1125,12 +1125,12 @@ def _boletin() -> dict:
         return {}
 
 
-BOLETIN_HIST = ROOT / "data" / "boletin_historico_hiblooms.csv"
+BOLETIN_HIST = ROOT / "data" / "reservoir_bulletin_history.csv"
 
 
 @lru_cache(maxsize=4)
 def _boletin_hist():
-    """{hiblooms_id: DataFrame(fecha, pct)} para calcular la tendencia del nivel."""
+    """{hiblooms_id: DataFrame(date, pct)} to compute the level trend."""
     if not BOLETIN_HIST.exists():
         return {}
     try:
@@ -1142,7 +1142,7 @@ def _boletin_hist():
 
 
 def _boletin_trend(hid: str, days: int) -> Optional[float]:
-    """Cambio en puntos de capacidad entre el último dato y el de hace `days` días."""
+    """Change in capacity points between the latest value and the one `days` days earlier."""
     h = _boletin_hist().get(hid)
     if h is None or len(h) < 2:
         return None
@@ -1158,24 +1158,24 @@ def _boletin_trend(hid: str, days: int) -> Optional[float]:
         return None
 
 
-MONITOR_BATCH = 6      # embalses por llamada a GEE (memoria)
-MONITOR_SCALE = 30     # m por píxel en el resumen general (20 m es el nativo)
-LOW_FILL = 60.0        # lámina por debajo del 60 % de la habitual = embalse tocado
+MONITOR_BATCH = 6      # reservoirs per GEE call (memory)
+MONITOR_SCALE = 30     # m per pixel in the general summary (20 m is native)
+LOW_FILL = 60.0        # water surface below 60 % of the usual = affected reservoir
 
 
 def _combined(level: str, fill_pct: Optional[float]) -> bool:
-    """Señal alta Y embalse bajo: el cruce que interesa mirar primero."""
+    """High signal AND low reservoir: the combination worth looking at first."""
     return level in ("alto", "muy alto") and fill_pct is not None and fill_pct < LOW_FILL
 
 
 def _with_boletin(row: dict, bol: dict, days: int = 30) -> dict:
-    """Añade el volumen oficial si ese embalse está en el boletín; manda sobre la lámina."""
+    """Add the official volume if the reservoir is in the bulletin; it takes precedence over the water surface."""
     b = bol.get(row["id"])
     row["oficial"] = b
     nivel = b["pct"] if b else row.get("fill_pct")
     row["nivel_pct"] = nivel
     row["nivel_fuente"] = "boletin" if b else ("satelite" if row.get("fill_pct") is not None else None)
-    # tendencia del nivel: puntos de capacidad (boletín) o % de lámina (satélite)
+    # level trend: capacity points (bulletin) or % of water surface (satellite)
     row["nivel_trend"] = _boletin_trend(row["id"], days) if b else row.get("trend_pct")
     row["combined"] = _combined(row["level"], nivel)
     return row
@@ -1188,7 +1188,7 @@ class MonitorReq(BaseModel):
 
 
 def _monitor_geoms(names: List[str], user: Optional[str]) -> list:
-    """[(id, label, geometría shapely)] de los embalses a vigilar."""
+    """[(id, label, shapely geometry)] of the reservoirs to monitor."""
     gdf = _reservoirs_gdf()
     out = [(str(r.NOMBRE), niceish(str(r.NOMBRE)), r.geometry) for r in gdf.itertuples()]
     for u in _list_uploads(user):
@@ -1212,7 +1212,7 @@ def niceish(n: str) -> str:
 
 @app.post("/api/monitor")
 def monitor(req: MonitorReq, request: Request, wait: bool = False):
-    """Por defecto devuelve {job_id}; con ?wait=1 calcula y devuelve el resultado."""
+    """Returns {job_id} by default; with ?wait=1 it computes and returns the result."""
     user = request.state.user
     if wait:
         return _do_monitor(req, user, lambda *_a, **_k: None)
@@ -1222,7 +1222,7 @@ def monitor(req: MonitorReq, request: Request, wait: bool = False):
 def _do_monitor(req: MonitorReq, user: Optional[str], prog):
     end = date.today() + timedelta(days=1)
     start = end - timedelta(days=req.days)
-    prev_start = start - timedelta(days=req.days)      # ventana anterior, misma duración
+    prev_start = start - timedelta(days=req.days)      # previous window, same length
     items = _monitor_geoms(req.reservoirs, user)
     if MOCK:
         rows = []
@@ -1253,7 +1253,7 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
     labels = {rid: label for rid, label, _g in items}
 
     def bands(img):
-        """Índices + lámina de agua del día (erosionada 20 m) + marca de píxel despejado."""
+        """Indices + water surface of the day (eroded 20 m) + clear-pixel flag."""
         scl = img.select("SCL")
         clear = scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8)) \
                    .And(scl.neq(9)).And(scl.neq(10)).And(scl.neq(11))
@@ -1273,7 +1273,7 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
         return ee.Image.cat(ndci, pci, ts).updateMask(m)
 
     def wmask(img):
-        """1 donde se vio agua despejada ese día (para el área de lámina de la ventana)."""
+        """1 where clear water was seen that day (for the window's water surface area)."""
         clear, water, _b4, _b5, _im = bands(img)
         return clear.And(water).selfMask().rename("w")
 
@@ -1282,18 +1282,18 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
                 .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", req.max_cloud)))
 
     col, col_prev = window(start, end), window(prev_start, start)
-    latest = col.map(prep).qualityMosaic("ts")       # píxel despejado más reciente de la ventana
+    latest = col.map(prep).qualityMosaic("ts")       # most recent clear pixel in the window
     latest_prev = (col_prev.map(prep).qualityMosaic("ts").select(["ndci", "pci"])
                    .rename(["ndci_ant", "pci_ant"]))
-    w_now = col.map(wmask).max().rename("wnow").selfMask()      # agua vista en cualquier día: menos sesgo por nubes
+    w_now = col.map(wmask).max().rename("wnow").selfMask()      # water seen on any day: less bias from clouds
     w_prev = col_prev.map(wmask).max().rename("wprev").selfMask()
-    # lámina habitual de referencia: JRC Global Surface Water, agua presente ≥ 50 % del tiempo (1984–2021)
+    # usual reference water surface: JRC Global Surface Water, water present ≥ 50 % of the time (1984–2021)
     ref = ee.Image("JRC/GSW1_4/GlobalSurfaceWater").select("occurrence").gte(50).rename("ref").selfMask()
 
     comp = ee.Image.cat(latest, latest_prev, w_now, w_prev, ref, ee.Image(1).rename("tot"))
     red = (ee.Reducer.mean().combine(ee.Reducer.percentile([90]), sharedInputs=True)
            .combine(ee.Reducer.count(), sharedInputs=True))
-    # En lotes: una sola llamada con 30 embalses agota la memoria de Earth Engine.
+    # In batches: a single call with 30 reservoirs exhausts Earth Engine memory.
     stats = []
     lotes = max(1, math.ceil(len(feats) / MONITOR_BATCH))
     for k, i in enumerate(range(0, len(feats), MONITOR_BATCH)):
@@ -1336,18 +1336,18 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
         })
     bol = _boletin()
     rows = [_with_boletin(r, bol, req.days) for r in rows]
-    # primero los que juntan señal alta y embalse bajo; luego por señal
+    # first those combining high signal and low reservoir; then by signal
     rows.sort(key=lambda r: (not r["combined"], -(r["ndci_p90"] if r["ndci_p90"] is not None else -9)))
     return {"mode": "gee", "start": start.isoformat(), "end": end.isoformat(), "days": req.days, "rows": rows}
 
 
-# ── Climatología: ¿lo de este año es normal para esta época? ────────────────
-# Solo NDCI y PCI: son comparables entre años y embalses. Los índices calibrados
-# son locales (El Val, Bellús) y su serie histórica en otro embalse no significa nada.
-# Todas las imágenes válidas de cada año, percentil 90 sobre la lámina de agua
-# (igual que el monitor, para no mezclar criterios), agrupadas por quincenas.
+# ── Climatology: is this year normal for this time of year? ─────────────────
+# Only NDCI and PCI: they are comparable across years and reservoirs. Calibrated indices
+# are local (El Val, Bellús) and their historical series in another reservoir means nothing.
+# All valid images of each year, 90th percentile over the water surface
+# (same as the monitor, to avoid mixing criteria), grouped by half-months.
 CLIM_INDICES = {"NDCI_ind": "ndci", "PCI_B5/B4": "pci"}
-CLIM_SCALE = 30        # m por píxel
+CLIM_SCALE = 30        # m per pixel
 
 
 class ClimReq(BaseModel):
@@ -1363,13 +1363,13 @@ def _clim_cache(key: str) -> Path:
 
 
 def _quincena(d: date) -> int:
-    """1–24: dos tramos por mes (días 1–15 y 16–fin)."""
+    """1–24: two periods per month (days 1–15 and 16–end)."""
     return (d.month - 1) * 2 + (1 if d.day <= 15 else 2)
 
 
 @app.post("/api/climatology")
 def climatology(req: ClimReq, wait: bool = False):
-    """Por defecto devuelve {job_id}; con ?wait=1 calcula y devuelve el resultado."""
+    """Returns {job_id} by default; with ?wait=1 it computes and returns the result."""
     if wait:
         return _do_climatology(req, lambda *_a, **_k: None)
     return _start_job("climatology", lambda prog: _do_climatology(req, prog))
@@ -1408,7 +1408,7 @@ def _do_climatology(req: ClimReq, prog):
     aoi = _aoi(req.reservoir)
 
     def stat(img):
-        """Percentil 90 del índice sobre la lámina de agua despejada de esa imagen."""
+        """90th percentile of the index over the clear water surface of that image."""
         scl = img.select("SCL")
         clear = (scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8))
                  .And(scl.neq(9)).And(scl.neq(10)).And(scl.neq(11)))
@@ -1433,7 +1433,7 @@ def _do_climatology(req: ClimReq, prog):
             a, b_ = date(y, 1, 1), min(end + timedelta(days=1), date(y + 1, 1, 1))
             col = (ee.ImageCollection(S2).filterBounds(aoi).filterDate(str(a), str(b_))
                    .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", req.max_cloud)))
-            # Una sola llamada por año: Earth Engine recorre la colección en su servidor.
+            # A single call per year: Earth Engine iterates over the collection on its server.
             for ft in col.map(stat).getInfo()["features"]:
                 p = ft["properties"]
                 if p.get("v") is None or (p.get("n") or 0) < 20:
@@ -1452,13 +1452,13 @@ def _do_climatology(req: ClimReq, prog):
 
 
 
-# ── Base de datos del proyecto (pestaña «Datos», solo lectura) ───────────────
+# ── Project database ("Data" tab, read-only) ────────────────────────────────
 import projectdb as pdb  # noqa: E402  (web/backend/projectdb.py)
 
 
 @app.on_event("startup")
 def _warm_db():
-    pdb.warm()  # lee la base al arrancar: el primer usuario ya no espera
+    pdb.warm()  # read the database at startup: the first user no longer waits
 from fastapi.responses import PlainTextResponse  # noqa: E402
 
 
@@ -1507,7 +1507,7 @@ def db_sources():
 
 @app.get("/api/db/campaigns")
 def db_campaigns(water_body: Optional[str] = None):
-    """Campañas y visitas de muestreo, con lo que se tomó en cada visita."""
+    """Sampling campaigns and visits, with what was taken in each visit."""
     return _pdb(pdb.campaigns, water_body)
 
 
@@ -1538,27 +1538,27 @@ def db_sensor_series(reservoir_id: int, variable: str = "phycocyanin", layer: st
 
 @app.get("/api/db/lab/pc")
 def db_lab_pc():
-    """Pares índice Sentinel-2 ↔ ficocianina de la sonda (laboratorio de calibración)."""
-    import sonda_val
-    return _pdb(sonda_val.pares_pc)
+    """Sentinel-2 index ↔ buoy phycocyanin pairs (calibration lab)."""
+    import val_buoy
+    return _pdb(val_buoy.pares_pc)
 
 
 @app.get("/api/db/elval/live")
 def db_elval_live():
-    """Últimos datos de la sonda SAICA de El Val + riesgo estacional y tendencia."""
-    import sonda_val
-    return _pdb(sonda_val.live)
+    """Latest data from the El Val SAICA buoy + seasonal risk and trend."""
+    import val_buoy
+    return _pdb(val_buoy.live)
 
 
 @app.post("/api/db/reload")
 def db_reload():
-    """Vuelve a leer la base de datos (tras cargar datos nuevos)."""
+    """Re-read the database (after loading new data)."""
     _pdb(pdb.data, True)
     return pdb.status()
 
 
-# ── Frontend estático (mismo servicio que la API, un solo enlace) ────────────
-# En el despliegue (Docker) el frontend compilado vive en web/frontend/dist.
+# ── Static frontend (same service as the API, a single link) ────────────────
+# In deployment (Docker) the built frontend lives in web/frontend/dist.
 FRONT = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 if FRONT.exists():
     from fastapi.staticfiles import StaticFiles
@@ -1568,7 +1568,7 @@ if FRONT.exists():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
-        """Cualquier ruta que no sea /api devuelve la web (React se encarga del resto)."""
+        """Any route other than /api returns the web app (React handles the rest)."""
         f = FRONT / full_path
         if full_path and f.is_file():
             return FileResponse(f)

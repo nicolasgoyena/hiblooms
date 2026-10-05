@@ -6,7 +6,7 @@ import Icon from './Icon'
 
 const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
 
-/** Controles de la pestaña, en el panel lateral. */
+/** Tab controls, in the side panel. */
 export type DbView = 'measures' | 'campaigns' | 'phyto' | 'sensors' | 'cores'
 
 export function DataForm(p: {
@@ -123,7 +123,7 @@ function SiteChips(p: { sites: DbSite[]; selSites: string[]; toggleSite: (s: str
 
 const RAMP = ['#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#ffff8c', '#f9d057', '#f29e2e', '#e76818', '#d7191c']
 
-/** Vistas sin promediar: perfil de un muestreo y diagrama profundidad × tiempo. */
+/** Non-averaged views: profile of one sampling and depth × time diagram. */
 function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => string }) {
   const rows = useMemo(() => data.rows.filter(r => r.depth_m != null), [data])
   const dates = useMemo(() => Array.from(new Set(rows.map(r => r.date))).sort(), [rows])
@@ -141,13 +141,13 @@ function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => st
   const vmin = Math.min(...rows.map(r => r.value)), vmax = Math.max(...rows.map(r => r.value))
   const col = (v: number) => colorAt(RAMP, vmax > vmin ? (v - vmin) / (vmax - vmin) : 0.5)
 
-  // Perfil: una serie por punto, ordenada por profundidad
+  // Profile: one series per site, sorted by depth
   const onDate = rows.filter(r => r.date === date)
   const bySite = Array.from(new Set(onDate.map(r => r.site_code))).map(c => ({
     code: c, pts: onDate.filter(r => r.site_code === c).sort((a, b) => (a.depth_m! - b.depth_m!))
       .map(r => ({ value: r.value, depth: r.depth_m, qc: r.qc_flag })),
   }))
-  // Profundidad × tiempo: un punto de muestreo cada vez (mezclarlos confunde)
+  // Depth × time: one sampling site at a time (mixing them is confusing)
   const section = rows.filter(r => r.site_code === site)
     .map(r => ({ t: new Date(r.date + 'T12:00:00').getTime(), depth: r.depth_m, value: r.value }))
   const t0 = Math.min(...section.map(p => p.t)), t1 = Math.max(...section.map(p => p.t))
@@ -215,7 +215,7 @@ function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => st
   )
 }
 
-/** Tarjeta principal: gráfico por punto con el control de calidad marcado y resumen. */
+/** Main card: chart per site with quality control flagged, plus a summary. */
 export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: DbSite[]; onClose: () => void }) {
   const [vista, setVista] = useState<'grafica' | 'tabla'>('grafica')
   const codes = useMemo(() => Array.from(new Set(data.rows.map(r => r.site_code))), [data])
@@ -223,12 +223,12 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
     const i = sites.findIndex(s => s.code === code)
     return POI_COLORS[(i < 0 ? codes.indexOf(code) : i) % POI_COLORS.length]
   }
-  // El flag más bajo de qc_flags es el "bueno"; el resto se marca en el gráfico
+  // The lowest flag in qc_flags is the "good" one; the rest are marked on the chart
   const goodFlag = data.qc.length ? Math.min(...data.qc.map(q => q.qc_flag)) : null
   const qcLabel = (f: number | null) => data.qc.find(q => q.qc_flag === f)?.label ?? String(f)
   const flagged = data.rows.filter(r => r.qc_flag != null && goodFlag != null && r.qc_flag !== goodFlag)
 
-  // Una fila por fecha, una columna por punto (media si hay varias profundidades)
+  // One row per date, one column per site (mean if there are several depths)
   const chart = useMemo(() => {
     const m = new Map<string, any>()
     for (const r of data.rows) {
@@ -342,7 +342,7 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
 }
 
 
-/** Vista de tabla: el dato crudo, con orden, filtros y descarga. */
+/** Table view: the raw data, with sorting, filters and download. */
 function DataTable({ data, color, qcLabel, goodFlag }: {
   data: DbSeries; color: (c: string) => string; qcLabel: (f: number | null) => string; goodFlag: number | null
 }) {

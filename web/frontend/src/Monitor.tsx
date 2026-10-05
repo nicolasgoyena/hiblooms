@@ -13,7 +13,7 @@ export const LEVELS: Record<string, { color: string; bg: string }> = {
 }
 const ORDER = ['muy alto', 'alto', 'moderado', 'bajo', 'muy bajo', 'sin datos']
 
-/** Controles de la pestaña, dentro del panel lateral. */
+/** Tab controls, inside the side panel. */
 export function MonitorForm({ days, setDays, maxCloud, setMaxCloud, onRun, running }: {
   days: number; setDays: (n: number) => void; maxCloud: number; setMaxCloud: (n: number) => void
   onRun: () => void; running: boolean
@@ -42,7 +42,7 @@ export function MonitorForm({ days, setDays, maxCloud, setMaxCloud, onRun, runni
   )
 }
 
-/** Tarjeta grande: resumen + lista de embalses ordenada por señal. */
+/** Large card: summary + list of reservoirs sorted by signal. */
 export function MonitorResult({ data, onOpen, onClose }: {
   data: { rows: MonitorRow[]; start: string; end: string; days: number }
   onOpen: (id: string, day: string | null) => void
@@ -119,7 +119,7 @@ export function MonitorResult({ data, onOpen, onClose }: {
   )
 }
 
-/** Flecha de tendencia. `up`='bad' cuando subir es mala señal (más algas). */
+/** Trend arrow. `up`='bad' when rising is a bad sign (more algae). */
 function Arrow({ v, thr, up, fmtv }: { v: number | null; thr: number; up?: 'bad' | 'good'; fmtv?: (n: number) => string }) {
   if (v === null || Math.abs(v) < thr) return <span className="mon-arw flat" title={t('estable')}>→</span>
   const rising = v > 0
@@ -133,7 +133,7 @@ function Arrow({ v, thr, up, fmtv }: { v: number | null; thr: number; up?: 'bad'
   )
 }
 
-/** Barra de lámina de agua respecto a la habitual, con su tendencia. */
+/** Water surface bar relative to the usual one, with its trend. */
 function Fill({ row }: { row: MonitorRow }) {
   const pct = row.nivel_pct
   if (pct === null) return <small className="mon-fill-na">{t('nivel sin estimar')}</small>
@@ -155,7 +155,7 @@ function Fill({ row }: { row: MonitorRow }) {
   )
 }
 
-/** Carga inicial automática al entrar en la pestaña. */
+/** Automatic initial load when entering the tab. */
 export function useAutoRun(run: () => void, ready: boolean) {
   useEffect(() => { if (ready) run() }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
 }
@@ -164,7 +164,7 @@ const RIESGO_COL: Record<string, { color: string; bg: string }> = {
   bajo: LEVELS['bajo'], medio: LEVELS['moderado'], alto: LEVELS['alto'],
 }
 
-/** El Val: últimos datos de la sonda SAICA, riesgo estacional de hoy y tendencia a corto plazo. */
+/** El Val: latest SAICA buoy data, today's seasonal risk and short-term trend. */
 function ElValPanel({ onOpen }: { onOpen: () => void }) {
   const [d, setD] = useState<ElValLive | null>(null)
   const [err, setErr] = useState(false)

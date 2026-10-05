@@ -1,26 +1,30 @@
-# HIBLOOMS · Visor web (React)
+# HIBLOOMS · Web viewer (developer notes)
 
-Frontend React + backend FastAPI ligero que reutiliza `hiblooms_core.py`.
-Primera versión: búsqueda de imágenes Sentinel-2 por embalse, mapa del índice, serie temporal.
+React frontend + FastAPI backend that reuses `hiblooms_core.py`. See the root `README.md`
+for an overview of the tool and how to deploy it.
 
 ```
 web/
-├── backend/server.py   # FastAPI: /api/reservoirs, /api/search, /api/image, /api/timeseries
-└── frontend/           # Vite + React + TypeScript + MapLibre + Recharts
+├── backend/
+│   ├── server.py        # FastAPI app: reservoirs, search, images, series, monitor, climatology, data
+│   ├── calibration.py   # Satellite ↔ in situ calibration (one GEE call per run)
+│   ├── projectdb.py     # Read-only access to the project database (Data tab)
+│   └── val_buoy.py      # El Val SAICA buoy: live data, seasonal risk and trend
+├── frontend/            # Vite + React + TypeScript + MapLibre + Recharts
+└── start.bat            # Windows: starts backend and frontend in two windows
 ```
 
-## Arrancar en local
+## Run locally
 
-**1. Backend** (desde la raíz del repo `hiblooms/`):
+**1. Backend** (from the repo root):
 
 ```bash
-pip install fastapi uvicorn geopandas earthengine-api
-# Credenciales GEE: JSON de la cuenta de servicio
-export GEE_SERVICE_ACCOUNT_JSON=/ruta/a/service_account.json   # o el JSON como texto
+pip install -r web/backend/requirements.txt
+export GEE_SERVICE_ACCOUNT_JSON=/path/to/service_account.json   # or the JSON as text
 uvicorn web.backend.server:app --reload --port 8000
 ```
 
-Sin credenciales arranca en **modo demo** (datos simulados) para trabajar en la interfaz:
+Without credentials it starts in **demo mode** (simulated data) so you can work on the interface:
 `HIBLOOMS_MOCK=1 uvicorn web.backend.server:app --reload --port 8000`
 
 **2. Frontend**:
@@ -28,15 +32,15 @@ Sin credenciales arranca en **modo demo** (datos simulados) para trabajar en la 
 ```bash
 cd web/frontend
 npm install
-npm run dev      # http://localhost:5173 (redirige /api → :8000)
+npm run dev      # http://localhost:5173 (proxies /api → :8000)
 ```
 
-## Notas
+## Notes
 
-- La búsqueda usa `get_available_dates` del core (evalúa nubosidad y cobertura imagen a imagen):
-  con rangos largos tarda. Límite: 2 años por búsqueda.
-- La serie temporal recalcula la media del embalse fecha a fecha (lento con GEE; máx. 120 fechas).
-  Siguiente paso: pasarlo a un trabajo asíncrono (como /api/jobs).
-- Mapas base: Esri World Imagery y CARTO (sin API key).
-- Producción: `npm run build` → servir `frontend/dist` (Vercel/Netlify/Render static) y fijar
-  `VITE_API_URL` con la URL del backend; `CORS_ORIGINS` en el backend.
+- The interface is bilingual (Spanish/English): UI strings live in `frontend/src/i18n.ts`.
+- Searches collect the statistics of every image in the period with a single GEE call.
+  Limit: 2 years per search.
+- The time series recomputes the reservoir mean date by date (slow with GEE; max. 120 dates).
+- Long operations (monitor, climatology, calibration) run as background jobs (`/api/jobs/{id}`).
+- Base maps: Esri World Imagery and Esri World Light Gray Canvas (no API key).
+- Production: the `Dockerfile` builds the frontend and serves it from the same service as the API.

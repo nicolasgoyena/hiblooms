@@ -1,28 +1,28 @@
-# Despliegue del visor HIBLOOMS (React + FastAPI en un solo contenedor).
-# Un único servicio sirve la web y la API, así que solo hay un enlace público.
+# Deployment of the HIBLOOMS viewer (React + FastAPI in a single container).
+# A single service serves the web app and the API, so there is only one public link.
 services:
   - type: web
     name: hiblooms
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free              # se duerme a los 15 min sin visitas (~1 min en despertar)
+    plan: free              # sleeps after 15 min without visits (~1 min to wake up)
     healthCheckPath: /api/health
     envVars:
-      # JSON completo de la cuenta de servicio de Google Earth Engine.
-      # Sin esto, el servicio arranca en modo demo con datos simulados.
+      # Full JSON of the Google Earth Engine service account.
+      # Without it, the service starts in demo mode with simulated data.
       - key: GEE_SERVICE_ACCOUNT_JSON
         sync: false
-      # Usuarios de la web: "usuario:contraseña,otro:otra". Si falta, queda abierta.
+      # Web users: "user:password,other:other". If missing, the site is open.
       - key: HIBLOOMS_USERS
         sync: false
-      # Texto largo al azar para firmar las sesiones.
+      # Long random string to sign sessions.
       - key: HIBLOOMS_SECRET
         generateValue: true
-      # Base de datos del proyecto (usuario de SOLO LECTURA), ver BASE_DE_DATOS.md.
-      # Sin ella, la pestaña Datos muestra datos simulados.
+      # Project database (READ-ONLY user), see DATABASE.md.
+      # Without it, the Data tab shows simulated data.
       - key: DATABASE_URL
         sync: false
-      # Carpeta de datos de la instancia (efímera en el plan gratuito).
+      # Instance data folder (ephemeral on the free plan).
       - key: HIBLOOMS_DATA_DIR
         value: /data
 

@@ -1,0 +1,33 @@
+# Downloads the El Val buoy profiles (SAICA · CHE) and adds them to sensor_data in Neon.
+# NOTE: GitHub only runs scheduled workflows that are on the default branch (main).
+name: Update El Val buoy
+
+# The CHE website does not accept connections from GitHub servers (outside Spain),
+# so the daily update runs from a UNAV PC (local .bat).
+# This workflow is kept for manual runs only, in case CHE allows it some day.
+on:
+  workflow_dispatch:        # "Run workflow" button to run it manually
+    inputs:
+      desde:
+        description: "From (YYYY-MM-DD). Empty = from the latest record in the database"
+        required: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas requests beautifulsoup4 lxml SQLAlchemy psycopg2-binary
+      - name: Download and insert
+        env:
+          DATABASE_URL_WRITE: ${{ secrets.NEON_WRITE_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.desde }}" ]; then
+            python scripts/update_val_buoy.py --desde "${{ github.event.inputs.desde }}"
+          else
+            python scripts/update_val_buoy.py
+          fi

@@ -1,9 +1,9 @@
-# ── HIBLOOMS · visor web (React + FastAPI) en un solo contenedor ─────────────
-# Un único servicio sirve la API y la web, así que solo hace falta un enlace.
-# Pensado para Hugging Face Spaces (puerto 7860) pero vale para cualquier sitio
-# que ejecute contenedores (Cloud Run, LifeWatch, un servidor propio).
+# ── HIBLOOMS · web viewer (React + FastAPI) in a single container ────────────
+# A single service serves both the API and the web app, so only one link is needed.
+# Designed for Hugging Face Spaces (port 7860) but works anywhere that
+# runs containers (Cloud Run, LifeWatch, your own server).
 
-# 1) Compilar el frontend
+# 1) Build the frontend
 FROM node:20-slim AS front
 WORKDIR /app
 COPY web/frontend/package*.json ./
@@ -11,7 +11,7 @@ RUN npm ci
 COPY web/frontend/ ./
 RUN npm run build
 
-# 2) Backend + web compilada
+# 2) Backend + built web app
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 ENV MPLBACKEND=Agg
@@ -20,19 +20,19 @@ WORKDIR /app
 COPY web/backend/requirements.txt web/backend/requirements.txt
 RUN pip install --no-cache-dir -r web/backend/requirements.txt
 
-# Código y datos del proyecto (shapefiles de embalses, puntos, boletín)
+# Project code and data (reservoir shapefiles, points, bulletin)
 COPY hiblooms_core.py ./
 COPY shapefiles/ shapefiles/
 COPY data/ data/
 COPY web/backend/ web/backend/
 COPY --from=front /app/dist web/frontend/dist
 
-# Datos de la instancia (shapefiles subidos, calibraciones, cachés).
-# En Hugging Face el sistema de archivos es efímero: si se reinicia, se pierden.
+# Instance data (uploaded shapefiles, calibrations, caches).
+# On Hugging Face the filesystem is ephemeral: it is lost on restart.
 ENV HIBLOOMS_DATA_DIR=/data
 RUN mkdir -p /data && chmod 777 /data
 
-# Puerto por defecto; Render inyecta el suyo en PORT
+# Default port; Render injects its own in PORT
 ENV PORT=7860
 EXPOSE 7860
 CMD ["sh", "-c", "uvicorn web.backend.server:app --host 0.0.0.0 --port ${PORT:-7860}"]

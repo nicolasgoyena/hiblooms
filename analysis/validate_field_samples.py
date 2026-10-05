@@ -1,24 +1,24 @@
 """
-Validación Sentinel-2 ↔ MUESTREOS DE CAMPO de HIBLOOMS (todos los embalses).
+Validation of Sentinel-2 ↔ HIBLOOMS FIELD SAMPLING (all reservoirs).
 
-A diferencia de validacion_sonda.py (un embalse, serie temporal), aquí se usan los
-muestreos del proyecto en todos los embalses: el caso del artículo de Water (2021), con
-rangos muy distintos entre embalses.
+Unlike validate_buoy.py (one reservoir, time series), this uses the project's
+sampling campaigns across all reservoirs: the setting of the Water (2021) paper, with
+very different ranges between reservoirs.
 
-Variables de campo (superficie, ≤ 1,5 m), las que existan en la base:
-  · clorofila: chl_a (laboratorio/campo), chl_total_probe (FluoroProbe)
-  · cianobacterias: chl_cyano (FluoroProbe), ficocianina (si hay), biovolumen y % de
-    cianobacterias del recuento de fitoplancton
-Satélite: la imagen Sentinel-2 válida más cercana en ±3 días a cada muestreo (3×3 píxeles).
+Field variables (surface, ≤ 1.5 m), those available in the database:
+  · chlorophyll: chl_a (lab/field), chl_total_probe (FluoroProbe)
+  · cyanobacteria: chl_cyano (FluoroProbe), phycocyanin (if any), biovolume and % of
+    cyanobacteria from the phytoplankton count
+Satellite: the closest valid Sentinel-2 image within ±3 days of each sample (3×3 pixels).
 
-Validación: dejando fuera un EMBALSE entero (¿funciona en un embalse que el modelo no ha
-visto?), y comparación con "solo estacionalidad".
+Validation: leaving out a whole RESERVOIR (does it work in a reservoir the model has not
+seen?), and comparison with "seasonality only".
 
-Uso (Anaconda Prompt, carpeta del repo):
-    set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
+Usage (Anaconda Prompt, repo folder):
+    set "DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python analisis\\validacion_muestreos.py
-Resultados en analisis/resultados/muestreos/.
+    python analysis\\validate_field_samples.py
+Results in analysis/results/field_validation/.
 """
 from __future__ import annotations
 
@@ -38,13 +38,13 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / "web" / "backend"))
-from validacion_sonda import BANDAS, INDICES, auc, combinaciones, init_gee, _tabla  # noqa: E402
+from validate_buoy import BANDAS, INDICES, auc, combinaciones, init_gee, _tabla  # noqa: E402
 
-OUT = ROOT / "analisis" / "resultados" / "muestreos"
+OUT = ROOT / "analysis" / "results" / "field_validation"
 VENTANA_DIAS = 3
 
 
-# ── Datos de campo ──────────────────────────────────────────────────────────
+# ── Field data ──────────────────────────────────────────────────────────────
 
 def es_objetivo(code: str, name: str) -> str | None:
     c, n = code.lower(), str(name).lower()
@@ -70,7 +70,7 @@ def muestreos() -> pd.DataFrame:
     o = o[o["depth_m"].isna() | (o["depth_m"] <= 1.5)]
     g = o.groupby(["site", "date", "var"])["value"].mean().unstack("var").reset_index()
     print("   variables de campo:", {k: int(g[k].notna().sum()) for k in g.columns if k not in ("site", "date")})
-    # Fitoplancton: biovolumen y % de cianobacterias por muestra
+    # Phytoplankton: biovolume and % of cyanobacteria per sample
     ph = pdb.phyto()["samples"]
     if ph:
         f = pd.DataFrame([{"site": s["site"], "date": pd.Timestamp(s["date"]),
@@ -87,7 +87,7 @@ def muestreos() -> pd.DataFrame:
     return g.dropna(subset=["lat", "lon"])
 
 
-# ── Sentinel-2 en cada punto ────────────────────────────────────────────────
+# ── Sentinel-2 at each point ────────────────────────────────────────────────
 
 def s2_por_punto(ee, g: pd.DataFrame) -> pd.DataFrame:
     filas = []
@@ -104,7 +104,7 @@ def s2_por_punto(ee, g: pd.DataFrame) -> pd.DataFrame:
             agua = scl.eq(6).reduceRegion(ee.Reducer.mean(), cerca, 20).get("SCL")
             nub = scl.eq(3).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10)).reduceRegion(ee.Reducer.mean(), entorno, 20).get("SCL")
             return ee.Feature(None, m.set("agua", agua).set("nubes300", nub).set("t", img.get("system:time_start")))
-        # solo las fechas cercanas a algún muestreo (filtro por lista de ventanas)
+        # only dates close to some sample (filter by list of windows)
         filt = None
         for dte in gg.date.drop_duplicates():
             f = ee.Filter.date((dte - pd.Timedelta(days=VENTANA_DIAS)).strftime("%Y-%m-%d"),
@@ -152,7 +152,7 @@ def emparejar(g: pd.DataFrame, s: pd.DataFrame) -> pd.DataFrame:
     return m
 
 
-# ── Evaluación ──────────────────────────────────────────────────────────────
+# ── Evaluation ──────────────────────────────────────────────────────────────
 
 def evaluar(m: pd.DataFrame, col: str) -> tuple[dict, pd.DataFrame]:
     from scipy import stats
@@ -165,7 +165,7 @@ def evaluar(m: pd.DataFrame, col: str) -> tuple[dict, pd.DataFrame]:
         return r, pd.DataFrame()
     y = d[col]
     r["rango"] = f"{y.min():.3g} – {y.max():.3g}"
-    # índices con nombre, en todo el conjunto
+    # named indices, on the whole dataset
     filas = []
     for k in INDICES:
         x = d[k]
@@ -175,7 +175,7 @@ def evaluar(m: pd.DataFrame, col: str) -> tuple[dict, pd.DataFrame]:
             filas.append({"indice": k, "rho": round(float(rho), 3)})
     tabla = pd.DataFrame(filas).sort_values("rho", key=abs, ascending=False)
     r["NDCI rho (todo)"] = float(tabla.set_index("indice").rho.get("NDCI", np.nan))
-    # búsqueda exhaustiva validada dejando fuera un embalse
+    # exhaustive search validated leaving one reservoir out
     C = combinaciones(d)
     thr = float(y.quantile(0.75))
     oof = pd.Series(np.nan, index=d.index)
@@ -195,11 +195,11 @@ def evaluar(m: pd.DataFrame, col: str) -> tuple[dict, pd.DataFrame]:
         r["mejor índice · rho validado (embalse fuera)"] = round(float(stats.spearmanr(oof[ok], y[ok])[0]), 3)
         r["mejor índice · AUC p75 validado"] = round(float(auc((y[ok] >= thr).values, oof[ok].values)), 3)
         r["índice más elegido"] = pd.Series(elegidos).value_counts().index[0]
-    # NDCI tal cual, sin elegir nada (no puede sobreajustar)
+    # NDCI as is, without choosing anything (cannot overfit)
     x = d["NDCI"]
     ok2 = np.isfinite(x)
     r["NDCI · AUC p75"] = round(float(auc((y[ok2] >= thr).values, x[ok2].values)), 3)
-    # bosque aleatorio (bandas + índices) y solo estacionalidad, embalse fuera
+    # random forest (bands + indices) and seasonality only, reservoir out
     try:
         from sklearn.ensemble import RandomForestRegressor
         X = pd.concat([d[BANDAS], d[list(INDICES)]], axis=1).replace([np.inf, -np.inf], np.nan)

@@ -50,7 +50,7 @@ export function CalibrationForm(p: {
   const [unit, setUnit] = useState('µg/L')
   const [kind, setKind] = useState<Kind>('other')
   const [tz, setTz] = useState('Europe/Madrid')
-  // punto de medida
+  // measurement point
   const [pois, setPois] = useState<Poi[]>([])
   const [where, setWhere] = useState<string>('__aoi')
   const [lat, setLat] = useState(''); const [lon, setLon] = useState('')
@@ -263,7 +263,7 @@ export function CalibrationForm(p: {
   )
 }
 
-// ── Tarjeta de resultados ────────────────────────────────────────────────────
+// ── Results card ─────────────────────────────────────────────────────────────
 export function CalibrationResult(p: {
   r: CalResult; unit: string; target: string; reservoirLabel: string
   onUse: (id: string) => void; onClose: () => void

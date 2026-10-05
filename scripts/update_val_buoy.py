@@ -1,18 +1,18 @@
 """
-Actualiza sensor_data con la estación SAICA 945 del embalse de El Val (CHE).
+Update sensor_data with the SAICA 945 station of El Val reservoir (CHE).
 
-Descarga desde el último dato que ya hay en la base hasta ayer, así que se puede
-ejecutar cuando sea (a diario, una vez por semana o tras meses parado) y se pone al día.
-Es idempotente: antes de insertar un tramo borra lo que hubiera de esta fuente en esas
-mismas fechas, de modo que repetirlo no duplica datos.
+Downloads from the latest record already in the database up to yesterday, so it can be
+run at any time (daily, weekly or after months idle) and it catches up.
+It is idempotent: before inserting a time span it deletes any data from this source on
+those same dates, so re-running it does not duplicate data.
 
-Uso:
-    set DATABASE_URL_WRITE=postgresql://usuario:clave@host/base
-    python scripts/actualizar_sonda_val.py                  # desde el último dato hasta ayer
-    python scripts/actualizar_sonda_val.py --desde 2026-06-01
-    python scripts/actualizar_sonda_val.py --prueba         # descarga y muestra, sin escribir
+Usage:
+    set DATABASE_URL_WRITE=postgresql://user:password@host/db
+    python scripts/update_val_buoy.py                  # from the latest record up to yesterday
+    python scripts/update_val_buoy.py --desde 2026-06-01
+    python scripts/update_val_buoy.py --prueba         # download and show, without writing
 
-Varias bases a la vez (p. ej. Neon y la local): separa las URL con ';' en DATABASE_URL_WRITE.
+Several databases at once (e.g. Neon and the local one): separate the URLs with ';' in DATABASE_URL_WRITE.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ import sys
 import time
 import unicodedata
 
-# La consola de Windows no siempre admite UTF-8: que los símbolos no rompan el script
+# The Windows console does not always support UTF-8: keep symbols from breaking the script
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -35,16 +35,16 @@ import requests
 from bs4 import BeautifulSoup
 from sqlalchemy import create_engine, text
 
-ESTACION = 945                    # estación SAICA del embalse de El Val
-RESERVOIR_ID = 2351               # El Val en reservoirs_spain
-# source_code de estos datos en la base. OJO: "che_aquadam_el_val" es la sonda de perfiles
-# antigua (2018–2024), otra fuente distinta; la estación SAICA 945 continúa desde 2024.
+ESTACION = 945                    # SAICA station of El Val reservoir
+RESERVOIR_ID = 2351               # El Val in reservoirs_spain
+# source_code of this data in the database. NOTE: "che_aquadam_el_val" is the old profiling
+# buoy (2018–2024), a different source; SAICA station 945 continues from 2024.
 SOURCE = "che_saica_945"
 URL = "https://saica.chebro.es/fichaDataTabla.php?estacion={e}&fini={a}&ffin={b}"
-TRAMO_DIAS = 7                    # días por petición (la web devuelve tablas grandes)
+TRAMO_DIAS = 7                    # days per request (the website returns large tables)
 HEADERS = {"User-Agent": "Mozilla/5.0 (HIBLOOMS BIOMA-UNAV; actualizacion de datos de sonda)"}
 
-# Cabecera de la tabla SAICA (sin tildes, en minúsculas) → columna de sensor_data
+# SAICA table header (no accents, lowercase) → sensor_data column
 COLUMNAS = [
     ("fecha", "date_time"),
     ("ficocianina", "phycocyanin"),
@@ -82,8 +82,8 @@ def descargar(desde: date, hasta: date) -> pd.DataFrame:
         cab = [sin_tildes(th.get_text(" ", strip=True)) for th in tabla.find_all("th")]
         if not any("ficocianina" in c or "clorofila" in c for c in cab):
             continue
-        # Texto crudo de cada celda: pandas.read_html confunde el punto decimal con el de
-        # miles (23.8 → 238), así que los números se convierten a mano con num()
+        # Raw text of each cell: pandas.read_html confuses the decimal point with the thousands
+        # separator (23.8 → 238), so numbers are converted by hand with num()
         filas = [[td.get_text(strip=True) for td in tr.find_all("td")]
                  for tr in (tabla.find("tbody") or tabla).find_all("tr")]
         filas = [f for f in filas if len(f) == len(cab)]
@@ -96,7 +96,7 @@ def descargar(desde: date, hasta: date) -> pd.DataFrame:
                 continue
             usadas.add(col)
             out[destino] = df[col]
-        # La profundidad máxima del embalse solo es válida en las celdas marcadas "f1"
+        # The reservoir maximum depth is only valid in cells flagged "f1"
         if "reservoir_max_depth_m" in out:
             idx = next((i for i, c in enumerate(cab) if c.startswith("profundidad maxima embalse")), None)
             if idx is not None and tabla.find("tbody"):
@@ -114,14 +114,14 @@ def descargar(desde: date, hasta: date) -> pd.DataFrame:
             if c != "date_time":
                 out[c] = out[c].map(num)
         out = out.dropna(subset=["date_time"])
-        # La web da hora local peninsular
+        # The website gives mainland Spain local time
         out["date_time"] = out["date_time"].dt.tz_localize("Europe/Madrid", ambiguous="NaT", nonexistent="shift_forward")
         return out.dropna(subset=["date_time"])
     return pd.DataFrame()
 
 
 def control_calidad(df: pd.DataFrame) -> pd.DataFrame:
-    """Mismo criterio que los datos ya cargados: 0 exacto en temperatura o pH = fallo de sensor."""
+    """Same criterion as the data already loaded: exactly 0 in temperature or pH = sensor failure."""
     notas = pd.Series("", index=df.index)
     for c, nombre in (("water_temp", "temperatura"), ("ph", "pH")):
         if c in df:
@@ -133,10 +133,10 @@ def control_calidad(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ── Neon por HTTPS (puerto 443) ─────────────────────────────────────────────
-# La red de la universidad bloquea el puerto 5432 de PostgreSQL, y la web de la CHE no
-# acepta conexiones desde fuera de España (GitHub Actions). Neon admite SQL por HTTPS,
-# así que desde la UNAV se escribe en Neon por el 443 cuando el 5432 no responde.
+# ── Neon over HTTPS (port 443) ─────────────────────────────────────────────
+# The university network blocks PostgreSQL port 5432, and the CHE website does not
+# accept connections from outside Spain (GitHub Actions). Neon supports SQL over HTTPS,
+# so from UNAV we write to Neon over 443 when 5432 does not respond.
 
 class NeonHTTP:
     def __init__(self, url: str):
@@ -160,7 +160,7 @@ class NeonHTTP:
                 continue
             if r.status_code >= 400:
                 raise RuntimeError(f"Neon HTTP {r.status_code}: {r.text[:300]}")
-            self.endpoints = [ep]          # el que funciona, para las siguientes
+            self.endpoints = [ep]          # the one that works, for the next ones
             return r.json()
         raise RuntimeError(f"No se pudo usar Neon por HTTPS: {err}")
 
@@ -186,7 +186,7 @@ def _jsonval(v):
     if isinstance(v, float) and v != v:  # NaN
         return None
     if isinstance(v, pd.Timestamp):
-        return str(v)          # mismo formato que el resto: 2026-09-20 23:30:00+02:00
+        return str(v)          # same format as the rest: 2026-09-20 23:30:00+02:00
     if hasattr(v, "item"):               # numpy → Python
         return v.item()
     return v
@@ -230,7 +230,7 @@ def escribir(engine, df: pd.DataFrame, desde: date, hasta: date) -> int:
             vals = ", ".join("(" + ", ".join(f"${j * k + m + 1}" for m in range(k)) + ")" for j in range(len(part)))
             params = [_jsonval(v) for row in part.itertuples(index=False) for v in row]
             qs.append((f"INSERT INTO sensor_data ({names}) VALUES {vals}", params))
-        engine.transaction(qs)     # todo o nada, como con la conexión normal
+        engine.transaction(qs)     # all or nothing, as with the normal connection
         return len(df)
     with engine.begin() as c:
         c.execute(text("""DELETE FROM sensor_data WHERE source_code = :s
@@ -295,7 +295,7 @@ def main() -> None:
                     total += n
                     print(f"  ✓ {d} → {f}: {n} medidas ({int((df['qc_flag'] > 0).sum())} marcadas)")
             d = f + timedelta(days=1)
-            time.sleep(1)  # sin prisas con el servidor de la CHE
+            time.sleep(1)  # go easy on the CHE server
         print(f"■ {nombre}: {total} medidas escritas" + (" (modo prueba: no se escribe nada)" if a.prueba else ""))
 
 

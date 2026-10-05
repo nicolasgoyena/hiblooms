@@ -1,12 +1,12 @@
-"""Actualiza data/boletin_embalses.csv con el último dato del Boletín Hidrológico Semanal (MITECO).
+"""Update data/reservoir_bulletin.csv with the latest Weekly Hydrological Bulletin data (MITECO).
 
-Descarga la base histórica oficial (Access, ~220 MB), se queda con la última semana de los
-embalses HIBLOOMS y reescribe el CSV que lee el backend. También refresca el histórico.
+Downloads the official historical database (Access, ~220 MB), keeps the latest week for the
+HIBLOOMS reservoirs and rewrites the CSV read by the backend. It also refreshes the history.
 
-Uso:   python scripts/actualizar_boletin.py
-Necesita: pip install pandas requests  y  mdbtools (Linux) o pyodbc/Access (Windows).
-En Windows sin mdbtools, abre el .mdb con Access y exporta la tabla a CSV, luego:
-       python scripts/actualizar_boletin.py --csv ruta\\tabla_exportada.csv
+Usage: python scripts/update_reservoir_bulletin.py
+Requires: pip install pandas requests  and  mdbtools (Linux) or pyodbc/Access (Windows).
+On Windows without mdbtools, open the .mdb in Access, export the table to CSV, then:
+       python scripts/update_reservoir_bulletin.py --csv path\\exported_table.csv
 """
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ URL = ("https://www.miteco.gob.es/content/dam/miteco/es/agua/temas/evaluacion-de
        "boletin-hidrologico/Historico-de-embalses/BD-Embalses.zip")
 TABLE = "T_Datos Embalses 1988-2026"
 ROOT = Path(__file__).resolve().parents[1]
-MAP_CSV = ROOT / "data" / "boletin_embalses.csv"
-HIST_CSV = ROOT / "data" / "boletin_historico_hiblooms.csv"
+MAP_CSV = ROOT / "data" / "reservoir_bulletin.csv"
+HIST_CSV = ROOT / "data" / "reservoir_bulletin_history.csv"
 
 
 def descargar_mdb(dest: Path) -> Path:

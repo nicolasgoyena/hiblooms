@@ -1,21 +1,21 @@
 """
-¿Se puede subir el R² de la clorofila de El Val mejorando los DATOS DE ENTRADA?
+Can the R² of El Val chlorophyll be improved by improving the INPUT DATA?
 
-Prueba, siempre con la misma validación (dejando fuera un año completo):
-  · corrección atmosférica: L2A Sen2Cor (lo actual) frente a L1C sin corregir (TOA)
-  · ventana alrededor de la boya: 1 píxel · 3×3 · 5×5
-  · capa de la sonda: 0–1,5 m · 0–3 m · 0–5 m
-  · filtros de calidad de imagen: brillo solar (B11 alto) y aerosoles (AOT alto)
-  · añadir la estacionalidad (día del año) como variable
-Modelo base: cuadrático sobre NDCI en escala log (el de la web). Para la mejor
-configuración también se prueba un bosque aleatorio con todas las bandas.
+Tests, always with the same validation (leaving one full year out):
+  · atmospheric correction: L2A Sen2Cor (current) vs uncorrected L1C (TOA)
+  · window around the buoy: 1 pixel · 3×3 · 5×5
+  · buoy depth layer: 0–1.5 m · 0–3 m · 0–5 m
+  · image quality filters: sun glint (high B11) and aerosols (high AOT)
+  · adding seasonality (day of year) as a variable
+Base model: quadratic on NDCI in log scale (the one used by the web tool). For the best
+configuration a random forest with all bands is also tested.
 
-Uso (Anaconda Prompt, carpeta del repo):
-    set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
+Usage (Anaconda Prompt, repo folder):
+    set "DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python analisis\\exprimir_clorofila.py
-La descarga de GEE se guarda en analisis/resultados/exprimir/s2_variantes.csv: si vuelves a
-ejecutarlo, no se repite.
+    python analysis\\chlorophyll_input_variants.py
+The GEE download is cached in analysis/results/chlorophyll_inputs/s2_variantes.csv: if you run it
+again, it is not repeated.
 """
 from __future__ import annotations
 
@@ -36,23 +36,23 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from validacion_sonda import BOYA, RES_ID, init_gee  # noqa: E402
-from mejorar_clorofila import metricas  # noqa: E402
+from validate_buoy import BOYA, RES_ID, init_gee  # noqa: E402
+from chlorophyll_model_search import metricas  # noqa: E402
 
 ROOT = HERE.parent
-OUT = ROOT / "analisis" / "resultados" / "exprimir"
+OUT = ROOT / "analysis" / "results" / "chlorophyll_inputs"
 B = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A", "B11"]
-VENTANAS = {"1px": 10, "3x3": 30, "5x5": 50}          # radio del buffer (m) a 20 m de píxel
+VENTANAS = {"1px": 10, "3x3": 30, "5x5": 50}          # buffer radius (m) at 20 m pixel size
 
 
-# ── 1. Sentinel-2: L2A y L1C, tres ventanas ─────────────────────────────────
+# ── 1. Sentinel-2: L2A and L1C, three windows ──────────────────────────────
 
 def extraer(ee) -> pd.DataFrame:
     pt = ee.Geometry.Point(list(BOYA))
     entorno = pt.buffer(300)
 
     def feat(img):
-        # Todo se combina como diccionarios: si un valor sale enmascarado (nulo) no rompe
+        # Everything is combined as dictionaries: a masked (null) value does not break it
         toa = ee.Image(img.get("toa"))
         scl = img.select("SCL")
         props = ee.Dictionary({"t": img.get("system:time_start")})
@@ -89,7 +89,7 @@ def extraer(ee) -> pd.DataFrame:
     return s
 
 
-# ── 2. Sonda por capas ──────────────────────────────────────────────────────
+# ── 2. Buoy by depth layers ────────────────────────────────────────────────
 
 def sonda(url: str, fechas: list[str]) -> pd.DataFrame:
     from sqlalchemy import create_engine, text
@@ -115,7 +115,7 @@ def emparejar(s2: pd.DataFrame, so: pd.DataFrame, horas: float = 3) -> pd.DataFr
     return pd.DataFrame(out)
 
 
-# ── 3. Validación ───────────────────────────────────────────────────────────
+# ── 3. Validation ───────────────────────────────────────────────────────────
 
 def cv(X: np.ndarray, ly: np.ndarray, years: np.ndarray, tipo: str) -> np.ndarray:
     from sklearn.linear_model import LinearRegression
@@ -192,7 +192,7 @@ def main():
     print("\n== Las 12 mejores combinaciones ==")
     print(res[cols].head(12).to_string(index=False))
 
-    # Bosque aleatorio con todas las bandas en la mejor combinación
+    # Random forest with all bands on the best combination
     best = res.iloc[0]
     src = "sr" if best["corrección"].startswith("L2A") else "toa"
     w, capa = best.ventana, best.capa_sonda

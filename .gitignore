@@ -1,6 +1,6 @@
 .streamlit/secrets.toml
 
-# Entornos virtuales
+# Virtual environments
 venv/
 .env
 
@@ -16,13 +16,14 @@ __pycache__/
 .vscode/
 .idea/
 
-# Claves de servicio (nunca al repositorio)
+# Service keys (never in the repository)
 gee_key.json
 *-key.json
 service-account*.json
 
-# Datos de la instancia del visor
+# Viewer instance data
 web/backend/_uploads/
 web/frontend/node_modules/
 web/frontend/.vite/
-scripts/actualizar_sonda_val.bat
+# Local scheduled-task launchers (e.g. daily buoy update on a UNAV PC)
+scripts/*.bat

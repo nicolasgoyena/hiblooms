@@ -1,13 +1,13 @@
 """
-Sonda SAICA 945 de El Val (CHE): datos en tiempo real y los dos modelos que se apoyan en ella.
+SAICA 945 buoy at El Val (CHE): real-time data and the two models built on it.
 
-  · live()           últimas lecturas de ficocianina, temperatura, turbidez y pH (+ últimos 7 días)
-  · riesgo()         riesgo estacional de pico de ficocianina (regresión logística sobre el día del año)
-                     validado dejando fuera un año completo → ficha «validado» en la pestaña Modelos
-  · tendencia()      persistencia + estacionalidad a 1, 3 y 7 días → ficha «experimental»
+  · live()           latest phycocyanin, temperature, turbidity and pH readings (+ last 7 days)
+  · riesgo()         seasonal risk of a phycocyanin peak (logistic regression on day of year)
+                     validated leaving one full year out → "validated" card in the Models tab
+  · tendencia()      persistence + seasonality at 1, 3 and 7 days → "experimental" card
 
-Todo se calcula en el servidor a partir de la base de datos (solo lectura) y se guarda en
-caché: la ficha se actualiza sola cuando entran datos nuevos de la sonda.
+Everything is computed on the server from the database (read-only) and cached:
+the card updates itself when new buoy data comes in.
 """
 from __future__ import annotations
 
@@ -44,10 +44,10 @@ def _cached(key: str, ttl: float, fn):
     return v
 
 
-# ── Datos ───────────────────────────────────────────────────────────────────
+# ── Data ────────────────────────────────────────────────────────────────────
 
 def _raw(days: int) -> pd.DataFrame:
-    """Lecturas crudas (sin datos marcados como erróneos) de los últimos `days` días de datos."""
+    """Raw readings (excluding data flagged as erroneous) for the last `days` days of data."""
     if pdb.is_mock():
         return _mock_raw(days)
     return pdb.q(f"""
@@ -62,7 +62,7 @@ def _raw(days: int) -> pd.DataFrame:
 
 
 def _daily() -> pd.DataFrame:
-    """Media diaria de ficocianina (días con ≥ 12 lecturas), serie completa."""
+    """Daily mean phycocyanin (days with ≥ 12 readings), full series."""
     if pdb.is_mock():
         r = _mock_raw(3 * 365)
     else:
@@ -134,7 +134,7 @@ def _X(doy) -> np.ndarray:
 
 
 def _logit_fit(X, y, l2=1e-3, it=50):
-    """Regresión logística por IRLS (sin sklearn en el servidor)."""
+    """Logistic regression via IRLS (no sklearn on the server)."""
     w = np.zeros(X.shape[1])
     for _ in range(it):
         p = 1 / (1 + np.exp(-X @ w))
@@ -166,7 +166,7 @@ def _riesgo() -> dict:
     y = (d["pc"] >= umbral).values.astype(float)
     doy, yrs = d.index.dayofyear.values, d.index.year.values
     X = _X(doy)
-    # validación: dejar fuera cada año
+    # validation: leave each year out
     p = np.full(len(d), np.nan)
     por_año = []
     for yr in np.unique(yrs):
@@ -243,7 +243,7 @@ def _tendencia() -> dict:
     d = _daily()
     lp = np.log1p(d["pc"])
     doy = d.index.dayofyear.values
-    # backtest honesto: climatología sin el año que se predice
+    # honest backtest: climatology without the year being predicted
     filas, resid = [], {h: [] for h in HORIZONTES}
     for yr in sorted(set(d.index.year)):
         c = _clim(d, excluir=yr)
@@ -261,7 +261,7 @@ def _tendencia() -> dict:
             r2 = 1 - np.sum((np.expm1(pred[k]) - yy) ** 2) / np.sum((yy - yy.mean()) ** 2)
             skill = 1 - np.mean(e ** 2) / np.mean(ep ** 2)
             filas.append({"year": int(yr), "h": h, "n": int(k.sum()), "r2": round(float(r2), 3), "skill": round(float(skill), 3)})
-    # pronóstico desde el último día con dato
+    # forecast from the last day with data
     c = _clim(d)
     ult = d["pc"].dropna()
     t0 = ult.index.max()
@@ -310,10 +310,10 @@ def _tendencia() -> dict:
     }
 
 
-# ── 4. Laboratorio de calibración de ficocianina ────────────────────────────
+# ── 4. Phycocyanin calibration lab ─────────────────────────────────────────
 
 def pares_pc() -> dict:
-    """Pares índice de Sentinel-2 ↔ ficocianina de la sonda, para el laboratorio de la web."""
+    """Sentinel-2 index ↔ buoy phycocyanin pairs, for the web tool's lab."""
     return _cached("pares_pc", 6 * 3600, _pares_pc)
 
 
@@ -338,7 +338,7 @@ def _pares_pc() -> dict:
             d = pd.DataFrame(columns=["date", "pci", "tbda", "ci", "pc"])
     d = d[d["pc"] > 0].copy()
     d["date"] = pd.to_datetime(d["date"])
-    # NDCI es el PCI en otra escala: NDCI = (PCI - 1) / (PCI + 1)
+    # NDCI is PCI on another scale: NDCI = (PCI - 1) / (PCI + 1)
     d["ndci"] = (d["pci"] - 1) / (d["pci"] + 1)
     filas = []
     for r in d.to_dict("records"):
@@ -387,5 +387,5 @@ def cards() -> list:
         try:
             out.append(fn())
         except Exception as e:  # noqa: BLE001
-            print("[sonda_val] ficha no disponible:", e)
+            print("[val_buoy] ficha no disponible:", e)
     return out
