@@ -17,8 +17,8 @@ visto?), y comparación con "solo estacionalidad".
 Uso (Anaconda Prompt, carpeta del repo):
     set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python scripts\\validacion_muestreos.py
-Resultados en resultados_muestreos/.
+    python analisis\\validacion_muestreos.py
+Resultados en analisis/resultados/muestreos/.
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / "web" / "backend"))
 from validacion_sonda import BANDAS, INDICES, auc, combinaciones, init_gee, _tabla  # noqa: E402
 
-OUT = ROOT / "resultados_muestreos"
+OUT = ROOT / "analisis" / "resultados" / "muestreos"
 VENTANA_DIAS = 3
 
 

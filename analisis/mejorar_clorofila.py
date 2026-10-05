@@ -1,7 +1,7 @@
 """
 Mejor modelo posible de CLOROFILA-a en El Val con Sentinel-2 (HIBLOOMS).
 
-Parte de lo que ya descargó validacion_sonda.py (resultados_validacion/s2_boya_todas.csv),
+Parte de lo que ya descargó validacion_sonda.py (analisis/resultados/validacion/s2_boya_todas.csv),
 así que NO vuelve a consultar GEE: solo lee la sonda de la base local.
 
 Qué prueba:
@@ -19,8 +19,8 @@ Qué prueba:
 
 Uso:
     set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
-    python scripts\\mejorar_clorofila.py
-Resultados en resultados_clorofila/.
+    python analisis\\mejorar_clorofila.py
+Resultados en analisis/resultados/clorofila/.
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ sys.path.insert(0, str(HERE))
 from validacion_sonda import BANDAS, INDICES, auc, combinaciones, emparejar, leer_sonda  # noqa: E402
 
 ROOT = HERE.parent
-OUT = ROOT / "resultados_clorofila"
+OUT = ROOT / "analisis" / "resultados" / "clorofila"
 CLASES = [0, 2.5, 8, 25, np.inf]            # OCDE: oligo · meso · eutro · hipereutrófico
 NOMBRES_CLASE = ["oligotrófico", "mesotrófico", "eutrófico", "hipereutrófico"]
 
@@ -71,7 +71,7 @@ def metricas(y, p) -> dict:
 
 
 def pares(url: str, horas: float, agua_min: float) -> pd.DataFrame:
-    s2 = pd.read_csv(ROOT / "resultados_validacion" / "s2_boya_todas.csv")
+    s2 = pd.read_csv(ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv")
     s2["t"] = pd.to_datetime(s2["t"], format="ISO8601", utc=True)
     s2 = s2[(s2.agua >= agua_min) & (s2.nubes300 <= 0.01) & (s2.B4 > 0)].copy()
     for k, (_, f) in INDICES.items():
@@ -193,8 +193,8 @@ def main():
     url = os.getenv("DATABASE_URL")
     if not url:
         sys.exit("Falta DATABASE_URL.")
-    if not (ROOT / "resultados_validacion" / "s2_boya_todas.csv").exists():
-        sys.exit("Ejecuta antes scripts\\validacion_sonda.py (hace falta resultados_validacion\\s2_boya_todas.csv).")
+    if not (ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv").exists():
+        sys.exit("Ejecuta antes analisis\\validacion_sonda.py (hace falta analisis/resultados/validacion\\s2_boya_todas.csv).")
     OUT.mkdir(exist_ok=True)
 
     print("1/3 ¿Cómo emparejar? (ventana y filtro de agua)")

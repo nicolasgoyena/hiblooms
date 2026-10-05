@@ -4,8 +4,5 @@ web/frontend/dist
 web/backend/_uploads
 **/__pycache__
 .streamlit
-images
-tests
-hiblooms_app
-pages
-api
+analisis
+scripts

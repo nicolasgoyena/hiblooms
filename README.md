@@ -1,170 +1,97 @@
-# HIBLOOMS — Detection and Visualization of Cyanobacterial Blooms in Reservoirs
+# HIBLOOMS — Detección y seguimiento de floraciones de cianobacterias en embalses
 
-Official repository of the **HIBLOOMS** project.
+Repositorio de la herramienta digital del proyecto **HIBLOOMS** (Instituto BIOMA, Universidad de Navarra).
+Combina imágenes **Sentinel-2** (Google Earth Engine) con datos de campo, laboratorio y sondas para
+seguir la calidad del agua en embalses.
 
-## Contents
+Versión publicada: <https://hiblooms.onrender.com>
 
-* **Web application** (Streamlit): Explore, analyze, and download water quality spectral indices derived from **Sentinel‑2** imagery, with comparison to *in situ* measurements. The app includes a set of predefined Spanish reservoirs but also allows users to upload their own shapefiles to visualize and analyze any reservoir.
-* **REST API** (FastAPI): Asynchronous backend that handles heavy Earth Engine processing jobs, decoupled from the Streamlit frontend.
-* **Auxiliary modules**: Core processing logic, calibration, database utilities, and i18n support.
-* **CLI version** (`hiblooms_core.py`): Run the processing pipelines without a web interface.
+## Qué hace
 
-## Installation
+- **Proyecto**: información del proyecto, equipo y financiación.
+- **Seguimiento actual**: estado de todos los embalses (boletín hidrológico, sonda de El Val en tiempo casi real).
+- **Visor satelital**: búsqueda de imágenes Sentinel-2 por embalse, mapas de índices, serie temporal,
+  distribución por clases y contexto histórico. Admite shapefiles propios (ZIP) para cualquier embalse.
+- **Datos del proyecto**: muestreos de campo, laboratorio, sondas y campañas (base PostgreSQL/PostGIS).
+- **Modelos y calibraciones**: fichas de los modelos validados y calibración con datos in situ del usuario.
 
-1. Clone the repository:
+## Modelos
 
-   ```bash
-   git clone https://github.com/<your-org>/hiblooms.git
-   cd hiblooms
-   ```
+Los modelos con coeficientes ajustados viven en `data/modelos/*.json` (fórmula, coeficientes, validación y
+límites), no en el código: recalibrar un modelo no exige tocar Python.
 
-2. Create and activate a virtual environment (recommended):
+| Índice | Estado | Embalse |
+|---|---|---|
+| `Chla_Val_cal` — clorofila-a | Validado (sonda CHE, 2018–2024, validación dejando fuera un año) | El Val |
+| `PC_Bellus_cal`, `Chla_Bellus_cal`, `SDD_Bellus_UV`, `TSM_Bellus_UV` | Modelos de la Universitat de València | Bellús |
+| `PC_Val_cal`, `UV_PC_Gral_cal`, `PCI_B5/B4` | Experimentales (Sentinel-2 no estima bien la ficocianina) | — |
+| `NDCI_ind`, `MCI` | Índices espectrales | Cualquiera |
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate   # Linux/Mac
-   venv\Scripts\activate      # Windows
-   ```
+Los análisis que justifican estas decisiones están en `analisis/` (ver más abajo).
 
-3. Install dependencies:
-
-   ```bash
-   # Streamlit app
-   pip install -r requirements.txt
-
-   # API (only needed on the API server)
-   pip install -r requirements_api.txt
-   ```
-
-## Usage
-
-### Web Application (Streamlit)
-
-```bash
-streamlit run app.py
-```
-
-### REST API (FastAPI)
-
-```bash
-uvicorn api.main:app --reload
-```
-
-### CLI Version
-
-```bash
-python hiblooms_core.py --help
-```
-
-## Repository Structure
+## Estructura
 
 ```
 hiblooms/
-├── .devcontainer/             # Optional configuration for container-based development
-│   └── devcontainer.json
-├── api/                       # FastAPI backend
-│   ├── main.py                #   REST endpoints
-│   ├── jobs_store.py          #   Job persistence in PostgreSQL
-│   └── worker.py              #   Asynchronous processing with Google Earth Engine
-├── data/                      # Auxiliary data used by the app
-│   ├── puntos_interes.csv     #   Sampling point coordinates
-│   ├── clorofila_val_entero.csv
-│   └── fechas_validas_*.csv   #   Precomputed valid dates by reservoir
-├── images/                    # App logos and images
-├── pages/                     # Additional Streamlit pages
-│   ├── login.py
-│   └── 2_Data_Catalog.py
-├── scripts/                   # ETL and precomputation utilities
-│   ├── actualizar_ficocianina.py
-│   ├── descargar_cloro.py
-│   ├── descargar_ficocianina.py
-│   └── precalculo_fechas_optimizado.py
-├── tests/                     # Test suite (pytest)
-│   ├── test_jobs_store.py
-│   └── test_api.py
-├── shapefiles/                # HIBLOOMS reservoir shapefile
-│   ├── embalses_hiblooms.shp
-│   ├── embalses_hiblooms.dbf
-│   ├── embalses_hiblooms.shx
-│   └── embalses_hiblooms.prj
-├── app.py                     # Main Streamlit application and visualization interface
-├── hiblooms_core.py           # GEE logic: indices, maps, statistics, and exports
-├── hiblooms_calibration.py    # Calibration workflow and GEE-compatible map models
-├── db_utils.py                # PostgreSQL connection and utilities
-├── i18n.py                    # ES/EN translations
-├── styles.css                 # Global app styles
-├── requirements.txt           # Streamlit app dependencies
-├── requirements_api.txt       # FastAPI backend dependencies
-├── render.yaml                # Render.com deployment configuration
-└── README.md
+├── hiblooms_core.py          # Núcleo GEE: embalses, nubosidad, índices y modelos sobre Sentinel-2
+├── shapefiles/               # Embalses del proyecto (embalses_hiblooms.*)
+├── data/
+│   ├── modelos/              # Fichas y coeficientes de los modelos (p. ej. chla_val.json)
+│   ├── puntos_interes.csv    # Puntos de muestreo por embalse
+│   └── boletin_*.csv         # Boletín hidrológico (lo genera scripts/actualizar_boletin.py)
+├── web/
+│   ├── backend/              # API FastAPI (server.py, calibration.py, projectdb.py, sonda_val.py)
+│   ├── frontend/             # React + TypeScript + Vite + MapLibre
+│   └── arrancar.bat          # Arranque local en Windows (backend + frontend)
+├── scripts/                  # Actualización de datos
+│   ├── actualizar_boletin.py
+│   └── actualizar_sonda_val.py
+├── analisis/                 # Validaciones y ajuste de modelos (no se despliegan)
+│   ├── validacion_sonda.py, validacion_muestreos.py
+│   ├── exprimir_clorofila.py, mejorar_clorofila.py, ajustar_clorofila_final.py
+│   ├── modelo_riesgo.py
+│   └── resultados/           # Tablas, figuras e informes de cada análisis
+├── Dockerfile                # Un solo contenedor: compila el frontend y sirve web + API
+├── render.yaml               # Despliegue en Render
+├── DESPLIEGUE.md             # Cómo desplegar (Render, servidor propio, LifeWatch)
+└── BASE_DE_DATOS.md          # Conexión de la pestaña Datos a la base del proyecto
 ```
 
-## Configuration
-
-### API service (`hiblooms-api`) — environment variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `GEE_SERVICE_ACCOUNT_JSON` | yes | Google Earth Engine service account JSON |
-| `DATABASE_URL` | yes | PostgreSQL connection string where jobs are persisted, e.g. `postgresql+psycopg2://user:pass@host:5432/dbname`. The `hiblooms_jobs` table is created automatically on startup |
-| `HIBLOOMS_API_TOKEN` | yes in production | Shared token required in the `X-API-Token` header. If unset, the API accepts unauthenticated requests and logs a warning |
-| `APP_ORIGIN` | recommended | Origin allowed by CORS, e.g. `https://hiblooms-app.onrender.com`. Defaults to `*` |
-
-### Streamlit app (`hiblooms-app`) — `.streamlit/secrets.toml`
-
-```toml
-api_url   = "https://hiblooms-api.onrender.com"
-api_token = "<same value as HIBLOOMS_API_TOKEN>"
-
-GEE_SERVICE_ACCOUNT_JSON = "..."
-
-[postgres]
-host = "..."
-port = 5432
-dbname = "..."
-user = "..."
-password = "..."
-
-[auth]
-username1 = "..."
-password1 = "..."
-```
-
-`api_token` **must** match `HIBLOOMS_API_TOKEN` on the API service, otherwise every
-job submission is rejected with HTTP 401.
-
-## Tests
+## Arrancar en local
 
 ```bash
-pip install pytest
-export TEST_DATABASE_URL="postgresql://postgres:pass@localhost:5432/hiblooms_test"
-pytest tests/
+# Backend (desde la raíz del repo)
+pip install -r web/backend/requirements.txt
+export GEE_SERVICE_ACCOUNT_JSON=/ruta/a/service_account.json   # o el JSON como texto
+export DATABASE_URL=postgresql://usuario:clave@host:5432/base   # opcional (pestaña Datos)
+uvicorn web.backend.server:app --reload --port 8000
+
+# Frontend
+cd web/frontend
+npm install
+npm run dev      # http://localhost:5173
 ```
 
-The tests are skipped (not failed) when `TEST_DATABASE_URL` is not set. Use a
-throwaway database: the suite creates and deletes rows in `hiblooms_jobs`.
+Sin credenciales de GEE el backend arranca en **modo demo** con datos simulados
+(`HIBLOOMS_MOCK=1` lo fuerza). En Windows, `web\arrancar.bat` lanza las dos partes.
 
-## Deployment
+## Desplegar
 
-The app is deployed on [Render.com](https://render.com) as two separate services defined in `render.yaml`:
-
-- **hiblooms-api**: FastAPI service running `api/main.py`
-- **hiblooms-app**: Streamlit service running `app.py`
-
-Job state is persisted in PostgreSQL, so jobs survive restarts, cold starts and
-redeploys, and the API can run with more than one instance. Finished jobs are
-deleted automatically after 2 days; a job left running for over an hour without
-progress is reported as failed (its worker died).
-
-## Citation
-
-If you use HIBLOOMS in your work, please cite the project as:
-
+```bash
+docker build -t hiblooms .
+docker run -p 8000:7860 -e GEE_SERVICE_ACCOUNT_JSON="$(cat gee_key.json)" hiblooms
 ```
+
+Variables de entorno: `GEE_SERVICE_ACCOUNT_JSON`, `DATABASE_URL` (solo lectura), `HIBLOOMS_USERS`
+(`usuario:contraseña,...`), `HIBLOOMS_SECRET`, `HIBLOOMS_DATA_DIR`. Detalle en `DESPLIEGUE.md`.
+
+## Componente en LifeWatch ERIC
+
+El workflow de HIBLOOMS en el VRE de LifeWatch (componentes *HiBloomsCalibration* y
+*HiBloomsVisualization*) se mantiene en el GitLab de LifeWatch y toma como referencia
+`hiblooms_core.py`, `web/backend/calibration.py` y `data/modelos/` de este repositorio.
+
+## Licencia y cita
+
 HIBLOOMS Project — Detection and Visualization of Cyanobacterial Blooms in Reservoirs.
-University of Navarra, 2025.
-GitHub repository: https://github.com/<your-org>/hiblooms
-```
-
-## License
-
+Universidad de Navarra.

@@ -13,8 +13,8 @@ configuración también se prueba un bosque aleatorio con todas las bandas.
 Uso (Anaconda Prompt, carpeta del repo):
     set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python scripts\\exprimir_clorofila.py
-La descarga de GEE se guarda en resultados_exprimir/s2_variantes.csv: si vuelves a
+    python analisis\\exprimir_clorofila.py
+La descarga de GEE se guarda en analisis/resultados/exprimir/s2_variantes.csv: si vuelves a
 ejecutarlo, no se repite.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ from validacion_sonda import BOYA, RES_ID, init_gee  # noqa: E402
 from mejorar_clorofila import metricas  # noqa: E402
 
 ROOT = HERE.parent
-OUT = ROOT / "resultados_exprimir"
+OUT = ROOT / "analisis" / "resultados" / "exprimir"
 B = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A", "B11"]
 VENTANAS = {"1px": 10, "3x3": 30, "5x5": 50}          # radio del buffer (m) a 20 m de píxel
 

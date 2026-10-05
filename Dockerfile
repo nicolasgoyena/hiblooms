@@ -21,7 +21,7 @@ COPY web/backend/requirements.txt web/backend/requirements.txt
 RUN pip install --no-cache-dir -r web/backend/requirements.txt
 
 # Código y datos del proyecto (shapefiles de embalses, puntos, boletín)
-COPY hiblooms_core.py hiblooms_calibration.py ./
+COPY hiblooms_core.py ./
 COPY shapefiles/ shapefiles/
 COPY data/ data/
 COPY web/backend/ web/backend/

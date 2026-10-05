@@ -7,11 +7,11 @@ Para cada imagen Sentinel-2 (2018–hoy) sobre la boya de El Val:
   3. empareja con la sonda en ±2 h: clorofila (Aquadam, 2018–2024, 0–1,5 m)
      y ficocianina (Aquadam y SAICA 945, 2024–hoy),
   4. calcula correlaciones y capacidad de detección (AUC) por índice,
-  5. guarda tablas, figuras e informe en resultados_validacion/.
+  5. guarda tablas, figuras e informe en analisis/resultados/validacion/.
 
 Uso (Anaconda Prompt, en la carpeta del repo):
     set DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling
-    python scripts\\validacion_sonda.py
+    python analisis\\validacion_sonda.py
 Opcional: --lon/--lat de la boya, --desde 2018-01-01, --ventana 2 (horas)
 
 Credenciales GEE: variable GEE_SERVICE_ACCOUNT_JSON (JSON o ruta) o .streamlit/secrets.toml,
@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "resultados_validacion"
+OUT = ROOT / "analisis" / "resultados" / "validacion"
 BOYA = (-1.7883, 41.8761)          # lon, lat de la boya de El Val (la de los scripts antiguos)
 RES_ID = 2351
 

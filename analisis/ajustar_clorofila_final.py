@@ -6,11 +6,11 @@ Configuración elegida con exprimir_clorofila.py:
   · clorofila de la sonda en 0–3 m
   · log10(Chl) = a + b·NDCI + c·NDCI² + d·sen(2π·día/365,25) + e·cos(2π·día/365,25)
 
-Lee resultados_exprimir/pares_variantes.csv (no consulta GEE), valida dejando fuera cada
+Lee analisis/resultados/exprimir/pares_variantes.csv (no consulta GEE), valida dejando fuera cada
 año, ajusta con todos los datos y actualiza la ficha data/modelos/chla_val.json, de donde
 el visor lee los coeficientes (hiblooms_core.py).
 
-Uso:  python scripts\\ajustar_clorofila_final.py
+Uso:  python analisis\\ajustar_clorofila_final.py
 """
 from __future__ import annotations
 
@@ -44,9 +44,9 @@ def rasgos(ndci, doy, estacional=True, cuadratico=True):
 
 
 def main():
-    f = ROOT / "resultados_exprimir" / "pares_variantes.csv"
+    f = ROOT / "analisis" / "resultados" / "exprimir" / "pares_variantes.csv"
     if not f.exists():
-        sys.exit("Falta resultados_exprimir\\pares_variantes.csv: ejecuta antes exprimir_clorofila.py")
+        sys.exit("Falta analisis/resultados/exprimir\\pares_variantes.csv: ejecuta antes exprimir_clorofila.py")
     m = pd.read_csv(f)
     m["t"] = pd.to_datetime(m["t"], format="ISO8601", utc=True)
     b4, b5 = m["toa_5x5_B4"], m["toa_5x5_B5"]

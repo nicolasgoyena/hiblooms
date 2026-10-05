@@ -1,7 +1,7 @@
 """
 HIBLOOMS · backend ligero para el frontend React.
 
-Reutiliza hiblooms_core.py (misma lógica que la app Streamlit) y expone
+Reutiliza hiblooms_core.py y expone
 endpoints síncronos sencillos para búsquedas satelitales:
 
   GET  /api/health
@@ -81,7 +81,7 @@ MOCK = os.getenv("HIBLOOMS_MOCK") == "1"
 
 
 def _secrets() -> dict:
-    """Lee el mismo .streamlit/secrets.toml que usa la app Streamlit (si existe)."""
+    """Lee .streamlit/secrets.toml si existe (credenciales en local, formato heredado)."""
     try:
         import tomllib  # Python ≥ 3.11
     except ModuleNotFoundError:
@@ -104,7 +104,7 @@ if not MOCK:
         import hiblooms_core as core  # noqa: E402
 
         sa = os.getenv("GEE_SERVICE_ACCOUNT_JSON")
-        if not sa:  # mismo secrets.toml que usa la app Streamlit
+        if not sa:  # .streamlit/secrets.toml en local
             sec = _secrets()
             if "GEE_SERVICE_ACCOUNT_JSON" in sec:
                 sa = json.loads(sec["GEE_SERVICE_ACCOUNT_JSON"], strict=False)
@@ -126,7 +126,7 @@ app.add_middleware(
 
 # ── Acceso (login) ───────────────────────────────────────────────────────────
 # Usuarios: variable HIBLOOMS_USERS="user1:pass1,user2:pass2" o la sección [auth]
-# de secrets.toml (username1/password1, username2/password2… igual que Streamlit).
+# de secrets.toml (username1/password1, username2/password2…).
 # Si no hay usuarios configurados, la web queda abierta (sin login).
 import hashlib, hmac, secrets as _pysecrets, time  # noqa: E402
 

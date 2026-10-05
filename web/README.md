@@ -15,7 +15,7 @@ web/
 
 ```bash
 pip install fastapi uvicorn geopandas earthengine-api
-# Credenciales GEE: el mismo JSON de cuenta de servicio que usa Streamlit
+# Credenciales GEE: JSON de la cuenta de servicio
 export GEE_SERVICE_ACCOUNT_JSON=/ruta/a/service_account.json   # o el JSON como texto
 uvicorn web.backend.server:app --reload --port 8000
 ```
@@ -36,7 +36,7 @@ npm run dev      # http://localhost:5173 (redirige /api → :8000)
 - La búsqueda usa `get_available_dates` del core (evalúa nubosidad y cobertura imagen a imagen):
   con rangos largos tarda. Límite: 2 años por búsqueda.
 - La serie temporal recalcula la media del embalse fecha a fecha (lento con GEE; máx. 120 fechas).
-  Siguiente paso: pasarlo al worker asíncrono de `api/`.
+  Siguiente paso: pasarlo a un trabajo asíncrono (como /api/jobs).
 - Mapas base: Esri World Imagery y CARTO (sin API key).
 - Producción: `npm run build` → servir `frontend/dist` (Vercel/Netlify/Render static) y fijar
   `VITE_API_URL` con la URL del backend; `CORS_ORIGINS` en el backend.

@@ -255,7 +255,7 @@ def _ensure_bands_available(image: ee.Image, bands: Sequence[str], date_label: s
 def _add_calibration_feature_bands(image: ee.Image) -> ee.Image:
     """Add the calibration predictor bands used by the calibration workflow.
 
-    Band names intentionally match hiblooms_calibration.CANDIDATE_INDICES so a
+    Band names intentionally match web/backend/calibration.CANDIDATE_INDICES so a
     saved linear calibration can be applied pixel-wise in Earth Engine.
     """
     b4 = image.select("B4").toFloat()

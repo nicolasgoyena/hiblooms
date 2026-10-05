@@ -15,8 +15,8 @@ Diseño honesto:
 Uso (Anaconda Prompt, carpeta del repo; tras haber ejecutado validacion_sonda.py):
     set "DATABASE_URL=postgresql://postgres:CLAVE@localhost:5432/unav_water_sampling"
     set "GEE_SERVICE_ACCOUNT_JSON=C:\\Users\\ngoyenaserv\\gee.json"
-    python scripts\\modelo_riesgo.py
-Resultados en resultados_riesgo/.
+    python analisis\\modelo_riesgo.py
+Resultados en analisis/resultados/riesgo/.
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validacion_sonda import BOYA, RES_ID, auc, init_gee  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "resultados_riesgo"
+OUT = ROOT / "analisis" / "resultados" / "riesgo"
 SOURCE = "che_saica_945"
 
 
@@ -84,9 +84,9 @@ def meteo_gee(ee, lon, lat, desde: str, hasta: str) -> pd.DataFrame:
 
 def ndci_diario(fechas: pd.DatetimeIndex) -> pd.DataFrame:
     """Último NDCI válido de Sentinel-2 (≤ 15 días de antigüedad), del CSV de validacion_sonda.py."""
-    f = ROOT / "resultados_validacion" / "s2_boya_todas.csv"
+    f = ROOT / "analisis" / "resultados" / "validacion" / "s2_boya_todas.csv"
     if not f.exists():
-        print("   (no hay resultados_validacion/s2_boya_todas.csv: sin NDCI)")
+        print("   (no hay analisis/resultados/validacion/s2_boya_todas.csv: sin NDCI)")
         return pd.DataFrame({"fecha": fechas})
     s = pd.read_csv(f)
     s = s[(s.agua >= 0.99) & (s.nubes300 <= 0.01) & (s.B4 > 0)].copy()

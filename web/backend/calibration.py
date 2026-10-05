@@ -1,9 +1,7 @@
 """
 Calibración satélite ↔ in situ para el visor React.
 
-Reutiliza de hiblooms_calibration.py: prepare_insitu, match_insitu_to_overpass,
-fit_calibration_model (catálogo de 9 modelos, CV, outliers) y la conversión a raster.
-Lo que cambia es la extracción satelital: en vez de 4–6 llamadas a GEE por imagen,
+Extracción satelital: en vez de 4–6 llamadas a GEE por imagen,
 se calculan en el servidor de GEE los 12 índices + nubosidad + cobertura de TODAS las
 imágenes del periodo y se recogen con UNA sola llamada.
 """
@@ -20,9 +18,11 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-import hiblooms_calibration as hc
-
-CANDIDATE_INDICES = list(hc.CANDIDATE_INDICES)
+# Índices candidatos como predictores (mismos nombres de banda que hiblooms_core._add_calibration_feature_bands)
+CANDIDATE_INDICES = [
+    "NDCI_705_665", "MCI_705", "R705_R665", "R740_R665", "R783_R665", "TB_740",
+    "TB_783", "NDRE_783_705", "NDRE_740_705", "B5_B4_diff", "B6_B5_diff", "B7_B5_diff",
+]
 MODEL_NAMES = ["linear", "ridge", "lasso", "elastic_net", "logistic", "poly2", "svr_rbf", "random_forest", "gradient_boosting"]
 RASTERIZABLE = ["linear", "ridge", "lasso", "elastic_net", "logistic"]
 S2 = "COPERNICUS/S2_SR_HARMONIZED"
@@ -131,7 +131,7 @@ def resolve_sites(insitu: pd.DataFrame, pois: List[dict], single_point: Optional
 
 # ── Extracción satelital en UNA llamada ──────────────────────────────────────
 def _add_indices(img):
-    """Idéntico a add_indices de hiblooms_calibration.compute_satellite_features."""
+    """Los 12 índices candidatos (mismas fórmulas que hiblooms_core._add_calibration_feature_bands)."""
     b4 = img.select("B4").toFloat().divide(10000)
     b5 = img.select("B5").toFloat().divide(10000)
     b6 = img.select("B6").toFloat().divide(10000)
