@@ -350,16 +350,20 @@ def _build_indices_image(
     aoi: ee.Geometry,
     selected_indices: Sequence[str],
     calibration_raster_config: Optional[Dict] = None,
+    check_bands: bool = True,
 ) -> ee.Image:
     """
     Build an image with the base bands + selected indices.
     Applies a cloud mask (SCL != 8,9,10) to the indices.
+    check_bands=False skips the band check (a getInfo call), so the function can be mapped
+    over an ImageCollection on the Earth Engine server.
     """
     scl = base_image.select("SCL")
     cloud_mask = scl.neq(8).And(scl.neq(9)).And(scl.neq(10))
 
     required = ["B2", "B3", "B4", "B5", "B6", "B7", "B8A"]
-    _ensure_bands_available(base_image, required)
+    if check_bands:
+        _ensure_bands_available(base_image, required)
 
     clipped = base_image.clip(aoi)
     optical = clipped.select(required).divide(10000)

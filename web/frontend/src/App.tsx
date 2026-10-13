@@ -65,11 +65,9 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [downloading, setDownloading] = useState<string | null>(null)
   const [clim, setClim] = useState<ClimResp | null>(null)
   const [loadingClim, setLoadingClim] = useState(false)
-  const CLIM_OK = ['NDCI_ind', 'PCI_B5/B4']
   const runClim = async (idx = indexId) => {
     if (!reservoir) return
     setPanelOpen(true); setTab('clima')
-    if (!CLIM_OK.includes(idx)) { setClim(null); return }
     if (clim && clim.index === idx) return
     setLoadingClim(true); setError(null)
     try { setClim(await api.climatology({ reservoir, index: idx, water_only: waterOnly }, j => setProg(j))) }
@@ -736,12 +734,6 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
           {tab === 'clima' && (loadingClim
             ? <p className="muted an-empty"><span className="spin dark" /> {prog?.step || t('Calculando la climatología…')} {prog ? `· ${prog.progress}%` : ''}</p>
-            : !CLIM_OK.includes(indexId)
-              ? <div className="an-empty">
-                  <p className="muted">{t('La climatología compara con años anteriores, así que solo tiene sentido con índices comparables entre embalses. Elige NDCI o PCI.')}</p>
-                  <button className="ghost solid" style={{ maxWidth: 200, margin: '10px auto 0' }}
-                    onClick={() => { changeIndex('NDCI_ind'); runClim('NDCI_ind') }}>{t('Ver con NDCI')}</button>
-                </div>
               : clim ? <Climatology data={clim} /> : null)}
           {tab === 'clases' && (
             loadingClasses ? <p className="muted an-empty"><span className="spin dark" /> {t('Calculando superficie por clases…')}</p>

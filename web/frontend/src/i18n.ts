@@ -272,8 +272,6 @@ const EN: Record<string, string> = {
   'habitual': 'usual',
   'imágenes': 'images',
   'Percentil 90 del índice sobre la lámina de agua de cada imagen (el mismo criterio que el monitor), con {n} imágenes válidas desde {a}. Las quincenas con menos de 4 imágenes en años anteriores se quedan sin rango.': '90th percentile of the index over the water surface of each image (the same criterion as the monitor), from {n} valid images since {a}. Fortnights with fewer than 4 images in previous years are left without a range.',
-  'La climatología compara con años anteriores, así que solo tiene sentido con índices comparables entre embalses. Elige NDCI o PCI.': 'Climatology compares against previous years, so it only makes sense with indices that are comparable across reservoirs. Choose NDCI or PCI.',
-  'Ver con NDCI': 'Show with NDCI',
 
   'ene': 'Jan',
   'feb': 'Feb',

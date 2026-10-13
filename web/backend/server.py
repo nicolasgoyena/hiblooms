@@ -1342,12 +1342,17 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
 
 
 # ── Climatology: is this year normal for this time of year? ─────────────────
-# Only NDCI and PCI: they are comparable across years and reservoirs. Calibrated indices
-# are local (El Val, Bellús) and their historical series in another reservoir means nothing.
-# All valid images of each year, 90th percentile over the water surface
-# (same as the monitor, to avoid mixing criteria), grouped by half-months.
-CLIM_INDICES = {"NDCI_ind": "ndci", "PCI_B5/B4": "pci"}
+# Any index available for the reservoir: spectral indices, the models of that reservoir
+# (El Val, Bellús) and the user's calibrations. The comparison is always within one reservoir,
+# so a local model is compared with its own past. All valid images of each year, 90th
+# percentile over the clear water surface (same as the monitor), grouped by half-months.
 CLIM_SCALE = 30        # m per pixel
+
+
+def _index_allowed(reservoir: str, index: str) -> bool:
+    """An index tied to a reservoir (meta "reservoir") is only valid for that reservoir."""
+    res = _meta(index).get("reservoir")
+    return res is None or res == reservoir
 
 
 class ClimReq(BaseModel):
@@ -1376,10 +1381,9 @@ def climatology(req: ClimReq, wait: bool = False):
 
 
 def _do_climatology(req: ClimReq, prog):
-    _check(req.reservoir)
-    if req.index not in CLIM_INDICES:
-        raise HTTPException(400, "La climatología solo está disponible para NDCI y PCI: "
-                                 "los índices calibrados son locales y su histórico no es comparable.")
+    _check(req.reservoir, req.index)
+    if not _index_allowed(req.reservoir, req.index):
+        raise HTTPException(400, "Este índice está calibrado para otro embalse: su histórico aquí no tiene sentido.")
     meta = _meta(req.index)
     end = date.today()
     start = date(end.year - req.years + 1, 1, 1)
@@ -1398,29 +1402,32 @@ def _do_climatology(req: ClimReq, prog):
                 "years": [start.year, end.year], "points": pts}
 
     import hashlib
-    key = hashlib.md5(f"v2|{req.reservoir}|{req.index}|{req.years}|{req.max_cloud}|{req.water_only}".encode()).hexdigest()[:10]
+    cal_v = json.dumps(CALS[req.index]["raster"], sort_keys=True) if req.index in CALS else ""
+    key = hashlib.md5(f"v3|{req.reservoir}|{req.index}|{req.years}|{req.max_cloud}|{req.water_only}|{cal_v}".encode()).hexdigest()[:10]
     f = _clim_cache(key)
     if f.exists() and (datetime.now().timestamp() - f.stat().st_mtime) < 86400:
         return json.loads(f.read_text(encoding="utf-8"))
 
     import ee
-    band = CLIM_INDICES[req.index]
     aoi = _aoi(req.reservoir)
+    band = _band(req.index)
+    base_ids = [] if req.index in CALS else [req.index]
 
     def stat(img):
         """90th percentile of the index over the clear water surface of that image."""
         scl = img.select("SCL")
         clear = (scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8))
                  .And(scl.neq(9)).And(scl.neq(10)).And(scl.neq(11)))
-        b = img.select(["B3", "B4", "B5", "B8A", "B11"]).divide(10000)
-        b3, b4, b5, b8a, b11 = b.select("B3"), b.select("B4"), b.select("B5"), b.select("B8A"), b.select("B11")
+        b = img.select(["B3", "B8A", "B11"]).divide(10000)
+        b3, b8a, b11 = b.select("B3"), b.select("B8A"), b.select("B11")
         ndwi = b3.subtract(b8a).divide(b3.add(b8a))
         mndwi = b3.subtract(b11).divide(b3.add(b11))
         water = mndwi.gt(0).Or(ndwi.gt(0))
         if req.water_only:
             water = water.focal_min(radius=SHORE_ERODE_M, units="meters")
-        ix = (b5.subtract(b4).divide(b5.add(b4)) if band == "ndci" else b5.divide(b4)).rename("v")
-        r = ix.updateMask(clear.And(water)).reduceRegion(
+        ind = core._build_indices_image(img, aoi, base_ids, check_bands=False)
+        ind = _with_index(ind, req.index, aoi)
+        r = ind.select(band).rename("v").updateMask(clear.And(water)).reduceRegion(
             ee.Reducer.percentile([90]).combine(ee.Reducer.count(), sharedInputs=True),
             aoi, CLIM_SCALE, maxPixels=1e13, tileScale=4)
         return ee.Feature(None, {"t": img.get("system:time_start"), "v": r.get("v_p90"), "n": r.get("v_count")})
