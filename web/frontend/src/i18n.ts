@@ -299,7 +299,7 @@ const EN: Record<string, string> = {
   'Este año va por debajo de lo normal en {n} de {m} meses observados.': 'This year is below normal in {n} of {m} observed months.',
   'Este año se mueve dentro de lo normal.': 'This year stays within the normal range.',
   'Una imagen por mes (la menos nubosa) desde {a}. Los meses sin suficientes años previos se quedan sin rango.': 'One image per month (the least cloudy) since {a}. Months without enough previous years are left without a range.',
-  'Calculando la climatología…': 'Computing the climatology…',
+  'Calculando el contexto histórico…': 'Computing the historical context…',
   'Enlace copiado': 'Link copied',
   'Copiar enlace': 'Copy link',
 

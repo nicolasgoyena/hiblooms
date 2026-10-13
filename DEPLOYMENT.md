@@ -47,6 +47,6 @@ Without it, that data is lost on restart.
 ## API for workflows
 
 Automatic documentation at `/docs`. Long operations
-(`/api/monitor`, `/api/climatology`, `/api/calibrate`) return a `job_id` that
+(`/api/monitor`, `/api/historical-context`, `/api/calibrate`) return a `job_id` that
 is polled at `/api/jobs/{id}`. Adding `?wait=1` makes them answer directly, which
 is convenient when calling them from a workflow.

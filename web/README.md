@@ -6,7 +6,7 @@ for an overview of the tool and how to deploy it.
 ```
 web/
 ├── backend/
-│   ├── server.py        # FastAPI app: reservoirs, search, images, series, monitor, climatology, data
+│   ├── server.py        # FastAPI app: reservoirs, search, images, series, monitor, historical context, data
 │   ├── calibration.py   # Satellite ↔ in situ calibration (one GEE call per run)
 │   ├── projectdb.py     # Read-only access to the project database (Data tab)
 │   └── val_buoy.py      # El Val SAICA buoy: live data, seasonal risk and trend
@@ -41,6 +41,6 @@ npm run dev      # http://localhost:5173 (proxies /api → :8000)
 - Searches collect the statistics of every image in the period with a single GEE call.
   Limit: 2 years per search.
 - The time series recomputes the reservoir mean date by date (slow with GEE; max. 120 dates).
-- Long operations (monitor, climatology, calibration) run as background jobs (`/api/jobs/{id}`).
+- Long operations (monitor, historical context, calibration) run as background jobs (`/api/jobs/{id}`).
 - Base maps: Esri World Imagery and Esri World Light Gray Canvas (no API key).
 - Production: the `Dockerfile` builds the frontend and serves it from the same service as the API.

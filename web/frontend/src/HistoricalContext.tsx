@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ClimResp, fmt } from './api'
+import { HistResp, fmt } from './api'
 import { t } from './i18n'
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
@@ -14,7 +14,7 @@ const pct = (xs: number[], p: number) => {
 }
 
 /** Usual range for each half-month (previous years) vs the current year. */
-export default function Climatology({ data }: { data: ClimResp }) {
+export default function HistoricalContext({ data }: { data: HistResp }) {
   const year = new Date().getFullYear()
   const rows = useMemo(() => Array.from({ length: 24 }, (_, k) => {
     const q = k + 1
@@ -38,7 +38,7 @@ export default function Climatology({ data }: { data: ClimResp }) {
   const nImgs = data.points.length
 
   return (
-    <div className="clima">
+    <div className="hist">
       <p className="lbl">{t('Contexto histórico')}</p>
       <p className="muted small">
         {t('Compara el año en curso con el rango habitual de los años anteriores, quincena a quincena.')}{' '}
