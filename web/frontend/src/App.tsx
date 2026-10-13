@@ -4,14 +4,14 @@ import MapView, { Basemap } from './MapView'
 import { CalibrationForm, CalibrationResult } from './Calibration'
 import ProjectPage from './ProjectPage'
 import { MonitorForm, MonitorResult } from './Monitor'
-import Climatology from './Climatology'
+import HistoricalContext from './HistoricalContext'
 import { DataForm, DataResult, DbView } from './DataTab'
 import { CoresResult, PhytoResult, SensorsResult } from './Extra'
 import { CampaignsResult } from './Campaigns'
 import { ModelCardView, ModelList } from './Models'
 import ErrorBoundary from './ErrorBoundary'
 import {
-  api, CalResult, ClimResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
+  api, CalResult, HistResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
   parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
   DbCampaign, DbKind, ModelCard,
 } from './api'
@@ -29,7 +29,7 @@ const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(loca
 const short = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short' })
 const niceMax = (v: number) => { const p = Math.pow(10, Math.floor(Math.log10(v || 1))); return Math.ceil(v / p) * p }
 
-type Tab = 'serie' | 'tabla' | 'clases' | 'clima'
+type Tab = 'serie' | 'tabla' | 'clases' | 'hist'
 
 export default function App({ user, onLogout }: { user?: string | null; onLogout?: () => void }) {
   const [lang, setLang] = useLang()
@@ -63,20 +63,18 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [classes, setClasses] = useState<{ date: string; index: string; rows: ClassRow[] } | null>(null)
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
-  const [clim, setClim] = useState<ClimResp | null>(null)
-  const [loadingClim, setLoadingClim] = useState(false)
-  const CLIM_OK = ['NDCI_ind', 'PCI_B5/B4']
-  const runClim = async (idx = indexId) => {
+  const [hist, setHist] = useState<HistResp | null>(null)
+  const [loadingHist, setLoadingHist] = useState(false)
+  const runHist = async (idx = indexId) => {
     if (!reservoir) return
-    setPanelOpen(true); setTab('clima')
-    if (!CLIM_OK.includes(idx)) { setClim(null); return }
-    if (clim && clim.index === idx) return
-    setLoadingClim(true); setError(null)
-    try { setClim(await api.climatology({ reservoir, index: idx, water_only: waterOnly }, j => setProg(j))) }
-    catch (e: any) { setError(e.message) } finally { setLoadingClim(false); setProg(null) }
+    setPanelOpen(true); setTab('hist')
+    if (hist && hist.index === idx) return
+    setLoadingHist(true); setError(null)
+    try { setHist(await api.historicalContext({ reservoir, index: idx, water_only: waterOnly }, j => setProg(j))) }
+    catch (e: any) { setError(e.message) } finally { setLoadingHist(false); setProg(null) }
   }
-  useEffect(() => { setClim(null) }, [reservoir])
-  useEffect(() => { if (panelOpen && tab === 'clima') runClim(indexId) }, [indexId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setHist(null) }, [reservoir])
+  useEffect(() => { if (panelOpen && tab === 'hist') runHist(indexId) }, [indexId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [appMode, setAppMode] = useState<'visor' | 'cal' | 'info' | 'mon' | 'db'>('info')
   // ── Data tab (project database) ──
@@ -566,7 +564,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
                 </button>
                 <button className="ghost solid" onClick={() => { setTab('tabla'); runSeries() }} disabled={hits.length < 2 || loadingSeries}>{t('Tabla')}</button>
                 <button className="ghost solid" onClick={runClasses} disabled={!img}>{t('Clases')}</button>
-                <button className="ghost solid" onClick={() => runClim()}><Icon name="calendario" /> {t('Contexto histórico')}</button>
+                <button className="ghost solid" onClick={() => runHist()}><Icon name="calendario" /> {t('Contexto histórico')}</button>
                 <button className="ghost solid" onClick={copyLink}>{copied ? <><Icon name="ok" /> {t('Enlace copiado')}</> : <><Icon name="enlace" /> {t('Copiar enlace')}</>}</button>
               </div>
             )}
@@ -681,7 +679,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
               <button className={tab === 'serie' ? 'on' : ''} onClick={() => { setTab('serie'); runSeries() }}>{t('Serie temporal')}</button>
               <button className={tab === 'tabla' ? 'on' : ''} onClick={() => { setTab('tabla'); runSeries() }}>{t('Tabla')}</button>
               <button className={tab === 'clases' ? 'on' : ''} onClick={runClasses} disabled={!activeDate}>{t('Clases')}</button>
-              <button className={tab === 'clima' ? 'on' : ''} onClick={() => runClim()}>{t('Contexto histórico')}</button>
+              <button className={tab === 'hist' ? 'on' : ''} onClick={() => runHist()}>{t('Contexto histórico')}</button>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {(tab === 'serie' || tab === 'tabla') && series && <button className="link dark" onClick={csvSeries}>{t('Descargar CSV')}</button>}
@@ -734,15 +732,9 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             </div>
           )}
 
-          {tab === 'clima' && (loadingClim
-            ? <p className="muted an-empty"><span className="spin dark" /> {prog?.step || t('Calculando la climatología…')} {prog ? `· ${prog.progress}%` : ''}</p>
-            : !CLIM_OK.includes(indexId)
-              ? <div className="an-empty">
-                  <p className="muted">{t('La climatología compara con años anteriores, así que solo tiene sentido con índices comparables entre embalses. Elige NDCI o PCI.')}</p>
-                  <button className="ghost solid" style={{ maxWidth: 200, margin: '10px auto 0' }}
-                    onClick={() => { changeIndex('NDCI_ind'); runClim('NDCI_ind') }}>{t('Ver con NDCI')}</button>
-                </div>
-              : clim ? <Climatology data={clim} /> : null)}
+          {tab === 'hist' && (loadingHist
+            ? <p className="muted an-empty"><span className="spin dark" /> {prog?.step || t('Calculando el contexto histórico…')} {prog ? `· ${prog.progress}%` : ''}</p>
+              : hist ? <HistoricalContext data={hist} /> : null)}
           {tab === 'clases' && (
             loadingClasses ? <p className="muted an-empty"><span className="spin dark" /> {t('Calculando superficie por clases…')}</p>
             : classes && (

@@ -1007,7 +1007,7 @@ def calibration_delete(cid: str):
 
 
 # ── Background jobs ──────────────────────────────────────────────────────────
-# Long operations (calibration, monitor, climatology) can take
+# Long operations (calibration, monitor, historical context) can take
 # minutes and the servers this is deployed on cut requests after
 # a minute or two. They run in a thread and the client polls for the result.
 # No database: they live in memory; if the server restarts, they are rerun.
@@ -1341,16 +1341,21 @@ def _do_monitor(req: MonitorReq, user: Optional[str], prog):
     return {"mode": "gee", "start": start.isoformat(), "end": end.isoformat(), "days": req.days, "rows": rows}
 
 
-# ── Climatology: is this year normal for this time of year? ─────────────────
-# Only NDCI and PCI: they are comparable across years and reservoirs. Calibrated indices
-# are local (El Val, Bellús) and their historical series in another reservoir means nothing.
-# All valid images of each year, 90th percentile over the water surface
-# (same as the monitor, to avoid mixing criteria), grouped by half-months.
-CLIM_INDICES = {"NDCI_ind": "ndci", "PCI_B5/B4": "pci"}
-CLIM_SCALE = 30        # m per pixel
+# ── Historical context: is this year normal for this time of year? ─────────────────
+# Any index available for the reservoir: spectral indices, the models of that reservoir
+# (El Val, Bellús) and the user's calibrations. The comparison is always within one reservoir,
+# so a local model is compared with its own past. All valid images of each year, 90th
+# percentile over the clear water surface (same as the monitor), grouped by half-months.
+HIST_SCALE = 30        # m per pixel
 
 
-class ClimReq(BaseModel):
+def _index_allowed(reservoir: str, index: str) -> bool:
+    """An index tied to a reservoir (meta "reservoir") is only valid for that reservoir."""
+    res = _meta(index).get("reservoir")
+    return res is None or res == reservoir
+
+
+class HistReq(BaseModel):
     reservoir: str
     index: str
     years: int = Field(8, ge=2, le=15)
@@ -1358,28 +1363,27 @@ class ClimReq(BaseModel):
     water_only: bool = True
 
 
-def _clim_cache(key: str) -> Path:
-    return UPLOADS / f"clim_{key}.json"
+def _hist_cache(key: str) -> Path:
+    return UPLOADS / f"hist_{key}.json"
 
 
-def _quincena(d: date) -> int:
+def _half_month(d: date) -> int:
     """1–24: two periods per month (days 1–15 and 16–end)."""
     return (d.month - 1) * 2 + (1 if d.day <= 15 else 2)
 
 
-@app.post("/api/climatology")
-def climatology(req: ClimReq, wait: bool = False):
+@app.post("/api/historical-context")
+def historical_context(req: HistReq, wait: bool = False):
     """Returns {job_id} by default; with ?wait=1 it computes and returns the result."""
     if wait:
-        return _do_climatology(req, lambda *_a, **_k: None)
-    return _start_job("climatology", lambda prog: _do_climatology(req, prog))
+        return _do_historical_context(req, lambda *_a, **_k: None)
+    return _start_job("historical-context", lambda prog: _do_historical_context(req, prog))
 
 
-def _do_climatology(req: ClimReq, prog):
-    _check(req.reservoir)
-    if req.index not in CLIM_INDICES:
-        raise HTTPException(400, "La climatología solo está disponible para NDCI y PCI: "
-                                 "los índices calibrados son locales y su histórico no es comparable.")
+def _do_historical_context(req: HistReq, prog):
+    _check(req.reservoir, req.index)
+    if not _index_allowed(req.reservoir, req.index):
+        raise HTTPException(400, "Este índice está calibrado para otro embalse: su histórico aquí no tiene sentido.")
     meta = _meta(req.index)
     end = date.today()
     start = date(end.year - req.years + 1, 1, 1)
@@ -1388,41 +1392,44 @@ def _do_climatology(req: ClimReq, prog):
         pts = []
         d = start
         while d <= end:
-            rng = _mock_rng("clim", req.reservoir, req.index, d.isoformat())
+            rng = _mock_rng("hist", req.reservoir, req.index, d.isoformat())
             if rng.random() < .45:
                 season = 0.5 + 0.5 * math.sin((d.timetuple().tm_yday - 200) / 365 * 2 * math.pi)
                 v = meta["min"] + (meta["max"] - meta["min"]) * (0.1 + 0.7 * season * rng.uniform(.4, 1.2))
-                pts.append({"date": d.isoformat(), "q": _quincena(d), "year": d.year, "value": round(v, 3)})
+                pts.append({"date": d.isoformat(), "q": _half_month(d), "year": d.year, "value": round(v, 3)})
             d += timedelta(days=5)
         return {"mode": "demo", "index": req.index, "unit": meta["unit"], "label": meta["label"],
                 "years": [start.year, end.year], "points": pts}
 
     import hashlib
-    key = hashlib.md5(f"v2|{req.reservoir}|{req.index}|{req.years}|{req.max_cloud}|{req.water_only}".encode()).hexdigest()[:10]
-    f = _clim_cache(key)
+    cal_v = json.dumps(CALS[req.index]["raster"], sort_keys=True) if req.index in CALS else ""
+    key = hashlib.md5(f"v3|{req.reservoir}|{req.index}|{req.years}|{req.max_cloud}|{req.water_only}|{cal_v}".encode()).hexdigest()[:10]
+    f = _hist_cache(key)
     if f.exists() and (datetime.now().timestamp() - f.stat().st_mtime) < 86400:
         return json.loads(f.read_text(encoding="utf-8"))
 
     import ee
-    band = CLIM_INDICES[req.index]
     aoi = _aoi(req.reservoir)
+    band = _band(req.index)
+    base_ids = [] if req.index in CALS else [req.index]
 
     def stat(img):
         """90th percentile of the index over the clear water surface of that image."""
         scl = img.select("SCL")
         clear = (scl.neq(0).And(scl.neq(1)).And(scl.neq(3)).And(scl.neq(8))
                  .And(scl.neq(9)).And(scl.neq(10)).And(scl.neq(11)))
-        b = img.select(["B3", "B4", "B5", "B8A", "B11"]).divide(10000)
-        b3, b4, b5, b8a, b11 = b.select("B3"), b.select("B4"), b.select("B5"), b.select("B8A"), b.select("B11")
+        b = img.select(["B3", "B8A", "B11"]).divide(10000)
+        b3, b8a, b11 = b.select("B3"), b.select("B8A"), b.select("B11")
         ndwi = b3.subtract(b8a).divide(b3.add(b8a))
         mndwi = b3.subtract(b11).divide(b3.add(b11))
         water = mndwi.gt(0).Or(ndwi.gt(0))
         if req.water_only:
             water = water.focal_min(radius=SHORE_ERODE_M, units="meters")
-        ix = (b5.subtract(b4).divide(b5.add(b4)) if band == "ndci" else b5.divide(b4)).rename("v")
-        r = ix.updateMask(clear.And(water)).reduceRegion(
+        ind = core._build_indices_image(img, aoi, base_ids, check_bands=False)
+        ind = _with_index(ind, req.index, aoi)
+        r = ind.select(band).rename("v").updateMask(clear.And(water)).reduceRegion(
             ee.Reducer.percentile([90]).combine(ee.Reducer.count(), sharedInputs=True),
-            aoi, CLIM_SCALE, maxPixels=1e13, tileScale=4)
+            aoi, HIST_SCALE, maxPixels=1e13, tileScale=4)
         return ee.Feature(None, {"t": img.get("system:time_start"), "v": r.get("v_p90"), "n": r.get("v_count")})
 
     pts = []
@@ -1439,7 +1446,7 @@ def _do_climatology(req: ClimReq, prog):
                 if p.get("v") is None or (p.get("n") or 0) < 20:
                     continue
                 d = datetime.utcfromtimestamp(p["t"] / 1000).date()
-                pts.append({"date": d.isoformat(), "q": _quincena(d), "year": d.year, "value": round(float(p["v"]), 4)})
+                pts.append({"date": d.isoformat(), "q": _half_month(d), "year": d.year, "value": round(float(p["v"]), 4)})
     except HTTPException:
         raise
     except Exception as e:

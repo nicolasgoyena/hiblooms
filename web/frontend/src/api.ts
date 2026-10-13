@@ -23,8 +23,8 @@ export type MonitorRow = {
   oficial: { pct: number; hm3: number; cap_hm3: number; fecha: string; fuente: string } | null
 }
 export type MonitorResp = { mode: string; start: string; end: string; days: number; rows: MonitorRow[] }
-export type ClimPoint = { date: string; q: number; year: number; value: number }
-export type ClimResp = { mode: string; index: string; unit: string; label: string; years: [number, number]; points: ClimPoint[] }
+export type HistPoint = { date: string; q: number; year: number; value: number }
+export type HistResp = { mode: string; index: string; unit: string; label: string; years: [number, number]; points: HistPoint[] }
 export type DbSite = { site: string; code: string; water_body: string; lat: number; lon: number; n_campaigns: number; n_obs: number; first: string | null; last: string | null; n_dates: number | null }
 export type DbParam = { parameter_code: string; name: string; group: string; unit: string | null; unit_name: string | null; n: number; n_here: number; sites: number; first: string; last: string }
 export type DbQc = { qc_flag: number; label: string; description: string | null }
@@ -133,8 +133,8 @@ export const api = {
       '/api/upload-shapefile', { filename: file.name, content_b64: btoa(bin) })
   },
   monitor: (b: { days: number; max_cloud: number }, onProgress?: Prog) => job<MonitorResp>('/api/monitor', b, onProgress),
-  climatology: (b: { reservoir: string; index: string; years?: number; max_cloud?: number; water_only?: boolean }, onProgress?: Prog) =>
-    job<ClimResp>('/api/climatology', b, onProgress),
+  historicalContext: (b: { reservoir: string; index: string; years?: number; max_cloud?: number; water_only?: boolean }, onProgress?: Prog) =>
+    job<HistResp>('/api/historical-context', b, onProgress),
   dbStatus: () => req<DbStatus>('/api/db/status'),
   dbSites: (wb?: string) => req<{ sites: DbSite[]; water_bodies: { name: string; n_sites: number }[] }>(`/api/db/sites${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
   dbParameters: (wb?: string, depth: DbDepth = 'surface') => {
