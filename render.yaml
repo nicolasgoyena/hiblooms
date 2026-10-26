@@ -5,7 +5,7 @@ services:
     name: hiblooms
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free              # se duerme a los 15 min sin visitas (~1 min en despertar)
+    plan: starter              # se duerme a los 15 min sin visitas (~1 min en despertar)
     healthCheckPath: /api/health
     envVars:
       # JSON completo de la cuenta de servicio de Google Earth Engine.
