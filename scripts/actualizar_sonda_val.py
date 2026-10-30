@@ -107,11 +107,22 @@ def descargar(desde: date, hasta: date) -> pd.DataFrame:
                     vals.append(num(td[idx].get_text(strip=True)) if ok else None)
                 if len(vals) == len(out):
                     out["reservoir_max_depth_m"] = vals
+        # Estado de validación de la CHE: la web marca cada celda con una clase CSS;
+        # "f1" = dato válido (mismo criterio que la profundidad máxima). Se toma el de la ficocianina.
+        out["che_estado"] = None
+        idx_f = next((i for i, c in enumerate(cab) if c.startswith("ficocianina")), None)
+        if idx_f is not None and tabla.find("tbody"):
+            est = []
+            for tr in tabla.find("tbody").find_all("tr"):
+                td = tr.find_all("td")
+                est.append(((td[idx_f].get("class") or [None])[0]) if len(td) > idx_f else None)
+            if len(est) == len(out):
+                out["che_estado"] = est
         if "date_time" not in out:
             raise RuntimeError(f"La tabla de {url} no tiene columna de fecha: {list(df.columns)}")
         out["date_time"] = pd.to_datetime(out["date_time"], format="%d-%m-%Y %H:%M:%S", errors="coerce")
         for c in out.columns:
-            if c != "date_time":
+            if c not in ("date_time", "che_estado"):
                 out[c] = out[c].map(num)
         out = out.dropna(subset=["date_time"])
         # La web da hora local peninsular
@@ -121,15 +132,26 @@ def descargar(desde: date, hasta: date) -> pd.DataFrame:
 
 
 def control_calidad(df: pd.DataFrame) -> pd.DataFrame:
-    """Mismo criterio que los datos ya cargados: 0 exacto en temperatura o pH = fallo de sensor."""
-    notas = pd.Series("", index=df.index)
+    """Mismas reglas que el resto de sensor_data.
+    2 (erróneo): temperatura o pH = 0, ficocianina negativa.
+    1 (sospechoso): turbidez negativa o en el tope del sensor (3000), o dato no validado por la CHE."""
+    err = pd.Series("", index=df.index)
+    sos = pd.Series("", index=df.index)
     for c, nombre in (("water_temp", "temperatura"), ("ph", "pH")):
         if c in df:
-            notas = notas.where(~(df[c] == 0), notas + f"{nombre} = 0 (fallo de sensor); ")
+            err = err.where(~(df[c] == 0), err + f"{nombre} = 0 (fallo de sensor); ")
     if "phycocyanin" in df:
-        notas = notas.where(~(df["phycocyanin"] < 0), notas + "ficocianina negativa; ")
-    df["qc_flag"] = (notas != "").map({True: 2, False: 0})
-    df["qc_note"] = notas.str.strip().str.rstrip(";").replace("", None)
+        err = err.where(~(df["phycocyanin"] < 0), err + "ficocianina negativa; ")
+    if "turbidity" in df:
+        sos = sos.where(~(df["turbidity"] < 0), sos + "turbidez negativa; ")
+        sos = sos.where(~(df["turbidity"] >= 3000), sos + "turbidez en el límite del sensor (3000); ")
+    if "che_estado" in df:
+        no_val = df["che_estado"].notna() & (df["che_estado"] != "f1")
+        sos = sos.where(~no_val, sos + "CHE: dato no validado (" + df["che_estado"].astype(str) + "); ")
+    df["qc_flag"] = 0
+    df.loc[sos != "", "qc_flag"] = 1
+    df.loc[err != "", "qc_flag"] = 2
+    df["qc_note"] = (err + sos).str.strip().str.rstrip(";").replace("", None)
     return df
 
 
@@ -195,10 +217,10 @@ def _jsonval(v):
 def columnas_tabla(engine) -> list[str]:
     if isinstance(engine, NeonHTTP):
         return [r["column_name"] for r in engine.query(
-            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sensor_data'")]
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = ANY (current_schemas(false)) AND table_name='sensor_data'")]
     with engine.connect() as c:
         r = c.execute(text("""SELECT column_name FROM information_schema.columns
-                              WHERE table_schema='public' AND table_name='sensor_data'"""))
+                              WHERE table_schema = ANY (current_schemas(false)) AND table_name='sensor_data'"""))
         return [x[0] for x in r]
 
 
@@ -211,6 +233,13 @@ def ultimo_dato(engine) -> date | None:
         v = c.execute(text("SELECT MAX(date_time::timestamptz) FROM sensor_data WHERE source_code = :s"),
                       {"s": SOURCE}).scalar()
     return None if v is None else pd.Timestamp(v).tz_convert("Europe/Madrid").date()
+
+
+
+# Posición de la estación: la misma que ya tienen sus lecturas anteriores
+SQL_GEOM = """UPDATE sensor_data SET geometry = (SELECT geometry FROM sensor_data
+                 WHERE source_code = '{s}' AND geometry IS NOT NULL LIMIT 1)
+              WHERE source_code = '{s}' AND geometry IS NULL""".format(s=SOURCE)
 
 
 def escribir(engine, df: pd.DataFrame, desde: date, hasta: date) -> int:
@@ -230,6 +259,7 @@ def escribir(engine, df: pd.DataFrame, desde: date, hasta: date) -> int:
             vals = ", ".join("(" + ", ".join(f"${j * k + m + 1}" for m in range(k)) + ")" for j in range(len(part)))
             params = [_jsonval(v) for row in part.itertuples(index=False) for v in row]
             qs.append((f"INSERT INTO sensor_data ({names}) VALUES {vals}", params))
+        qs.append((SQL_GEOM, []))
         engine.transaction(qs)     # todo o nada, como con la conexión normal
         return len(df)
     with engine.begin() as c:
@@ -237,7 +267,13 @@ def escribir(engine, df: pd.DataFrame, desde: date, hasta: date) -> int:
                           AND date_time::timestamptz >= :a AND date_time::timestamptz < :b"""),
                   {"s": SOURCE, "a": f"{desde} 00:00:00 Europe/Madrid",
                    "b": f"{hasta + timedelta(days=1)} 00:00:00 Europe/Madrid"})
-        df.to_sql("sensor_data", c, if_exists="append", index=False, method="multi", chunksize=1000)
+        # Esquema real de la tabla (timeseries en la base reorganizada, public en Neon):
+        # sin él, pandas no la encuentra y crearía una tabla nueva en public
+        esquema = c.execute(text("""SELECT table_schema FROM information_schema.tables
+                                    WHERE table_name = 'sensor_data'
+                                      AND table_schema = ANY (current_schemas(false)) LIMIT 1""")).scalar()
+        df.to_sql("sensor_data", c, schema=esquema, if_exists="append", index=False, method="multi", chunksize=1000)
+        c.execute(text(SQL_GEOM))
     return len(df)
 
 
