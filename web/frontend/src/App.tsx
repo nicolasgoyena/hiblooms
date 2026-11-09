@@ -432,6 +432,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
         }}
         focus={dbBounds}
         compareTileUrl={appMode === 'visor' ? cmpImg?.tile_url ?? null : null} swipe={swipe}
+        compareRgbTileUrl={appMode === 'visor' ? cmpImg?.rgb_tile_url ?? null : null}
       />
 
       {/* ── Panel de búsqueda ─────────────────────────── */}

@@ -689,7 +689,7 @@ def image(req: ImageReq):
     if MOCK:
         rng = _mock_rng(req.reservoir, req.date, req.index)
         return {
-            "mode": "demo", "tile_url": _mock_tiles(req.date.isoformat()), "rgb_tile_url": None,
+            "mode": "demo", "tile_url": _mock_tiles(req.date.isoformat()), "rgb_tile_url": _mock_tiles("rgb" + req.date.isoformat()),
             "datetime": f"{req.date.isoformat()} 10:5{rng.randint(0, 9)}:00",
             "cloud": round(rng.uniform(0, req.max_cloud), 1), "coverage": round(rng.uniform(80, 100), 1),
             "mean": _mock_value(meta, req.reservoir, req.date, req.index),

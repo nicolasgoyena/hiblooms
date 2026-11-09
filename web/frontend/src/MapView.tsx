@@ -21,6 +21,7 @@ type Props = {
   onPoiClick: (name: string) => void
   lang?: Lang
   compareTileUrl?: string | null   // segunda fecha, para el comparador
+  compareRgbTileUrl?: string | null // color real de la segunda fecha (las dos mitades con las mismas capas)
   focus?: [[number, number], [number, number]] | null  // encuadre forzado (p. ej. puntos de la pestaña Datos)
   swipe?: number                   // 0–1: posición de la cortinilla
 }
@@ -236,15 +237,27 @@ export default function MapView(p: Props) {
       }
       syncB.current = sync
       m.on('move', sync); m.on('resize', sync)
-      b.on('load', () => { readyB.current = true; sync(); if (urlB.current) setTiles(b, urlB.current, p.opacity); outlineB() })
+      b.on('load', () => { readyB.current = true; sync(); tilesB(); outlineB() })
       mapB.current = b
       sync()
-    } else if (readyB.current) {
-      setTiles(mapB.current, p.compareTileUrl, p.opacity)
-    }
-  }), [p.compareTileUrl])
-  const urlB = useRef<string | null>(null)
-  urlB.current = p.compareTileUrl ?? null
+    } else tilesB()
+  }), [p.compareTileUrl, p.compareRgbTileUrl])
+  // El segundo mapa lleva las MISMAS capas que el principal: color real de Sentinel-2 debajo e
+  // índice encima. Antes solo llevaba el índice, así que donde el índice está enmascarado
+  // (orillas, tierra) una mitad enseñaba Sentinel-2 (10 m) y la otra la ortofoto de Esri (<1 m).
+  const tilesRef = useRef({ idx: null as string | null, rgb: null as string | null, opacity: 0.9, showRgb: false })
+  tilesRef.current = { idx: p.compareTileUrl ?? null, rgb: p.compareRgbTileUrl ?? null, opacity: p.opacity, showRgb: p.showRgb }
+  const tilesB = () => {
+    const b = mapB.current
+    if (!b || !readyB.current) return
+    const { idx, rgb, opacity, showRgb } = tilesRef.current
+    setTiles(b, 'rgbB', rgb, 1, true)
+    setTiles(b, 'idxB', idx, opacity, !showRgb)
+  }
+  useEffect(() => {
+    const b = mapB.current
+    if (b?.getLayer('idxB')) b.setLayoutProperty('idxB', 'visibility', p.showRgb ? 'none' : 'visible')
+  }, [p.showRgb])
   // contorno del embalse también en el segundo mapa, para comparar las dos mitades
   const resRef = useRef<{ res: GeoJSON.FeatureCollection | null; sel: string | null }>({ res: null, sel: null })
   resRef.current = { res: p.reservoirs, sel: p.selected }
@@ -269,7 +282,7 @@ export default function MapView(p: Props) {
     if (b.getLayer('base')) b.removeLayer('base')
     if (b.getSource('base')) b.removeSource('base')
     b.addSource('base', { type: 'raster', tiles: src.tiles, tileSize: 256, maxzoom: 19 })
-    b.addLayer({ id: 'base', type: 'raster', source: 'base' }, b.getLayer('idxB') ? 'idxB' : undefined)
+    b.addLayer({ id: 'base', type: 'raster', source: 'base' }, b.getLayer('rgbB') ? 'rgbB' : b.getLayer('idxB') ? 'idxB' : undefined)
   }, [p.basemap])
   useEffect(() => { const b = mapB.current; if (b?.getLayer('idxB')) b.setPaintProperty('idxB', 'raster-opacity', p.opacity) }, [p.opacity])
 
@@ -286,10 +299,14 @@ export default function MapView(p: Props) {
   )
 }
 
-function setTiles(m: MLMap, url: string, opacity = 0.9) {
-  const id = 'idxB'
+/** Pone (o quita, si url es null) una capa ráster del segundo mapa: rgbB bajo idxB, ambas bajo el contorno. */
+function setTiles(m: MLMap, id: 'rgbB' | 'idxB', url: string | null, opacity: number, visible: boolean) {
   if (m.getLayer(id)) m.removeLayer(id)
   if (m.getSource(id)) m.removeSource(id)
+  if (!url) return
+  const before = id === 'rgbB' ? (m.getLayer('idxB') ? 'idxB' : m.getLayer('resB-line') ? 'resB-line' : undefined)
+    : (m.getLayer('resB-line') ? 'resB-line' : undefined)
   m.addSource(id, { type: 'raster', tiles: [url], tileSize: 256 })
-  m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': opacity } }, m.getLayer('resB-line') ? 'resB-line' : undefined)
+  m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': opacity },
+    layout: { visibility: visible ? 'visible' : 'none' } }, before)
 }
