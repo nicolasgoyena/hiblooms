@@ -48,11 +48,12 @@ JOIN sampling.sampling_points sp ON sp.point_number = n.punto
 JOIN (SELECT DISTINCT sampling_point_id, water_body_name FROM sampling.sampling_events) ev
   ON ev.sampling_point_id = sp.sampling_point_id AND ev.water_body_name ILIKE n.embalse_like;
 
-SELECT * FROM emparejados ORDER BY codigo;
--- Códigos sin pareja o con más de una (deben salir 0 filas):
-SELECT n.codigo, COUNT(e.sampling_point_id) AS n_puntos
+-- Una fila por código: n_parejas debe ser 1 en todas (pgAdmin solo enseña el último resultado,
+-- así que la comprobación va en una sola consulta)
+SELECT n.codigo, e.point_code, e.water_body_name, e.se_mueve_m,
+       COUNT(e.codigo) OVER (PARTITION BY n.codigo) AS n_parejas
 FROM nuevas_coords n LEFT JOIN emparejados e ON e.codigo = n.codigo
-GROUP BY n.codigo HAVING COUNT(e.sampling_point_id) <> 1;
+ORDER BY n.codigo;
 
 -- 3. Actualización (mantiene el SRID que ya tenga la columna geometry)
 UPDATE sampling.sampling_points sp
