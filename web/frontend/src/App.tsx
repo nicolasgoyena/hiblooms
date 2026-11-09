@@ -2,22 +2,28 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ComposedChart, Area, Line, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import MapView, { Basemap } from './MapView'
 import { CalibrationForm, CalibrationResult } from './Calibration'
-import ProjectPage from './ProjectPage'
+import ProjectPage, { FundingNote } from './ProjectPage'
 import { MonitorForm, MonitorResult } from './Monitor'
 import Climatology from './Climatology'
 import { DataForm, DataResult, DbView } from './DataTab'
-import { CoresResult, PhytoResult, SensorsResult } from './Extra'
+import { CoresResult, FluoroResult, PhytoResult, SensorsResult } from './Extra'
 import { CampaignsResult } from './Campaigns'
 import { ModelCardView, ModelList } from './Models'
 import ErrorBoundary from './ErrorBoundary'
 import {
   api, CalResult, ClimResp, DbDepth, DbParam, DbSeries, DbSite, DbStatus, MonitorResp, ClassRow, colorAt, DateHit, downloadText, fmt, ImageResult, IndexMeta, niceName,
-  parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv,
+  parsePoisCsv, Poi, POI_COLORS, SeriesPoint, toCsv, doubtful, Doubt,
   DbCampaign, DbKind, ModelCard,
 } from './api'
 import { locale, t, useLang } from './i18n'
 import LangToggle from './LangToggle'
 import Icon from './Icon'
+
+const DOUBT_TXT: Record<Doubt, string> = {
+  pocos: 'quedan pocos píxeles de agua despejada',
+  sesgo: 'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)',
+  pico: 'pico aislado respecto a las fechas vecinas',
+}
 
 // Estado inicial de la URL: se lee una sola vez, antes de que nada la reescriba.
 const INITIAL_HASH = new URLSearchParams(location.hash.slice(1))
@@ -57,6 +63,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [error, setError] = useState<string | null>(null)
 
   const [panelOpen, setPanelOpen] = useState(false)
+  const [showDoubtful, setShowDoubtful] = useState(false)
   const [tab, setTab] = useState<Tab>('serie')
   const [series, setSeries] = useState<SeriesPoint[] | null>(null)
   const [loadingSeries, setLoadingSeries] = useState(false)
@@ -168,13 +175,20 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const [cmpDate, setCmpDate] = useState<string | null>(null)
   const [cmpImg, setCmpImg] = useState<ImageResult | null>(null)
   const [swipe, setSwipe] = useState(0.5)
+  const cmpReq = useRef(0)   // solo vale la última petición (si se cambia rápido de fecha)
   const pickCompare = async (d: string | null) => {
+    const my = ++cmpReq.current
     setCmpDate(d); setCmpImg(null)
     if (!d || !reservoir) return
-    try { setCmpImg(await api.image({ reservoir, date: d, index: indexId, max_cloud: maxCloud, points: [], water_only: waterOnly })) }
-    catch (e: any) { setError(e.message); setCmpDate(null) }
+    try {
+      const r = await api.image({ reservoir, date: d, index: indexId, max_cloud: maxCloud, points: [], water_only: waterOnly })
+      if (my === cmpReq.current) setCmpImg(r)
+    } catch (e: any) { if (my === cmpReq.current) { setError(e.message); setCmpDate(null) } }
   }
+  const clearCompare = () => { cmpReq.current++; setCmpDate(null); setCmpImg(null); setSwipe(0.5) }
   useEffect(() => { if (cmpDate) pickCompare(cmpDate) }, [indexId, waterOnly]) // eslint-disable-line react-hooks/exhaustive-deps
+  // La cortinilla es cosa del visor: al ir a otra pestaña se quita sola.
+  useEffect(() => { if (appMode !== 'visor' && (cmpDate || cmpImg)) clearCompare() }, [appMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [copied, setCopied] = useState(false)
   const copyLink = async () => {
@@ -262,7 +276,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     changeIndex(allowed.find(i => i.id === 'NDCI_ind')?.id ?? allowed[0]?.id)
   }, [allowed]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null); setCmpDate(null); setCmpImg(null) }
+  const resetResults = () => { setHits(null); setActiveDate(null); setImg(null); setSeries(null); setClasses(null); setPanelOpen(false); setError(null); clearCompare() }
 
   const pickReservoir = (n: string) => {
     if (n === reservoir) return // clic de nuevo en el mismo embalse: no borrar resultados
@@ -319,6 +333,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
   const loadDate = async (d: string, idx = indexId) => {
     if (!reservoir) return
+    if (d === cmpDate) clearCompare()   // comparar una fecha consigo misma no tiene sentido
     setActiveDate(d); setLoadingImg(true); setError(null)
     try { setImg(await api.image({ reservoir, date: d, index: idx, max_cloud: maxCloud, points: pois, water_only: waterOnly })) }
     catch (e: any) { setImg(null); setError(e.message) } finally { setLoadingImg(false) }
@@ -372,31 +387,51 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
   const csvSeries = () => {
     if (!series || !reservoir) return
     const rows = series.map(r => {
-      const o: Record<string, unknown> = { fecha: r.date, Media_Embalse: r.mean }
+      const o: Record<string, unknown> = { fecha: r.date, Media_Embalse: r.mean, Mediana_Embalse: r.q?.median ?? null,
+        agua_valida_pct: r.q?.valid_pct ?? null, dudosa: doubts.get(r.date) ?? '' }
       pois.forEach(p => { o[p.name] = r[p.name] ?? null })
       return o
     })
     downloadText(`hiblooms_${safeName}_serie_${indexId.replace('/', '-')}.csv`, toCsv(rows))
   }
 
+  // En «Modelos de la plataforma» el mapa enseña el embalse del modelo elegido (y no el último
+  // del visor), también después de cerrar su ficha.
+  const modelRes = appMode === 'cal' && calView === 'models' ? models.find(m => m.id === modelSel)?.reservoir ?? null : null
+  const mapSel = modelRes ?? reservoir
+  // Las capas de la imagen (índice, color real) y los puntos de interés son del visor: en las
+  // demás pestañas se ocultan para no tapar lo que se enseña allí (vuelven al volver al visor).
+  const showTiles = (appMode === 'visor' || (appMode === 'cal' && calView === 'calibrate')) && (!modelRes || modelRes === reservoir)
   const demoFill = mode === 'demo' && img && meta && img.mean !== null ? colorAt(palette, (img.mean - meta.min) / (meta.max - meta.min)) : null
-  const seriesMax = series ? Math.max(0, ...series.flatMap(s => [s.mean, ...pois.map(p => s[p.name])]).map(v => (typeof v === 'number' ? v : 0))) : 0
+  // Fechas dudosas (pocos píxeles de agua, media arrastrada por píxeles extremos o pico aislado):
+  // por defecto se quitan de la línea de la media y se avisa; se pueden volver a mostrar.
+  const doubts = useMemo(() => (series && meta ? doubtful(series, meta.max - meta.min) : new Map<string, Doubt>()), [series, meta])
+  const chartSeries = useMemo(() => (series ?? []).map(r => {
+    const bad = doubts.get(r.date)
+    if (bad && !showDoubtful) {   // la fecha entera queda fuera: si hay nubes sin detectar, los puntos también fallan
+      const o: Record<string, unknown> = { ...r, mean: null, bad: r.mean }
+      pois.forEach(p => { o[p.name] = null })
+      return o as SeriesPoint & { bad: number | null }
+    }
+    return { ...r, bad: bad ? r.mean : null } as SeriesPoint & { bad: number | null }
+  }), [series, doubts, showDoubtful, pois])
+  const seriesMax = series ? Math.max(0, ...chartSeries.flatMap(s => [s.mean, ...(showDoubtful ? [s.bad] : []), ...pois.map(p => s[p.name])]).map(v => (typeof v === 'number' ? v : 0))) : 0
   const poiColor = (i: number) => POI_COLORS[i % POI_COLORS.length]
 
   return (
     <div className="app">
       <MapView lang={lang}
-        reservoirs={reservoirs} selected={reservoir} onSelect={pickReservoir} basemap={basemap}
-        indexTileUrl={img?.tile_url ?? null} rgbTileUrl={img?.rgb_tile_url ?? null}
-        showRgb={showRgb} opacity={opacity} demoFill={demoFill}
-        points={appMode === 'db' ? dbSites.map(x => ({ name: x.code, lat: x.lat, lon: x.lon })) : pois}
+        reservoirs={reservoirs} selected={mapSel} onSelect={pickReservoir} basemap={basemap}
+        indexTileUrl={showTiles ? img?.tile_url ?? null : null} rgbTileUrl={showTiles ? img?.rgb_tile_url ?? null : null}
+        showRgb={showRgb} opacity={opacity} demoFill={showTiles ? demoFill : null}
+        points={appMode === 'db' ? dbSites.map(x => ({ name: x.code, lat: x.lat, lon: x.lon })) : showTiles ? pois : []}
         addingPoint={adding} onMapClick={addPoint}
         onPoiClick={(name) => {
           if (appMode === 'db') { const x = dbSites.find(s => s.code === name); if (x) toggleDbSite(x.site); return }
           if (hits && hits.length > 1) { setTab('serie'); runSeries() }
         }}
         focus={dbBounds}
-        compareTileUrl={cmpImg?.tile_url ?? null} swipe={swipe}
+        compareTileUrl={appMode === 'visor' ? cmpImg?.tile_url ?? null : null} swipe={swipe}
       />
 
       {/* ── Panel de búsqueda ─────────────────────────── */}
@@ -461,7 +496,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
 
         {appMode === 'info' ? (
           <div className="pj-nav">
-            <p><b style={{ color: '#F2F6F4' }}>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
+            <p><b>HIBLOOMS</b> · {t('proyecto PID2023-153234OB-I00 del Instituto BIOMA (Universidad de Navarra) con las Confederaciones Hidrográficas del Ebro y del Júcar.')}</p>
             <p><Icon name="monitor" /> <b>{t('Seguimiento actual')}</b>: {t('estado de todos los embalses de un vistazo, con avisos y los últimos datos de la sonda de El Val.')}</p>
             <p><Icon name="satelite" /> <b>{t('Visor satelital')}</b>: {t('busca imágenes Sentinel-2 de cualquier embalse, mapas de índices, series temporales, puntos de interés y descargas.')}</p>
             <p><Icon name="datos" /> <b>{t('Datos del proyecto')}</b>: {t('muestreos, fitoplancton, sondas y testigos de sedimento de la base de datos del proyecto.')}</p>
@@ -599,9 +634,10 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           </section>
         )}
         </>)}
+        <FundingNote />
       </aside>
 
-      {cmpImg?.tile_url && (
+      {appMode === 'visor' && cmpImg?.tile_url && (
         <div className="swipe-handle" style={{ left: `calc(${swipe * 100}%)` }} aria-hidden>
           <span>{activeDate ? short(activeDate) : ''}</span><i />
           <span>{cmpDate ? short(cmpDate) : ''}</span>
@@ -641,6 +677,12 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
             <input type="checkbox" checked={waterOnly} onChange={e => setWaterOnly(e.target.checked)} />
             <span>{t('Solo lámina de agua')}<small>{t('quita orillas y píxeles de borde')}</small></span>
           </label>
+          {img?.q?.valid_pct != null && (
+            <p className="muted small" style={{ margin: 0 }}>{t('Mediana {m} · {p} % del embalse con agua despejada', { m: fmt(img.q.median), p: fmt(img.q.valid_pct, 0) })}</p>
+          )}
+          {img?.q && meta && img.mean != null && ((img.q.valid_pct != null && img.q.valid_pct < 10) || (img.q.median != null && Math.abs(img.mean - img.q.median) > 0.15 * (meta.max - meta.min))) && (
+            <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}><Icon name="aviso" /> {t('Media poco fiable en esta fecha: quedan pocos píxeles de agua despejada o unos pocos píxeles extremos la arrastran. Mira la mediana.')}</div>
+          )}
           {img?.interval80 && meta && img.mean != null && (
             <p className="muted small" style={{ margin: 0 }}>{t('Rango probable (80 %): {lo} – {hi} {unit}', { lo: fmt(img.interval80[0], 1), hi: fmt(img.interval80[1], 1), unit: meta.unit })}</p>
           )}
@@ -694,7 +736,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           {tab === 'serie' && series && (
             <>
               <ResponsiveContainer width="100%" height={190}>
-                <ComposedChart data={series} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}
+                <ComposedChart data={chartSeries} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}
                   onClick={(e: any) => e?.activeLabel && loadDate(e.activeLabel)}>
                   <defs>
                     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
@@ -705,15 +747,40 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
                   <CartesianGrid stroke="#E3E9E7" vertical={false} />
                   <XAxis dataKey="date" tickFormatter={short} tick={{ fontSize: 11, fill: '#5B6B6C' }} minTickGap={24} />
                   <YAxis tick={{ fontSize: 11, fill: '#5B6B6C' }} domain={[0, niceMax(Math.max(meta.max * 0.2, seriesMax * 1.1))]} tickFormatter={(v: number) => fmt(v, 2)} />
-                  <Tooltip labelFormatter={(l: any) => fmtDate(String(l))} formatter={(v: any, n: any) => [`${fmt(v)} ${meta.unit}`, n]} />
+                  <Tooltip content={({ payload, label }: any) => {
+                    if (!payload?.length) return null
+                    const r = payload[0].payload as SeriesPoint & { bad: number | null }
+                    const why = doubts.get(r.date)
+                    return (
+                      <div className="tt">
+                        <b>{fmtDate(String(label))}</b><br />
+                        {payload.filter((x: any) => x.dataKey !== 'bad' && x.value != null).map((x: any) => <span key={x.dataKey}>{x.name}: <b>{fmt(x.value)}</b> {meta.unit}<br /></span>)}
+                        {why && <span className="tt-warn"><Icon name="aviso" size={12} /> {t('Fecha dudosa')}: {t(DOUBT_TXT[why])}<br />{t('Media')}: {fmt(r.bad)} · </span>}
+                        {r.q?.median != null && <span className="muted">{t('Mediana')}: {fmt(r.q.median)}</span>}
+                        {r.q?.valid_pct != null && <span className="muted"> · {t('{p} % del embalse con agua despejada', { p: fmt(r.q.valid_pct, 0) })}</span>}
+                      </div>
+                    )
+                  }} />
                   {pois.length > 0 && <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />}
                   {activeDate && <ReferenceLine x={activeDate} stroke="#C8561B" strokeDasharray="4 3" />}
                   <Area name={t('Media embalse')} type="monotone" dataKey="mean" stroke="#0F8A78" strokeWidth={2.5} fill="url(#g)" connectNulls dot={{ r: 3, fill: '#0F8A78' }} activeDot={{ r: 5 }} />
+                  {showDoubtful && doubts.size > 0 && (
+                    <Line name={t('Fecha dudosa')} dataKey="bad" stroke="none" legendType="none" isAnimationActive={false}
+                      dot={{ r: 6, fill: '#fff', stroke: '#C8561B', strokeWidth: 2 }} activeDot={{ r: 7 }} />
+                  )}
                   {pois.map((p, i) => (
                     <Line key={p.name} name={p.name} type="monotone" dataKey={p.name} stroke={poiColor(i)} strokeWidth={1.8} dot={{ r: 2.5 }} connectNulls />
                   ))}
                 </ComposedChart>
               </ResponsiveContainer>
+              {doubts.size > 0 && (
+                <p className="muted small doubt-note">
+                  <Icon name="aviso" size={13} /> {showDoubtful
+                    ? t('{n} fechas dudosas marcadas con un aro naranja: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado. Su media no es representativa del embalse.', { n: doubts.size })
+                    : t('{n} fechas dudosas quitadas de la línea: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado.', { n: doubts.size })}{' '}
+                  <button className="link dark" onClick={() => setShowDoubtful(v => !v)}>{showDoubtful ? t('Ocultarlas') : t('Mostrarlas')}</button>
+                </p>
+              )}
               <p className="muted small">{t('Haz clic en un punto de la gráfica para ver su mapa.')}</p>
             </>
           )}
@@ -721,11 +788,13 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           {tab === 'tabla' && series && (
             <div className="tbl-wrap">
               <table className="tbl">
-                <thead><tr><th>{t('Fecha')}</th><th>{t('Media embalse')}</th>{pois.map(p => <th key={p.name}>{p.name}</th>)}</tr></thead>
+                <thead><tr><th>{t('Fecha')}</th><th>{t('Media embalse')}</th><th>{t('Mediana')}</th><th title={t('Porcentaje del polígono del embalse con píxeles de agua despejada')}>{t('Agua válida')}</th>{pois.map(p => <th key={p.name}>{p.name}</th>)}</tr></thead>
                 <tbody>
                   {series.slice().reverse().map(r => (
                     <tr key={r.date} onClick={() => loadDate(r.date)} style={{ cursor: 'pointer', background: r.date === activeDate ? '#E6F1EE' : undefined }}>
-                      <td>{fmtDate(r.date)}</td><td>{fmt(r.mean)}</td>
+                      <td>{fmtDate(r.date)}</td>
+                      <td title={doubts.has(r.date) ? t(DOUBT_TXT[doubts.get(r.date)!]) : undefined}>{fmt(r.mean)}{doubts.has(r.date) && <span className="qc-note"> ⚠</span>}</td>
+                      <td>{fmt(r.q?.median)}</td><td>{r.q?.valid_pct != null ? `${fmt(r.q.valid_pct, 0)} %` : '–'}</td>
                       {pois.map(p => <td key={p.name}>{fmt(r[p.name] as number | null)}</td>)}
                     </tr>
                   ))}
@@ -779,6 +848,9 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
       )}
       {appMode === 'db' && dbShow && dbView === 'phyto' && (
         <ErrorBoundary label="Datos"><PhytoResult body={dbBody} sites={dbSel} onClose={() => setDbShow(false)} /></ErrorBoundary>
+      )}
+      {appMode === 'db' && dbShow && dbView === 'fluoro' && (
+        <ErrorBoundary label="Datos"><FluoroResult body={dbBody} sites={dbSel} onClose={() => setDbShow(false)} /></ErrorBoundary>
       )}
       {appMode === 'db' && dbShow && dbView === 'cores' && (
         <ErrorBoundary label="Datos"><CoresResult body={dbBody} onClose={() => setDbShow(false)} /></ErrorBoundary>

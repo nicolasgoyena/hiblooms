@@ -2,25 +2,52 @@ import { Lang, t } from './i18n'
 import LangToggle from './LangToggle'
 import Icon from './Icon'
 
+/* ── Publicidad de la financiación (Guía de comunicación de la AEI, v. 24-09-2024) ──
+   · Referencia del proyecto + «financiado por MICIU/AEI/10.13039/501100011033 y por FEDER, UE»
+     en TODAS las páginas y, en la portada, arriba, sin necesidad de desplazarse.
+   · Logos MICIU + (FEDER/UE) + AEI, sin traducir y nunca más pequeños que los de otras entidades.
+   · Los nombres y siglas MICIU y AEI no se traducen.
+   Pon el logo oficial combinado (MICIU + Cofinanciado por la UE + AEI) que da la AEI en
+   public/logo_financiacion.png; mientras no esté, se usa public/ministerio.png (MICIU + AEI). */
+export const GRANT = 'PID2023-153234OB-I00'
+export const FUNDING_LOGO = '/logo_financiacion.png'
+export const FUNDING_FALLBACK = '/ministerio.png'
+export const fundingText = () => t('Proyecto {ref} financiado por MICIU/AEI/10.13039/501100011033 y por FEDER, UE', { ref: GRANT })
+export function FundingLogo({ className }: { className?: string }) {
+  return (
+    <img className={className} src={FUNDING_LOGO} alt="MICIU · AEI · FEDER, UE"
+      onError={e => { const im = e.currentTarget; if (!im.src.endsWith(FUNDING_FALLBACK)) im.src = FUNDING_FALLBACK }} />
+  )
+}
+/** Franja de financiación para el panel lateral (visible en todas las pestañas). */
+export function FundingNote() {
+  return (
+    <div className="funding-note">
+      <FundingLogo />
+      <small>{fundingText()}</small>
+    </div>
+  )
+}
+
 const TEAM_RESEARCH = [
-  ['David Elustondo', 'DEV', 'BIOMA/UNAV', 'Calidad del agua, QA/QC y biogeoquímica'],
-  ['Yasser Morera Gómez', 'YMG', 'BIOMA/UNAV', 'Geoquímica isotópica y geocronología con ²¹⁰Pb'],
-  ['Esther Lasheras Adot', 'ELA', 'BIOMA/UNAV', 'Técnicas analíticas y calidad del agua'],
-  ['Jesús Miguel Santamaría', 'JSU', 'BIOMA/UNAV', 'Calidad del agua y técnicas analíticas'],
-  ['Carolina Santamaría Elola', 'CSE', 'BIOMA/UNAV', 'Técnicas analíticas y calidad del agua'],
-  ['Adriana Rodríguez Garraus', 'ARG', 'MITOX/UNAV', 'Análisis toxicológico'],
-  ['Sheila Izquieta Rojano', 'SIR', 'BIOMA/UNAV', 'SIG y teledetección, datos FAIR, digitalización'],
+  ['David Elustondo', 'DEV', 'Instituto BIOMA · Universidad de Navarra', 'Calidad del agua, QA/QC y biogeoquímica'],
+  ['Yasser Morera Gómez', 'YMG', 'Instituto BIOMA · Universidad de Navarra', 'Geoquímica isotópica y geocronología con ²¹⁰Pb'],
+  ['Esther Lasheras Adot', 'ELA', 'Instituto BIOMA · Universidad de Navarra', 'Técnicas analíticas y calidad del agua'],
+  ['Jesús Miguel Santamaría', 'JSU', 'Instituto BIOMA · Universidad de Navarra', 'Calidad del agua y técnicas analíticas'],
+  ['Carolina Santamaría Elola', 'CSE', 'Instituto BIOMA · Universidad de Navarra', 'Técnicas analíticas y calidad del agua'],
+  ['Adriana Rodríguez Garraus', 'ARG', 'MITOX · Universidad de Navarra', 'Análisis toxicológico'],
+  ['Sheila Izquieta Rojano', 'SIR', 'Instituto BIOMA · Universidad de Navarra', 'SIG y teledetección, datos FAIR, digitalización'],
 ]
 const TEAM_WORK = [
-  ['Aimee Valle Pombrol', 'AVP', 'BIOMA/UNAV', 'Taxonomía de cianobacterias e identificación de toxinas'],
-  ['Carlos Manuel Alonso Hernández', 'CAH', 'Lab. de Radioecología/IAEA', 'Geocronología con ²¹⁰Pb'],
-  ['David Widory', 'DWI', 'GEOTOP/UQAM', 'Geoquímica isotópica y calidad del agua'],
-  ['Ángel Ramón Moreira González', 'AMG', 'CEAC', 'Taxonomía de fitoplancton y algas'],
-  ['Augusto Abilio Comas González', 'ACG', 'CEAC', 'Taxonomía de cianobacterias y ecología acuática'],
-  ['Lorea Pérez Babace', 'LPB', 'BIOMA/UNAV', 'Técnicas analíticas y muestreo de campo'],
-  ['José Miguel Otano Calvente', 'JOC', 'BIOMA/UNAV', 'Técnicas analíticas y muestreo de campo'],
-  ['Alain Suescun Santamaría', 'ASS', 'BIOMA/UNAV', 'Técnicas analíticas'],
-  ['Leyre López Alonso', 'LLA', 'BIOMA/UNAV', 'Análisis de datos'],
+  ['Aimee Valle Pombrol', 'AVP', 'Instituto BIOMA · Universidad de Navarra', 'Taxonomía de cianobacterias e identificación de toxinas'],
+  ['Carlos Manuel Alonso Hernández', 'CAH', 'Laboratorio de Radioecología · Organismo Internacional de Energía Atómica (OIEA), Mónaco', 'Geocronología con ²¹⁰Pb'],
+  ['David Widory', 'DWI', 'GEOTOP · Universidad de Quebec en Montreal (UQAM), Canadá', 'Geoquímica isotópica y calidad del agua'],
+  ['Ángel Ramón Moreira González', 'AMG', 'Centro de Estudios Ambientales de Cienfuegos (CEAC), Cuba', 'Taxonomía de fitoplancton y algas'],
+  ['Augusto Abilio Comas González', 'ACG', 'Centro de Estudios Ambientales de Cienfuegos (CEAC), Cuba', 'Taxonomía de cianobacterias y ecología acuática'],
+  ['Lorea Pérez Babace', 'LPB', 'Instituto BIOMA · Universidad de Navarra', 'Técnicas analíticas y muestreo de campo'],
+  ['José Miguel Otano Calvente', 'JOC', 'Instituto BIOMA · Universidad de Navarra', 'Técnicas analíticas y muestreo de campo'],
+  ['Alain Suescun Santamaría', 'ASS', 'Instituto BIOMA · Universidad de Navarra', 'Técnicas analíticas'],
+  ['Leyre López Alonso', 'LLA', 'Instituto BIOMA · Universidad de Navarra', 'Análisis de datos'],
   ['María José Rodríguez Pérez', 'MRP', 'Confederación Hidrográfica del Ebro', 'Calidad del agua'],
   ['María Concepción Durán Lalaguna', 'MDL', 'Confederación Hidrográfica del Júcar', 'Calidad del agua'],
 ]
@@ -58,11 +85,12 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
       <div className="pj-logobar">
         <img className="pj-logo-main" src="/logo_hiblooms.png" alt="HIBLOOMS" />
         <span className="pj-logo-sep" />
-        <img src="/ministerio.png" alt={t('Ministerio de Ciencia, Innovación y Universidades')} />
+        <FundingLogo className="pj-logo-main" />
         <img src="/logo_bioma_unav.png" alt={t('Instituto BIOMA · Universidad de Navarra')} />
         <img src="/logo_ebro.png" alt={t('Confederación Hidrográfica del Ebro')} />
         <img src="/logo_jucar.png" alt={t('Confederación Hidrográfica del Júcar')} />
       </div>
+        <p className="pj-funding">{fundingText()}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span className="pj-live"><i /> {t('Monitorización activa · Sentinel-2')}</span>
           {lang && setLang && <LangToggle lang={lang} setLang={setLang} />}

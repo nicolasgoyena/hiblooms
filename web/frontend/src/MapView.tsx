@@ -201,11 +201,22 @@ export default function MapView(p: Props) {
   useEffect(() => whenReady(m => { m.getCanvas().style.cursor = p.addingPoint ? 'crosshair' : '' }), [p.addingPoint])
 
   // ── Comparador: segundo mapa encima, recortado por la cortinilla y sincronizado ──
+  // El segundo mapa copia SIEMPRE la cámara completa del principal (centro, zoom, giro,
+  // inclinación y padding) y su tamaño. Antes solo se copiaba el centro sin el padding con el
+  // que se encuadra el embalse, y por eso salía desplazado y a otra escala. Los manejadores se
+  // quitan al cerrar la comparación (antes se quedaban colgados y fallaban sobre un mapa ya
+  // borrado, lo que bloqueaba el repintado del mapa principal).
+  const syncB = useRef<(() => void) | null>(null)
+  // isStyleLoaded() da false mientras cargan teselas, así que se usa una marca propia
+  const readyB = useRef(false)
+  const dropB = () => {
+    const m = map.current
+    if (m && syncB.current) { m.off('move', syncB.current); m.off('resize', syncB.current) }
+    syncB.current = null; readyB.current = false
+    mapB.current?.remove(); mapB.current = null
+  }
   useEffect(() => whenReady(m => {
-    if (!p.compareTileUrl) {
-      mapB.current?.remove(); mapB.current = null
-      return
-    }
+    if (!p.compareTileUrl) { dropB(); return }
     if (!mapB.current) {
       const b = new maplibregl.Map({
         container: refB.current!,
@@ -215,18 +226,52 @@ export default function MapView(p: Props) {
           layers: [{ id: 'base', type: 'raster', source: 'base' }],
         },
         center: m.getCenter(), zoom: m.getZoom(), bearing: m.getBearing(), pitch: m.getPitch(),
-        interactive: false, attributionControl: false,
+        interactive: false, attributionControl: false, fadeDuration: 0,
       })
       const sync = () => {
-        b.jumpTo({ center: m.getCenter(), zoom: m.getZoom(), bearing: m.getBearing(), pitch: m.getPitch() })
+        if (mapB.current !== b) return
+        const c = m.getCanvas(), cb = b.getCanvas()
+        if (c.clientWidth !== cb.clientWidth || c.clientHeight !== cb.clientHeight) b.resize()
+        b.jumpTo({ center: m.getCenter(), zoom: m.getZoom(), bearing: m.getBearing(), pitch: m.getPitch(), padding: m.getPadding() })
       }
+      syncB.current = sync
       m.on('move', sync); m.on('resize', sync)
-      b.on('load', () => { sync(); setTiles(b, p.compareTileUrl!) })
+      b.on('load', () => { readyB.current = true; sync(); if (urlB.current) setTiles(b, urlB.current, p.opacity); outlineB() })
       mapB.current = b
-    } else {
-      setTiles(mapB.current, p.compareTileUrl)
+      sync()
+    } else if (readyB.current) {
+      setTiles(mapB.current, p.compareTileUrl, p.opacity)
     }
-  }), [p.compareTileUrl, p.basemap])
+  }), [p.compareTileUrl])
+  const urlB = useRef<string | null>(null)
+  urlB.current = p.compareTileUrl ?? null
+  // contorno del embalse también en el segundo mapa, para comparar las dos mitades
+  const resRef = useRef<{ res: GeoJSON.FeatureCollection | null; sel: string | null }>({ res: null, sel: null })
+  resRef.current = { res: p.reservoirs, sel: p.selected }
+  const outlineB = () => {
+    const b = mapB.current
+    if (!b || !readyB.current) return
+    const { res, sel } = resRef.current
+    const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: (res?.features ?? []).filter(f => f.properties?.NOMBRE === sel) }
+    const src = b.getSource('resB') as maplibregl.GeoJSONSource | undefined
+    if (src) { src.setData(fc); return }
+    b.addSource('resB', { type: 'geojson', data: fc })
+    b.addLayer({ id: 'resB-line', type: 'line', source: 'resB', paint: { 'line-color': '#FFFFFF', 'line-width': 2.5 } })
+  }
+  useEffect(() => { outlineB() }, [p.selected, p.reservoirs]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => dropB(), []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // mismo mapa base y misma opacidad que el principal
+  useEffect(() => {
+    const b = mapB.current
+    if (!b || !readyB.current) return
+    const src = BASEMAPS[p.basemap]
+    if (b.getLayer('base')) b.removeLayer('base')
+    if (b.getSource('base')) b.removeSource('base')
+    b.addSource('base', { type: 'raster', tiles: src.tiles, tileSize: 256, maxzoom: 19 })
+    b.addLayer({ id: 'base', type: 'raster', source: 'base' }, b.getLayer('idxB') ? 'idxB' : undefined)
+  }, [p.basemap])
+  useEffect(() => { const b = mapB.current; if (b?.getLayer('idxB')) b.setPaintProperty('idxB', 'raster-opacity', p.opacity) }, [p.opacity])
 
   useEffect(() => {
     const el = refB.current
@@ -241,10 +286,10 @@ export default function MapView(p: Props) {
   )
 }
 
-function setTiles(m: MLMap, url: string) {
+function setTiles(m: MLMap, url: string, opacity = 0.9) {
   const id = 'idxB'
   if (m.getLayer(id)) m.removeLayer(id)
   if (m.getSource(id)) m.removeSource(id)
   m.addSource(id, { type: 'raster', tiles: [url], tileSize: 256 })
-  m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': 0.9 } })
+  m.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': opacity } }, m.getLayer('resB-line') ? 'resB-line' : undefined)
 }

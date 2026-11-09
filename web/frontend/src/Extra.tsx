@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, colorAt, CoreData, CoreMeta, fmt, PhytoResp, SensorRes, SensorSeries } from './api'
+import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { api, colorAt, CoreData, CoreMeta, fmt, FluoroParam, FluoroResp, PhytoResp, SensorRes, SensorSeries } from './api'
 import { loc, locale, t } from './i18n'
 import Icon from './Icon'
 
@@ -256,7 +256,7 @@ export function SensorsResult({ onClose }: { onClose: () => void }) {
     <div className="card calres dbres xres">
       <button className="x" onClick={onClose} aria-label={t('Cerrar')}>×</button>
       <div>
-        <p className="eyebrow">{t('Sondas fijas')}</p>
+        <p className="eyebrow">{t('Monitorización remota · sondas fijas')}</p>
         <h2 className="serif">{d?.name ?? meta?.name ?? t('Cargando…')}{d?.unit ? <span className="unit"> · {t(d.var_name)}</span> : null}</h2>
         {meta && <p className="muted small">
           {t('{a} días con datos de sonda', { a: meta.sensor_days })}
@@ -337,5 +337,189 @@ function SensorSection({ d }: { d: SensorSeries }) {
       </svg>
       <div className="wc-legend"><span>{fmt(lo, 1)}</span><i style={{ background: `linear-gradient(90deg, ${RAMP.join(',')})` }} /><span>{fmt(hi, 1)} {d.unit}</span></div>
     </>
+  )
+}
+
+
+// ── Perfiles de la FluoroProbe III ──────────────────────────────────────────
+
+const FP_COLOR: Record<FluoroParam['kind'], string> = {
+  total: '#0C2B33', cyano: '#1D8A99', green: '#6BA539', diatoms: '#C9A227', crypto: '#B5651D',
+  yellow: '#E0B04A', transmission: '#7A63B8', temp: '#C0392B', other: '#8A9A9C',
+}
+const FP_ORDER: FluoroParam['kind'][] = ['total', 'cyano', 'green', 'diatoms', 'crypto', 'yellow', 'transmission', 'temp', 'other']
+const FP_CHL = new Set<FluoroParam['kind']>(['total', 'cyano', 'green', 'diatoms', 'crypto'])
+const FP_LABEL: Record<FluoroParam['kind'], string> = {
+  total: 'Clorofila total', cyano: 'Cianobacterias', green: 'Algas verdes', diatoms: 'Diatomeas', crypto: 'Criptófitas',
+  yellow: 'Sustancias amarillas', transmission: 'Transmisión', temp: 'Temperatura', other: 'Otra variable',
+}
+
+/** Media de la columna (trapecios sobre la profundidad). */
+function columnMean(pts: { depth: number; value: number }[]): number | null {
+  if (!pts.length) return null
+  if (pts.length === 1) return pts[0].value
+  let a = 0, h = 0
+  for (let i = 1; i < pts.length; i++) {
+    const dz = pts[i].depth - pts[i - 1].depth
+    a += dz * (pts[i].value + pts[i - 1].value) / 2; h += dz
+  }
+  return h > 0 ? a / h : pts[0].value
+}
+
+export function FluoroResult({ body, sites, onClose }: { body: string; sites: string[]; onClose: () => void }) {
+  const [data, setData] = useState<FluoroResp | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [cast, setCast] = useState('')                 // `${site_code}|${date}`
+  const [view, setView] = useState<'profile' | 'section'>('profile')
+  const [on, setOn] = useState<string[]>([])           // parámetros visibles en el perfil
+  const [secParam, setSecParam] = useState('')
+  const [secSite, setSecSite] = useState('')
+  useEffect(() => {
+    setData(null); setErr(null)
+    api.dbFluoro(body || undefined, sites).then(setData).catch(e => setErr(e.message))
+  }, [body, sites.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const params = useMemo(() => [...(data?.params ?? [])].sort((a, b) => FP_ORDER.indexOf(a.kind) - FP_ORDER.indexOf(b.kind)), [data])
+  useEffect(() => {
+    if (!data) return
+    if (!data.casts.some(c => `${c.site_code}|${c.date}` === cast)) setCast(data.casts[0] ? `${data.casts[0].site_code}|${data.casts[0].date}` : '')
+    setOn(params.filter(p => FP_CHL.has(p.kind)).map(p => p.parameter_code))
+    const cy = params.find(p => p.kind === 'cyano') ?? params[0]
+    setSecParam(cy?.parameter_code ?? '')
+    setSecSite(data.casts[0]?.site_code ?? '')
+  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pname = (p: FluoroParam) => p.kind !== 'other' ? t(FP_LABEL[p.kind]) : loc(p.name, p.name_es)
+  const [site, date] = cast.split('|')
+  const profile = useMemo(() => {
+    if (!data) return []
+    const r = data.rows.filter(x => x.site_code === site && x.date === date)
+    return params.map(p => ({
+      p, pts: r.filter(x => x.parameter_code === p.parameter_code).map(x => ({ depth: x.depth_m, value: x.value })).sort((a, b) => a.depth - b.depth),
+    })).filter(s => s.pts.length)
+  }, [data, site, date, params])
+  const shown = profile.filter(s => on.includes(s.p.parameter_code))
+  const zmax = Math.max(1, ...profile.flatMap(s => s.pts.map(x => x.depth)))
+  const units = Array.from(new Set(shown.map(s => s.p.unit ?? '')))
+
+  // Resumen del lance: media de la columna por grupo y peso de las cianobacterias
+  const means = profile.filter(s => FP_CHL.has(s.p.kind)).map(s => ({ p: s.p, mean: columnMean(s.pts), max: Math.max(...s.pts.map(x => x.value)),
+    zAtMax: s.pts.reduce((b, x) => (x.value > b.value ? x : b), s.pts[0]).depth }))
+  const tot = means.find(m => m.p.kind === 'total')?.mean
+    ?? means.filter(m => m.p.kind !== 'total').reduce((a, m) => a + (m.mean ?? 0), 0)
+  const cy = means.find(m => m.p.kind === 'cyano')
+
+  // Profundidad × tiempo: un parámetro en un punto
+  const section = useMemo(() => (data?.rows ?? []).filter(x => x.site_code === secSite && x.parameter_code === secParam)
+    .map(x => ({ t: new Date(x.date + 'T12:00:00').getTime(), depth: x.depth_m, value: x.value })), [data, secSite, secParam])
+  const sv = section.map(x => x.value)
+  const vmin = sv.length ? Math.min(...sv) : 0, vmax = sv.length ? Math.max(...sv) : 1
+  const t0 = section.length ? Math.min(...section.map(x => x.t)) : 0, t1 = section.length ? Math.max(...section.map(x => x.t)) : 1
+  const secZ = section.length ? Math.max(...section.map(x => x.depth)) : 1
+  const secUnit = params.find(p => p.parameter_code === secParam)?.unit ?? ''
+  const castSites = Array.from(new Set((data?.casts ?? []).map(c => c.site_code))).sort()
+
+  return (
+    <div className="card calres dbres xres">
+      <button className="x" onClick={onClose} aria-label={t('Cerrar')}>×</button>
+      <div>
+        <p className="eyebrow">{t('Perfiles FluoroProbe III')}</p>
+        <h2 className="serif">{t('Clorofila por grupo algal en la columna de agua')}</h2>
+        {data && <p className="muted small">{t('{n} perfiles en {s} puntos', { n: data.casts.length, s: castSites.length })}{body ? ` · ${body}` : ''}</p>}
+      </div>
+      {err && <div className="badge err">{err}</div>}
+      {!data && !err && <p className="muted an-empty"><span className="spin dark" /> {t('Cargando perfiles…')}</p>}
+      {data && !data.casts.length && <Empty text={t('No hay perfiles de la FluoroProbe con estos filtros.')} />}
+      {data && data.casts.length > 0 && (<>
+        <div className="wc-bar">
+          <div className="seg">
+            <button className={view === 'profile' ? 'on' : ''} onClick={() => setView('profile')}>{t('Perfil')}</button>
+            <button className={view === 'section' ? 'on' : ''} onClick={() => setView('section')}>{t('Profundidad × tiempo')}</button>
+          </div>
+          {view === 'profile' ? (
+            <select className="wc-date" value={cast} onChange={e => setCast(e.target.value)}>
+              {data.casts.map(c => <option key={`${c.site_code}|${c.date}`} value={`${c.site_code}|${c.date}`}>{fmtDate(c.date)} · {c.site_code} · {fmt(c.zmax, 1)} m</option>)}
+            </select>
+          ) : (<>
+            <select className="wc-date" value={secSite} onChange={e => setSecSite(e.target.value)}>
+              {castSites.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select className="wc-date" value={secParam} onChange={e => setSecParam(e.target.value)}>
+              {params.map(p => <option key={p.parameter_code} value={p.parameter_code}>{pname(p)}{p.unit ? ` (${p.unit})` : ''}</option>)}
+            </select>
+          </>)}
+        </div>
+
+        {view === 'profile' ? (<>
+          <div className="fp-chips">
+            {profile.map(s => {
+              const act = on.includes(s.p.parameter_code)
+              return (
+                <button key={s.p.parameter_code} className={'tag nice' + (act ? ' on' : '')} style={act ? { background: FP_COLOR[s.p.kind], borderColor: FP_COLOR[s.p.kind] } : undefined}
+                  onClick={() => setOn(o => act ? o.filter(x => x !== s.p.parameter_code) : [...o, s.p.parameter_code])} title={loc(s.p.name, s.p.name_es)}>
+                  {pname(s.p)}{s.p.unit ? ` · ${s.p.unit}` : ''}
+                </button>
+              )
+            })}
+          </div>
+          {units.length > 1 && <p className="muted small">{t('Ojo: hay variables con unidades distintas en el mismo eje.')}</p>}
+          <div style={{ height: 340 }}>
+            <ResponsiveContainer>
+              <ScatterChart margin={{ top: 8, right: 16, bottom: 18, left: 4 }}>
+                <CartesianGrid stroke="#E4EBEA" />
+                <XAxis type="number" dataKey="value" domain={[0, 'auto']} tick={{ fontSize: 11, fill: '#5E7376' }}
+                  label={{ value: units.join(' · '), position: 'insideBottom', offset: -8, style: { fontSize: 11, fill: '#5E7376' } }} />
+                <YAxis type="number" dataKey="depth" reversed domain={[0, Math.ceil(zmax)]} width={46} name={t('Profundidad')}
+                  tick={{ fontSize: 11, fill: '#5E7376' }} label={{ value: t('Profundidad (m)'), angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#5E7376' } }} />
+                <Tooltip formatter={(v: any, n: any) => [fmt(v as number, 2), n === 'depth' ? t('Profundidad') : n]} />
+                <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: 11 }} />
+                {shown.map(s => (
+                  <Scatter key={s.p.parameter_code} name={pname(s.p)} data={s.pts} fill={FP_COLOR[s.p.kind]} shape={() => <g />}
+                    line={{ stroke: FP_COLOR[s.p.kind], strokeWidth: s.p.kind === 'total' ? 2.6 : 2 }} isAnimationActive={false} />
+                ))}
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          {means.length > 0 && (
+            <div className="tbl-wrap" style={{ maxHeight: 200 }}>
+              <table className="tbl">
+                <thead><tr><th>{t('Grupo')}</th><th>{t('Media de la columna')}</th><th>{t('Máximo')}</th><th>{t('Prof. del máximo')}</th><th>%</th></tr></thead>
+                <tbody>{means.map(m => (
+                  <tr key={m.p.parameter_code}>
+                    <td><span className="dot" style={{ background: FP_COLOR[m.p.kind] }} />{pname(m.p)}</td>
+                    <td>{fmt(m.mean, 2)} {m.p.unit ?? ''}</td><td>{fmt(m.max, 2)}</td><td>{fmt(m.zAtMax, 1)} m</td>
+                    <td>{m.p.kind !== 'total' && tot ? `${fmt(100 * (m.mean ?? 0) / tot, 0)} %` : ''}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+          {cy && tot ? (
+            <p className="muted small">{t('Las cianobacterias suponen el {p} % de la clorofila de la columna; su máximo ({v} µg/L) está a {z} m.', { p: fmt(100 * (cy.mean ?? 0) / tot, 0), v: fmt(cy.max, 1), z: fmt(cy.zAtMax, 1) })}</p>
+          ) : null}
+        </>) : (
+          section.length === 0 ? <Empty text={t('Sin perfiles de esta variable en este punto.')} /> : (<>
+            <div style={{ height: 320 }}>
+              <ResponsiveContainer>
+                <ScatterChart margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
+                  <CartesianGrid stroke="#E4EBEA" />
+                  <XAxis type="number" dataKey="t" scale="time" domain={[t0, t1]} name={t('Fecha')}
+                    tickFormatter={v => new Date(v).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: '2-digit' })} tick={{ fontSize: 11, fill: '#5E7376' }} />
+                  <YAxis type="number" dataKey="depth" reversed domain={[0, Math.ceil(secZ)]} width={46} name={t('Profundidad')}
+                    tick={{ fontSize: 11, fill: '#5E7376' }} label={{ value: t('Profundidad (m)'), angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#5E7376' } }} />
+                  <ZAxis type="number" dataKey="value" range={[40, 40]} name={secUnit} />
+                  <Tooltip formatter={(v: any, n: any) => [n === t('Fecha') ? fmtDate(new Date(v).toISOString()) : fmt(v as number, 2), n]} />
+                  <Scatter data={section} shape="square" isAnimationActive={false}>
+                    {section.map((p, i) => <Cell key={i} fill={colorAt(RAMP, vmax > vmin ? (p.value - vmin) / (vmax - vmin) : 0.5)} />)}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="wc-legend"><span>{fmt(vmin, 1)}</span><i style={{ background: `linear-gradient(90deg, ${RAMP.join(',')})` }} /><span>{fmt(vmax, 1)} {secUnit}</span></div>
+          </>)
+        )}
+        <p className="muted small">{t('FluoroProbe III (bbe Moldaenke): separa la clorofila por grupos algales a partir de su fluorescencia con varias longitudes de onda de excitación. Los valores son clorofila equivalente según la calibración de la sonda y no sustituyen a la clorofila de laboratorio.')}</p>
+      </>)}
+    </div>
   )
 }

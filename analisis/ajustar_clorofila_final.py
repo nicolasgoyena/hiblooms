@@ -133,6 +133,21 @@ def main():
     p = preds["elegido"]; kk = np.isfinite(p)
     card["pairs"] = [{"date": t.strftime("%Y-%m-%d"), "obs": round(float(o), 2), "pred": round(float(q), 2), "ndci": round(float(n), 4)}
                      for t, o, q, n in zip(m.t[kk], y[kk], p[kk], m.ndci[kk])]
+    # Versión en inglés de los textos de la ficha (la web la usa cuando el idioma es inglés)
+    en = card.setdefault("en", {})
+    en.update({
+        "variable": "Chlorophyll-a", "reservoir_label": "El Val reservoir (Zaragoza)",
+        "description": "Estimates chlorophyll-a concentration (total algal biomass) in the top 3 m of the reservoir from the Sentinel-2 NDCI" + (" and the time of year." if est else "."),
+        "formula": formula.replace(",", ".").replace("sen(día)", "sin(day)").replace("cos(día)", "cos(day)"),
+        "index_formula": "NDCI = (B5 − B4) / (B5 + B4) on Sentinel-2 L1C, mean over 5×5 pixels (≈100 m)" + (" · day = day of the year of the image" if est else ""),
+    })
+    en.setdefault("validation", {})["metrics"] = [
+        {"label": "Typical error", "value": f"×{fila['MAE_log(×)']:.1f}", "help": "The prediction is usually within that factor of the true value"},
+        {"label": "R² (log scale)", "value": f"{fila['R2_log']:.2f}", "help": "Share of variation explained"},
+        {"label": "AUC ≥ 10 µg/L", "value": f"{fila['AUC≥10']:.2f}", "help": "Ability to tell apart episodes above 10 µg/L (0.5 = chance, 1 = perfect)"},
+        {"label": "AUC ≥ 20 µg/L", "value": f"{fila['AUC≥20']:.2f}", "help": "Ability to tell apart episodes above 20 µg/L"},
+        {"label": "Trophic class", "value": str(fila["clase_trófica_ok"]), "help": "Correct OECD class (oligo · meso · eu · hypereutrophic)"},
+    ]
     FICHA.write_text(json.dumps(card, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\nFicha actualizada: {FICHA.relative_to(ROOT)} — el visor usará estos coeficientes.")
 

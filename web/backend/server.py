@@ -474,7 +474,15 @@ def _values_dict(ind, index: str, aoi, points: list, time_ms: int, scale: int = 
     if index.startswith("CAL_"):  # las calibraciones ya llevan su propia máscara de agua despejada
         water = ee.Image(1)
     band = ind.select(index)
-    d = {"mean": band.updateMask(water).reduceRegion(ee.Reducer.mean(), aoi, scale, maxPixels=1e13, tileScale=tile_scale).get(index)}
+    # Media, mediana y nº de píxeles válidos en una sola pasada. La mediana y el nº de píxeles
+    # sirven para detectar fechas dudosas: si quedan pocos píxeles de agua despejada (nubes,
+    # bruma o sombras sin marcar), unos pocos píxeles contaminados disparan la media.
+    red = (ee.Reducer.mean().combine(ee.Reducer.median(), sharedInputs=True)
+           .combine(ee.Reducer.count(), sharedInputs=True))
+    st = band.updateMask(water).reduceRegion(red, aoi, scale, maxPixels=1e13, tileScale=tile_scale)
+    d = {"mean": st.get(f"{index}_mean"), "median": st.get(f"{index}_median"), "n": st.get(f"{index}_count"),
+         "ntot": ee.Image(1).rename("o").reduceRegion(ee.Reducer.count(), aoi, scale, maxPixels=1e13,
+                                                      tileScale=tile_scale).get("o")}
     for i, p in enumerate(points):
         d[f"p{i}"] = band.reduceRegion(ee.Reducer.mean(), ee.Geometry.Point([p.lon, p.lat]).buffer(30), 20).get(index)
     return d
@@ -483,6 +491,14 @@ def _values_dict(ind, index: str, aoi, points: list, time_ms: int, scale: int = 
 def _unpack(vals: dict, points: list):
     num = lambda v: float(v) if v is not None else None
     return num(vals.get("mean")), {p.name: num(vals.get(f"p{i}")) for i, p in enumerate(points)}
+
+
+def _quality(vals: dict) -> dict:
+    """Mediana del embalse y % del polígono con píxeles de agua válidos (para marcar fechas dudosas)."""
+    n, tot, med = vals.get("n"), vals.get("ntot"), vals.get("median")
+    return {"median": float(med) if med is not None else None,
+            "n_px": int(n) if n is not None else 0,
+            "valid_pct": round(100 * float(n) / float(tot), 1) if n is not None and tot else None}
 
 
 
@@ -673,10 +689,11 @@ def image(req: ImageReq):
     if MOCK:
         rng = _mock_rng(req.reservoir, req.date, req.index)
         return {
-            "mode": "demo", "tile_url": None, "rgb_tile_url": None,
+            "mode": "demo", "tile_url": _mock_tiles(req.date.isoformat()), "rgb_tile_url": None,
             "datetime": f"{req.date.isoformat()} 10:5{rng.randint(0, 9)}:00",
             "cloud": round(rng.uniform(0, req.max_cloud), 1), "coverage": round(rng.uniform(80, 100), 1),
             "mean": _mock_value(meta, req.reservoir, req.date, req.index),
+            "q": {"median": _mock_value(meta, req.reservoir, req.date, req.index), "n_px": 900, "valid_pct": round(rng.uniform(40, 95), 1)},
             "points": {p.name: _mock_value(meta, req.reservoir, req.date, req.index, p.name) for p in req.points},
             **({"interval80": [0, 0], "extrapolation_pct": round(rng.uniform(0, 15), 1)} if req.index in CALS else {}),
         }
@@ -695,7 +712,7 @@ def image(req: ImageReq):
             dvals["extrap"] = ind.select(eb).reduceRegion(ee.Reducer.mean(), _aoi(req.reservoir), 20, maxPixels=1e13).get(eb)
         vals = ee.Dictionary(dvals).getInfo()
         mean, pts = _unpack(vals, req.points)
-        extra = {}
+        extra = {"q": _quality(vals)}
         if req.index in CALS:
             iv = CALS[req.index]["raster"].get("interval") or {}
             if mean is not None and iv.get("factor_lo") is not None:
@@ -710,6 +727,30 @@ def image(req: ImageReq):
             "cloud": cloud, "coverage": cov, "mean": mean, "points": pts, **extra}
 
 
+def _mock_tiles(seed: str) -> Optional[str]:
+    """Solo para pruebas del comparador en modo demo: HIBLOOMS_MOCK_TILES=<origen de la web>."""
+    base = os.environ.get("HIBLOOMS_MOCK_TILES")
+    return f"{base}/api/mock-tile/{{z}}/{{x}}/{{y}}.png?s={seed}" if MOCK and base else None
+
+
+@app.get("/api/mock-tile/{z}/{x}/{y}.png", include_in_schema=False)
+def mock_tile(z: int, x: int, y: int, s: str = ""):
+    if not (MOCK and os.environ.get("HIBLOOMS_MOCK_TILES")):
+        raise HTTPException(404)
+    import io
+    from PIL import Image, ImageDraw
+    from fastapi.responses import Response
+    h = abs(hash(s)) % 360
+    import colorsys
+    r, g, b = (int(255 * c) for c in colorsys.hsv_to_rgb(h / 360, .7, .9))
+    im = Image.new("RGBA", (256, 256), (r, g, b, int(os.environ.get("HIBLOOMS_MOCK_ALPHA", "90"))))
+    dr = ImageDraw.Draw(im)
+    dr.rectangle([0, 0, 255, 255], outline=(0, 0, 0, 255), width=2)
+    dr.text((8, 8), f"{z}/{x}/{y} {s}", fill=(0, 0, 0, 255))
+    buf = io.BytesIO(); im.save(buf, "PNG")
+    return Response(buf.getvalue(), media_type="image/png")
+
+
 @app.post("/api/timeseries")
 def timeseries(req: SeriesReq):
     _check(req.reservoir, req.index)
@@ -720,7 +761,11 @@ def timeseries(req: SeriesReq):
             rng = _mock_rng(req.reservoir, d, req.index)
             season = 0.5 + 0.5 * math.sin((d.timetuple().tm_yday - 150) / 365 * 2 * math.pi)
             v = meta["min"] + (meta["max"] - meta["min"]) * min(1, rng.betavariate(1.5, 6) + 0.35 * season * rng.random())
-            row = {"date": d.isoformat(), "mean": round(v, 3)}
+            q = {"median": round(v, 3), "n_px": rng.randint(600, 1200), "valid_pct": round(rng.uniform(45, 95), 1)}
+            if rng.random() < 0.1:  # de vez en cuando, una fecha con pocos píxeles y la media disparada
+                q = {"median": round(v, 3), "n_px": rng.randint(5, 60), "valid_pct": round(rng.uniform(0.5, 6), 1)}
+                v = v + (meta["max"] - meta["min"]) * rng.uniform(0.6, 1.2)
+            row = {"date": d.isoformat(), "mean": round(v, 3), "q": q}
             for p in req.points:
                 row[p.name] = round(v * _mock_rng(d, p.name).uniform(0.6, 1.5), 3)
             out.append(row)
@@ -747,7 +792,7 @@ def timeseries(req: SeriesReq):
         raise HTTPException(502, f"Error en Earth Engine: {e}")
     for d in days:
         mean, pts = _unpack(got.get(d, {}), req.points)
-        out.append({"date": d, "mean": mean, **pts})
+        out.append({"date": d, "mean": mean, "q": _quality(got.get(d, {})), **pts})
     return {"index": req.index, "series": out, "mode": "gee"}
 
 
@@ -1514,6 +1559,12 @@ def db_campaigns(water_body: Optional[str] = None):
 @app.get("/api/db/phyto")
 def db_phyto(water_body: Optional[str] = None, sites: Optional[str] = None, metric: str = "biovolume"):
     return _pdb(pdb.phyto, water_body, [x for x in (sites or "").split(",") if x] or None, metric)
+
+
+@app.get("/api/db/fluoro")
+def db_fluoro(water_body: Optional[str] = None, sites: Optional[str] = None):
+    """Perfiles de la sonda FluoroProbe III (clorofila por grupo algal a lo largo de la columna)."""
+    return _pdb(pdb.fluoro, water_body, [x for x in (sites or "").split(",") if x] or None)
 
 
 @app.get("/api/db/cores")

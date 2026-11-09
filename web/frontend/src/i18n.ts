@@ -47,6 +47,10 @@ export function t(es: string, vars?: Record<string, string | number>): string {
   if (es == null) return ''
   es = String(es)
   let s = lang === 'en' ? (EN[es] ?? es) : es
+  // En desarrollo, apunta los textos sin traducir (window.__i18nMissing) para encontrarlos.
+  if ((import.meta as any).env?.DEV && lang === 'en' && !(es in EN) && /[a-záéíóúñ]{3}/i.test(es)) {
+    const w = window as any; (w.__i18nMissing ??= new Set<string>()).add(es)
+  }
   if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m))
   return s
 }
@@ -668,4 +672,145 @@ const EN: Record<string, string> = {
   'Concentración por píxel, puntos y embalse': 'Concentration per pixel, point and reservoir',
   'Posible floración': 'Potential bloom',
   'Detección temprana y seguimiento': 'Early detection and tracking',
+
+  // ── Revisión de Yasser (nov 2026) ──
+  // Equipo: instituciones con su nombre completo
+  'MITOX · Universidad de Navarra': 'MITOX · University of Navarra',
+  'Laboratorio de Radioecología · Organismo Internacional de Energía Atómica (OIEA), Mónaco': 'Radioecology Laboratory · International Atomic Energy Agency (IAEA), Monaco',
+  'GEOTOP · Universidad de Quebec en Montreal (UQAM), Canadá': 'GEOTOP · Université du Québec à Montréal (UQAM), Canada',
+  'Centro de Estudios Ambientales de Cienfuegos (CEAC), Cuba': 'Centro de Estudios Ambientales de Cienfuegos (CEAC — Cienfuegos Centre for Environmental Studies), Cuba',
+  // Financiación (las siglas MICIU/AEI no se traducen, según la guía de la AEI)
+  'Proyecto {ref} financiado por MICIU/AEI/10.13039/501100011033 y por FEDER, UE': 'Grant {ref} funded by MICIU/AEI/10.13039/501100011033 and by ERDF, EU',
+  // Modelos y calibraciones
+  'Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.':
+    'The models in this section are based on machine learning (ML) techniques trained with data from the Ebro River Basin Authority probes at El Val reservoir, mainly between 2023 and 2025.',
+  'Parten del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), dentro de HIBLOOMS.':
+    "They build on Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra), within HIBLOOMS.",
+  'Leer el TFM en DADUN': 'Read the thesis in DADUN',
+  'experimental': 'experimental',
+  'laboratorio': 'lab',
+  'medio': 'medium',
+  'Hoy': 'Today',
+  'hoy': 'today',
+  'riesgo {n}': '{n} risk',
+  'época de más riesgo': 'highest-risk season',
+  'Probabilidad de pico': 'Peak probability',
+  'Línea gruesa: probabilidad de que un día sea de pico según la época (modelo). Línea gris: proporción de días de pico observada por la sonda en esas fechas. Fondo: riesgo medio y alto.':
+    'Thick line: probability that a day is a peak day given the season (model). Grey line: share of peak days observed by the probe on those dates. Background: medium and high risk.',
+  'Año fuera': 'Year left out',
+  'Días': 'Days',
+  'Picos': 'Peaks',
+  'Año': 'Year',
+  'Años': 'Years',
+  'días de sonda': 'probe days',
+  'día': 'day',
+  'días': 'days',
+  'último dato': 'latest reading',
+  'Esperado': 'Expected',
+  'Azul: ficocianina media diaria de la sonda. Naranja: valor esperado; la banda es el rango en el que cayó el 80 % de los casos en años anteriores.':
+    'Blue: daily mean phycocyanin from the probe. Orange: expected value; the band is the range where 80 % of cases fell in previous years.',
+  'Se calcula con los datos de la sonda y se actualiza solo cuando llegan datos nuevos. El valor de hoy aparece en la pestaña Monitor, junto a El Val.':
+    'Computed from the probe data and updated automatically when new data arrive. Today\'s value appears in the Current status tab, next to El Val.',
+  'Los pares salen de la base del proyecto y se actualizan con ella. Nada de lo que pruebes aquí modifica el visor: es un banco de pruebas.':
+    'The pairs come from the project database and update with it. Nothing you try here changes the viewer: it is a test bench.',
+  'No se han podido cargar los pares de calibración.': 'The calibration pairs could not be loaded.',
+  'Cargando pares imagen–sonda…': 'Loading image–probe pairs…',
+  'Con estos filtros quedan muy pocos pares para ajustar nada.': 'Too few pairs are left with these filters to fit anything.',
+  'Con un solo año no se puede validar: para comprobar el modelo hay que ajustarlo sin un año y probarlo en ese año. Activa al menos dos años y compara el R² del ajuste con el validado.':
+    'With a single year there is no validation: to test the model it has to be fitted without one year and tested on that year. Turn on at least two years and compare the fit R² with the validated one.',
+  'El modelo aguanta la validación con estos filtros. Antes de creértelo, comprueba que no dependa de un solo año ni de unos pocos puntos extremos.':
+    'The model holds up in validation with these filters. Before trusting it, check that it does not depend on a single year or a few extreme points.',
+  'Ojo: el ajuste parece razonable, pero al validarlo en un año que el modelo no ha visto se cae. Eso es sobreajuste: el índice no lleva información de ficocianina.':
+    'Careful: the fit looks reasonable, but it collapses when validated on a year the model has not seen. That is overfitting: the index carries no phycocyanin information.',
+  'Ni siquiera el ajuste encuentra relación. Es lo esperable: Sentinel-2 no tiene banda en 620 nm, donde absorbe la ficocianina.':
+    'Not even the fit finds a relationship. That is expected: Sentinel-2 has no band at 620 nm, where phycocyanin absorbs.',
+  'Ajustada con los puntos visibles ahora mismo; cambia con cada filtro.': 'Fitted with the points visible right now; it changes with every filter.',
+  'Con todos los datos a la vez. Siempre mejora al complicar el modelo.': 'With all the data at once. It always improves as the model gets more complex.',
+  'R² del ajuste': 'Fit R²',
+  'Ajustando sin un año y comprobando en ese año. Es el que cuenta.': 'Fitting without one year and testing on that year. This is the one that counts.',
+  'R² validado': 'Validated R²',
+  'Lo que consigue un modelo que solo sabe la época del año, con la misma validación.': 'What a model that only knows the time of year achieves, with the same validation.',
+  'solo estacionalidad': 'seasonality only',
+  'Correlación de rangos entre el índice y la ficocianina.': 'Rank correlation between the index and phycocyanin.',
+  'correlación (Spearman)': 'correlation (Spearman)',
+  'Capacidad de señalar los días por encima del percentil 90 (0,5 = azar).': 'Ability to flag days above the 90th percentile (0.5 = chance).',
+  'AUC de picos': 'Peak AUC',
+  'restaurar puntos': 'restore points',
+  'Ficocianina frente al índice': 'Phycocyanin vs. index',
+  'pincha para excluirlo': 'click to exclude it',
+  'Ver los 8 valores más altos (con su fecha)': 'Show the 8 highest values (with their date)',
+  'índice': 'index',
+  'excluir': 'exclude',
+  'En el tiempo: sonda y estimación validada': 'Over time: probe and validated estimate',
+  'Sin estimación validada: hace falta más de un año activado.': 'No validated estimate: more than one year must be turned on.',
+  '{n} pares de {a} · umbral de pico (percentil 90): {p} µg/L · datos de la sonda {s}.': '{n} pairs from {a} · peak threshold (90th percentile): {p} µg/L · probe data {s}.',
+  'Forma': 'Form',
+  'lineal': 'linear',
+  'cuadrática': 'quadratic',
+  'sin transformar': 'untransformed',
+  'logaritmo': 'logarithm',
+  'solo mayo–octubre': 'May–October only',
+  'quitar el 1 % más alto': 'drop the top 1 %',
+  // Monitor / sonda
+  'Cargando la sonda de El Val…': 'Loading the El Val probe…',
+  'El Val · sonda en tiempo real': 'El Val · real-time probe',
+  'Experimental: persistencia + estacionalidad. Banda del 80 % de los casos en años anteriores.': 'Experimental: persistence + seasonality. Band covering 80 % of cases in previous years.',
+  'Modelo validado de riesgo estacional (pestaña Modelos): probabilidad de pico de ficocianina según la época del año.': 'Validated seasonal risk model (Models tab): probability of a phycocyanin peak given the time of year.',
+  'Riesgo estacional': 'Seasonal risk',
+  'Tendencia ficocianina': 'Phycocyanin trend',
+  'estable 24 h': 'stable 24 h',
+  'hace {n} días': '{n} days ago',
+  // Datos del proyecto
+  'Gráfica': 'Chart',
+  'Buscar por fecha, punto, embalse…': 'Search by date, site, reservoir…',
+  'solo marcadas por calidad': 'quality-flagged only',
+  'Se muestran las 2.000 primeras filas; descarga el CSV para verlas todas.': 'Showing the first 2,000 rows; download the CSV to see them all.',
+  'Monitorización remota': 'Remote monitoring',
+  'Monitorización remota · sondas fijas': 'Remote monitoring · fixed probes',
+  'Monitorización remota: series de alta frecuencia que envían las sondas fijas instaladas en los embalses (clorofila, ficocianina, temperatura…). Elige embalse y variable en el gráfico.':
+    'Remote monitoring: high-frequency series sent by the fixed probes installed in the reservoirs (chlorophyll, phycocyanin, temperature…). Choose reservoir and variable in the chart.',
+  'Perfiles FluoroProbe': 'FluoroProbe profiles',
+  'Perfiles FluoroProbe III': 'FluoroProbe III profiles',
+  'Perfiles de la sonda FluoroProbe III: clorofila de cada grupo algal (cianobacterias, algas verdes, diatomeas, criptófitas) a lo largo de la columna de agua, en cada punto y campaña.':
+    'FluoroProbe III profiles: chlorophyll of each algal group (cyanobacteria, green algae, diatoms, cryptophytes) through the water column, at each site and campaign.',
+  'Clorofila por grupo algal en la columna de agua': 'Chlorophyll by algal group through the water column',
+  '{n} perfiles en {s} puntos': '{n} profiles at {s} sites',
+  'Cargando perfiles…': 'Loading profiles…',
+  'No hay perfiles de la FluoroProbe con estos filtros.': 'No FluoroProbe profiles with these filters.',
+  'Clorofila total': 'Total chlorophyll',
+  'Cianobacterias': 'Cyanobacteria',
+  'Algas verdes': 'Green algae',
+  'Diatomeas': 'Diatoms',
+  'Criptófitas': 'Cryptophytes',
+  'Sustancias amarillas': 'Yellow substances',
+  'Transmisión': 'Transmission',
+  'Temperatura': 'Temperature',
+  'Ojo: hay variables con unidades distintas en el mismo eje.': 'Note: variables with different units share the same axis.',
+  'Máximo': 'Maximum',
+  'Prof. del máximo': 'Depth of maximum',
+  'Las cianobacterias suponen el {p} % de la clorofila de la columna; su máximo ({v} µg/L) está a {z} m.':
+    'Cyanobacteria account for {p} % of the column chlorophyll; their maximum ({v} µg/L) is at {z} m.',
+  'Sin perfiles de esta variable en este punto.': 'No profiles of this variable at this site.',
+  'FluoroProbe III (bbe Moldaenke): separa la clorofila por grupos algales a partir de su fluorescencia con varias longitudes de onda de excitación. Los valores son clorofila equivalente según la calibración de la sonda y no sustituyen a la clorofila de laboratorio.':
+    'FluoroProbe III (bbe Moldaenke): splits chlorophyll by algal group from its fluorescence at several excitation wavelengths. Values are chlorophyll equivalents from the probe calibration and do not replace laboratory chlorophyll.',
+  // Visor: fechas dudosas
+  'Fecha dudosa': 'Doubtful date',
+  'Media': 'Mean',
+  'Agua válida': 'Valid water',
+  'Porcentaje del polígono del embalse con píxeles de agua despejada': 'Share of the reservoir polygon with clear water pixels',
+  '{p} % del embalse con agua despejada': '{p} % of the reservoir with clear water',
+  'Mediana {m} · {p} % del embalse con agua despejada': 'Median {m} · {p} % of the reservoir with clear water',
+  'Media poco fiable en esta fecha: quedan pocos píxeles de agua despejada o unos pocos píxeles extremos la arrastran. Mira la mediana.':
+    'Unreliable mean on this date: few clear water pixels are left, or a few extreme pixels drag it. Check the median.',
+  '{n} fechas dudosas marcadas con un aro naranja: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado. Su media no es representativa del embalse.':
+    '{n} doubtful dates marked with an orange ring: few clear water pixels (undetected clouds, haze or shadows) or an isolated spike. Their mean does not represent the reservoir.',
+  '{n} fechas dudosas quitadas de la línea: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado.':
+    '{n} doubtful dates removed from the line: few clear water pixels (undetected clouds, haze or shadows) or an isolated spike.',
+  'Mostrarlas': 'Show them',
+  'Ocultarlas': 'Hide them',
+  'quedan pocos píxeles de agua despejada': 'few clear water pixels left',
+  'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)': 'the mean is far from the median (dragged by a few extreme pixels)',
+  'pico aislado respecto a las fechas vecinas': 'isolated spike compared with neighbouring dates',
+  'El modelo elegido no se puede pintar en el mapa (no es lineal ni logístico). Incluye un modelo marcado con ◆ en el modo experto si lo necesitas en el mapa.':
+    'The chosen model cannot be drawn on the map (it is neither linear nor logistic). Include a model marked with ◆ in expert mode if you need it on the map.',
 }

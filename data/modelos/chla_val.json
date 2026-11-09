@@ -1428,5 +1428,52 @@
    -0.10978157004260705,
    0.23099920988170833
   ]
+ },
+ "en": {
+  "variable": "Chlorophyll-a",
+  "reservoir_label": "El Val reservoir (Zaragoza)",
+  "description": "Estimates chlorophyll-a concentration (total algal biomass) in the top 3 m of the reservoir from the Sentinel-2 NDCI and the time of year.",
+  "formula": "log10(Chl-a) = 1.287 + 5.368·NDCI − 0.050·sin(day) − 0.252·cos(day)",
+  "index_formula": "NDCI = (B5 − B4) / (B5 + B4) on Sentinel-2 L1C, mean over 5×5 pixels (≈100 m) · day = day of the year of the image",
+  "training": {
+   "ground_truth": "CHE Aquadam profiling probe (chlorophyll, mean 0–3 m)",
+   "matching": "Sentinel-2 L1C image and probe within ±3 h · mean of 5×5 pixels around the buoy · cloud-free water within 300 m only"
+  },
+  "validation": {
+   "method": "Cross-validation leaving out one full year each time (the model never sees the year it predicts)",
+   "metrics": [
+    {
+     "label": "Typical error",
+     "value": "×1.8",
+     "help": "The prediction is usually within that factor of the true value"
+    },
+    {
+     "label": "R² (log scale)",
+     "value": "0.69",
+     "help": "Share of variation explained"
+    },
+    {
+     "label": "AUC ≥ 10 µg/L",
+     "value": "0.91",
+     "help": "Ability to tell apart episodes above 10 µg/L (0.5 = chance, 1 = perfect)"
+    },
+    {
+     "label": "AUC ≥ 20 µg/L",
+     "value": "0.90",
+     "help": "Ability to tell apart episodes above 20 µg/L"
+    },
+    {
+     "label": "Trophic class",
+     "value": "61%",
+     "help": "Correct OECD class (oligo · meso · eu · hypereutrophic)"
+    }
+   ],
+   "compared": "108 configurations were compared (L2A/L1C atmospheric correction, 1, 3×3 and 5×5 pixel windows, probe layers, image filters) and linear, quadratic, Lasso, random forest and gradient boosting models. Uncorrected L1C reflectance with a 5×5 mean was the most robust; no machine-learning model beat this formula."
+  },
+  "limits": [
+   "Estimates total algal biomass: it does not tell cyanobacteria from other algae.",
+   "Represents the mean of the top 3 m, not strictly surface chlorophyll.",
+   "Calibrated at El Val: in other reservoirs it is indicative until validated with their data."
+  ]
  }
 }
