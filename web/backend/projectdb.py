@@ -407,6 +407,13 @@ def _load_mock() -> dict:
         ("TN", "Nitrógeno total", "Nutrientes", "mg_L"),
         ("P", "Fósforo", "Nutrientes", "ppm"),
         ("MC", "Microcistinas (ELISA)", "Toxinas", "ng_mL"),
+        ("chl_green", "Clorofila de algas verdes (FluoroProbe)", "field", "ug_L"),
+        ("chl_cyano", "Clorofila de cianobacterias (FluoroProbe)", "field", "ug_L"),
+        ("chl_diatoms", "Clorofila de diatomeas (FluoroProbe)", "field", "ug_L"),
+        ("chl_crypto", "Clorofila de criptófitas (FluoroProbe)", "field", "ug_L"),
+        ("chl_total_probe", "Clorofila total (FluoroProbe)", "field", "ug_L"),
+        ("yellow_substances", "Sustancias amarillas (FluoroProbe)", "field", "r.u."),
+        ("transmission", "Transmisión (FluoroProbe)", "field", "percent"),
     ], columns=["parameter_code", "name", "parameter_group", "default_unit"])
     base = {"WTEMP": (8, 26), "PH": (7.6, 9.2), "DOXY": (6, 12), "COND": (350, 900), "SECCHI": (0.6, 3.5),
             "CHLA": (2, 60), "NO3": (0.2, 6), "NH4": (0.01, .4), "TN": (0.5, 4), "P": (.01, .2), "MC": (0, 2.5)}
@@ -422,6 +429,24 @@ def _load_mock() -> dict:
                                 source_table="insitu_determinations", column_name=code,
                                 value=round(deep + (surf - deep) * w + rng.uniform(-.2, .2), 2), qc_flag=1,
                                 source_code="HIBLOOMS"))
+        # perfiles simulados de la FluoroProbe: clorofila por grupo algal cada 25 cm
+        if r.point_number <= 2:
+            zmax = rng.uniform(6, 12)
+            zc = rng.uniform(1, 4)                        # máximo de cianobacterias cerca de la superficie
+            for k in range(0, int(zmax / .25)):
+                z = .25 * k + .1
+                g = {"chl_green": (1 + 3 * season) * math.exp(-((z - 3) / 4) ** 2),
+                     "chl_cyano": (0.2 + 18 * season ** 2) * math.exp(-((z - zc) / 1.8) ** 2),
+                     "chl_diatoms": (2 + 2 * (1 - season)) * math.exp(-((z - 5) / 5) ** 2),
+                     "chl_crypto": 0.8 * math.exp(-((z - 6) / 3) ** 2)}
+                g = {c: max(0.0, v * rng.uniform(.85, 1.15)) for c, v in g.items()}
+                g["chl_total_probe"] = sum(g.values())
+                g["yellow_substances"] = 1.2 + rng.uniform(-.1, .1)
+                g["transmission"] = max(5.0, 90 - 3 * g["chl_total_probe"])
+                for code, v in g.items():
+                    obs.append(dict(sampling_event_id=r.sampling_event_id, date=d0, depth_m=round(z, 2),
+                                    source_table="profiles_data", column_name=code, value=round(v, 3),
+                                    qc_flag=1, source_code="HIBLOOMS"))
         for code, (lo, hi) in base.items():
             if code in ("WTEMP", "DOXY") or rng.random() < .1:
                 continue
@@ -433,7 +458,8 @@ def _load_mock() -> dict:
     obs = pd.DataFrame(obs)
     vocab = pd.DataFrame(columns=["table_name", "column_name", "parameter_code", "unit_code"])
     units = pd.DataFrame([("degC", "°C"), ("pH", "pH"), ("mg_L", "mg/L"), ("uS_cm", "µS/cm"), ("m", "m"),
-                          ("mg_m3", "mg/m³"), ("ppm", "ppm"), ("ng_mL", "ng/mL")], columns=["unit_code", "unit_name"])
+                          ("mg_m3", "mg/m³"), ("ppm", "ppm"), ("ng_mL", "ng/mL"), ("ug_L", "µg/L"),
+                          ("percent", "%"), ("r.u.", "r.u.")], columns=["unit_code", "unit_name"])
     qc = pd.DataFrame([(1, "Good", "Bueno", "Validated value"), (2, "Doubtful", "Dudoso", "Check"),
                        (3, "Bad", "Malo", "Do not use")],
                       columns=["qc_flag", "label", "label_es", "description"])
@@ -737,6 +763,54 @@ def export_csv(parameter: Optional[str] = None, water_body: Optional[str] = None
 
 def sources() -> dict:
     return {"sources": _jsonable(data()["sources"])}
+
+
+# ── Perfiles de la FluoroProbe III (bbe Moldaenke) ─────────────────────────
+# La sonda mide la clorofila de cada grupo algal (verdes, cianobacterias, diatomeas,
+# criptófitas) a lo largo de la columna de agua, más sustancias amarillas y transmisión.
+# Sus datos viven en field.profiles_data; aquí se agrupan por lance (punto + fecha).
+FLUORO_KINDS = [  # (clave, palabras en código o nombre)
+    ("total", ("total",)), ("cyano", ("cyano", "bluegreen", "blue_green", "blue-green", "ciano")),
+    ("diatoms", ("diatom", "brown")), ("crypto", ("crypto", "cripto")),
+    ("green", ("green", "verde", "chlorophyta")), ("yellow", ("yellow", "amarill", "cdom")),
+    ("transmission", ("transmis",)), ("temp", ("temp",)),
+]
+
+
+def _fluoro_kind(code: str, name: str) -> str:
+    c = f"{code} {name}".lower()
+    for k, words in FLUORO_KINDS:
+        if any(w in c for w in words):
+            return k
+    return "other"
+
+
+def fluoro(water_body: Optional[str] = None, sites_: Optional[list] = None) -> dict:
+    """Lances de la FluoroProbe con su perfil completo (todas las profundidades, sin promediar)."""
+    d = data()
+    o = d["obs"]
+    o = o[(o["source_table"] == "profiles_data") & o["depth_m"].notna()]
+    p = d["points"].drop_duplicates("site").set_index("site")
+    o = o.assign(site_code=o["site"].map(p["site_code"]).astype(str), water_body=o["site"].map(p["water_body_name"]))
+    if water_body:
+        o = o[o["water_body"] == water_body]
+    if sites_:
+        o = o[o["site"].isin(sites_)]
+    cat = d["catalog"].set_index("parameter_code")
+    params = []
+    for code, n in o.groupby("parameter_code").size().items():
+        c = cat.loc[code] if code in cat.index else {}
+        name = c.get("name", code) if len(c) else code
+        params.append({"parameter_code": code, "name": name, "name_es": c.get("name_es") if len(c) else None,
+                       "unit": c.get("unit_name") if len(c) else None, "n": int(n),
+                       "kind": _fluoro_kind(code, f"{name} {c.get('name_es', '') if len(c) else ''}")})
+    casts = (o.groupby(["site", "site_code", "water_body", "date"])
+             .agg(n=("value", "size"), zmax=("depth_m", "max")).reset_index()
+             .sort_values(["date", "site_code"], ascending=[False, True]))
+    rows = o[["site_code", "date", "depth_m", "parameter_code", "value"]].copy()
+    rows["depth_m"] = rows["depth_m"].round(2)
+    rows["value"] = rows["value"].round(4)
+    return {"params": params, "casts": _jsonable(casts), "rows": _jsonable(rows.sort_values(["date", "site_code", "depth_m"]))}
 
 
 # ── Fitoplancton ───────────────────────────────────────────────────────────

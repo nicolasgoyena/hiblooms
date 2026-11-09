@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { api, fmt, LabPairs, LabRow, ModelCard } from './api'
-import { locale, t } from './i18n'
+import { getLang, locale, t } from './i18n'
 import Icon from './Icon'
 
 const TROFICO = [
@@ -13,10 +13,39 @@ const TROFICO = [
 const MES = (d: string) => new Date(d + 'T12:00:00').getMonth()
 const MES_COL = ['#2c7bb6', '#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#f9d057', '#f29e2e', '#e76818', '#d7191c', '#f29e2e', '#00ccbc', '#2c7bb6']
 
+/** Enlace al TFM de Manuel Ruiz Galilea en DADUN (repositorio de la Universidad de Navarra).
+ *  Pega aquí la URL del registro (https://hdl.handle.net/10171/…) cuando esté publicado:
+ *  mientras esté vacío, el texto se muestra sin enlace. */
+export const TFM_URL = ''
+
+/** Ficha en el idioma de la web: la versión inglesa (m.en) se superpone a la española. */
+export function localCard(m: ModelCard): ModelCard {
+  if (getLang() !== 'en' || !m.en) return m
+  const e = m.en
+  return {
+    ...m, ...e,
+    training: { ...m.training, ...(e.training ?? {}) },
+    validation: { ...m.validation, ...(e.validation ?? {}) },
+  } as ModelCard
+}
+
+/** Contexto de los modelos (qué son, con qué datos se entrenan y de dónde salen). */
+function ModelContext() {
+  return (
+    <div className="model-ctx">
+      <p>{t('Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.')}</p>
+      <p>{t('Parten del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), dentro de HIBLOOMS.')}{' '}
+        {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
+    </div>
+  )
+}
+
 /** Lista de modelos, en el panel lateral. */
-export function ModelList({ models, sel, onSel }: { models: ModelCard[]; sel: string | null; onSel: (id: string) => void }) {
+export function ModelList({ models: raw, sel, onSel }: { models: ModelCard[]; sel: string | null; onSel: (id: string) => void }) {
+  const models = raw.map(localCard)
   return (
     <section>
+      <ModelContext />
       <label className="lbl">{t('Modelos de la plataforma')}</label>
       <div className="model-list">
         {models.map(m => (
@@ -34,7 +63,8 @@ export function ModelList({ models, sel, onSel }: { models: ModelCard[]; sel: st
 }
 
 /** Ficha grande del modelo. */
-export function ModelCardView({ m, onOpen, onClose }: { m: ModelCard; onOpen: () => void; onClose: () => void }) {
+export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpen: () => void; onClose: () => void }) {
+  const m = localCard(raw)
   const pts = m.pairs.map(p => ({ ...p, lo: Math.log10(Math.max(p.obs, 0.1)), lp: Math.log10(Math.max(p.pred, 0.1)), mes: MES(p.date) }))
   const lg = (v: number) => Math.log10(v)
   const ticks = [0.3, 1, 3, 10, 30, 100, 300].map(lg)

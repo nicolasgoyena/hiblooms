@@ -13,6 +13,7 @@ export type ImageResult = {
   points?: Record<string, number | null>
   interval80?: [number, number]
   extrapolation_pct?: number
+  q?: SeriesQ
 }
 export type MonitorRow = {
   id: string; label: string; ndci_mean: number | null; ndci_p90: number | null; pci_p90: number | null
@@ -40,6 +41,10 @@ export type PhytoSample = { site: string; code: string; water_body: string; date
 export type PhytoResp = { samples: PhytoSample[]; groups: string[]; metric: 'density' | 'biovolume' }
 export type CoreMeta = { core_id: number; code: string | null; site: string | null; site_code: string | null; water_body: string | null; date: string | null; length_cm: number | null; water_depth_m: number | null; interval_cm: number | null; notes: string | null; notes_es?: string | null; n_sections: number; parameters: string[] }
 export type CoreData = { core_id: number; parameters: { parameter_code: string; name: string; name_es?: string | null; unit: string | null; n: number }[]; rows: { parameter_code: string; section_top_cm: number; section_bottom_cm: number | null; depth_cm: number; value: number; qc_flag: number | null; below_lod: boolean }[] }
+export type FluoroParam = { parameter_code: string; name: string; name_es?: string | null; unit: string | null; n: number
+  kind: 'total' | 'cyano' | 'green' | 'diatoms' | 'crypto' | 'yellow' | 'transmission' | 'temp' | 'other' }
+export type FluoroCast = { site: string; site_code: string; water_body: string; date: string; n: number; zmax: number }
+export type FluoroResp = { params: FluoroParam[]; casts: FluoroCast[]; rows: { site_code: string; date: string; depth_m: number; parameter_code: string; value: number }[] }
 export type SensorRes = { reservoir_id: number; name: string; sensor_days: number; sat_dates: number; first: string | null; last: string | null; sources?: string[] }
 export type SensorSeries = { reservoir_id: number; name: string; variable: string; var_name: string; unit: string; layer: string
   daily: { date: string; value: number; n: number; zmax: number }[]; profile: { date: string; dbin: number; value: number }[]
@@ -54,7 +59,9 @@ export type ModelCard = { id: string; index_id: string; reservoir: string; reser
   kind?: 'satellite' | 'seasonal' | 'trend' | 'lab'
   curve?: { doy: number; p: number; obs: number | null }[]; levels?: { medio: number; alto: number }
   high_season?: string | null; today?: RiskToday
-  history?: { date: string; value: number }[]; forecast?: TrendPoint[] }
+  history?: { date: string; value: number }[]; forecast?: TrendPoint[]
+  /** Textos en inglés de la ficha; se superponen cuando la web está en inglés. */
+  en?: Record<string, any> }
 export type LabRow = { date: string; doy: number; year: number; pc: number
   pci: number | null; ndci: number | null; tbda: number | null; ci: number | null }
 export type LabPairs = { reservoir_label: string; station: string
@@ -67,7 +74,9 @@ export type ElValLive = { ok: boolean; reservoir_id: number; station?: string; l
   variables: LiveVar[]; risk_today?: RiskToday | null; trend?: TrendPoint[] | null }
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
-export type SeriesPoint = { date: string; mean: number | null; [poi: string]: number | string | null }
+/** Calidad de la media del embalse en una fecha: mediana, píxeles de agua válidos y % del polígono. */
+export type SeriesQ = { median: number | null; n_px: number; valid_pct: number | null }
+export type SeriesPoint = { date: string; mean: number | null; q?: SeriesQ; [poi: string]: number | string | null | SeriesQ | undefined }
 export type ClassRow = { low: number; high: number | null; area_ha: number; pct: number }
 
 const BASE = (import.meta as any).env?.VITE_API_URL ?? ''
@@ -154,6 +163,12 @@ export const api = {
     if (wb) q.set('water_body', wb)
     if (sites.length) q.set('sites', sites.join(','))
     return req<PhytoResp>(`/api/db/phyto?${q}`)
+  },
+  dbFluoro: (wb: string | undefined, sites: string[]) => {
+    const q = new URLSearchParams()
+    if (wb) q.set('water_body', wb)
+    if (sites.length) q.set('sites', sites.join(','))
+    return req<FluoroResp>(`/api/db/fluoro?${q}`)
   },
   dbCores: (wb?: string) => req<{ cores: CoreMeta[] }>(`/api/db/cores${wb ? `?water_body=${encodeURIComponent(wb)}` : ''}`),
   dbCore: (id: number) => req<CoreData>(`/api/db/core/${id}`),
@@ -264,4 +279,32 @@ export function downloadBlob(name: string, text: string, type = 'application/jso
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob([text], { type }))
   a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+
+export type Doubt = 'pocos' | 'pico' | 'sesgo'
+/** Fechas dudosas de una serie de medias del embalse.
+ *  · pocos: quedan pocos píxeles de agua despejada (< 30 % de los de la mejor fecha, o < 10 % del
+ *    polígono); unos pocos píxeles con nubes, bruma o sombra sin marcar disparan la media.
+ *  · sesgo: la media se separa mucho de la mediana → la arrastran unos pocos píxeles extremos.
+ *  · pico: valor aislado muy por encima/debajo de sus vecinos (filtro de Hampel, ±3 fechas). */
+export function doubtful(series: SeriesPoint[], range: number): Map<string, Doubt> {
+  const out = new Map<string, Doubt>()
+  const ns = series.map(r => r.q?.n_px ?? 0)
+  const nmax = Math.max(0, ...ns)
+  const span = Math.abs(range) || 1
+  series.forEach((r, i) => {
+    if (r.mean == null) return
+    const q = r.q
+    if (q && nmax > 0 && (q.n_px < 0.3 * nmax || (q.valid_pct != null && q.valid_pct < 10))) { out.set(r.date, 'pocos'); return }
+    if (q?.median != null && Math.abs(r.mean - q.median) > 0.15 * span) { out.set(r.date, 'sesgo'); return }
+    const win = series.slice(Math.max(0, i - 3), i + 4).filter((x, j) => x !== r && x.mean != null && !out.has(x.date) && j >= 0).map(x => x.mean as number)
+    if (win.length < 4) return
+    const sorted = [...win].sort((a, b) => a - b)
+    const med = sorted[Math.floor(sorted.length / 2)]
+    const mad = [...win.map(v => Math.abs(v - med))].sort((a, b) => a - b)[Math.floor(win.length / 2)]
+    const d = Math.abs(r.mean - med)
+    if (d > Math.max(4 * 1.4826 * mad, 0.12 * span)) out.set(r.date, 'pico')
+  })
+  return out
 }

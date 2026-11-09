@@ -7,7 +7,7 @@ import Icon from './Icon'
 const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Controles de la pestaña, en el panel lateral. */
-export type DbView = 'measures' | 'campaigns' | 'phyto' | 'sensors' | 'cores'
+export type DbView = 'measures' | 'campaigns' | 'phyto' | 'fluoro' | 'sensors' | 'cores'
 
 export function DataForm(p: {
   status: DbStatus | null
@@ -35,7 +35,7 @@ export function DataForm(p: {
 
       <div className="db-views">
         {([['measures', 'serie', 'Medidas'], ['campaigns', 'calendario', 'Campañas'], ['phyto', 'fitoplancton', 'Fitoplancton'],
-          ['sensors', 'sonda', 'Sondas'], ['cores', 'testigo', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
+          ['fluoro', 'regla', 'Perfiles FluoroProbe'], ['sensors', 'sonda', 'Monitorización remota'], ['cores', 'testigo', 'Testigos']] as [DbView, string, string][]).map(([k, ic, lb]) => (
           <button key={k} className={p.view === k ? 'on' : ''} onClick={() => p.setView(k)}><span><Icon name={ic} size={18} /></span>{t(lb)}</button>
         ))}
       </div>
@@ -50,7 +50,7 @@ export function DataForm(p: {
 
       {p.view !== 'measures' ? (<>
         <p className="muted small">{t(VIEW_HELP[p.view])}</p>
-        {p.view === 'phyto' && <SiteChips {...p} />}
+        {(p.view === 'phyto' || p.view === 'fluoro') && <SiteChips {...p} />}
       </>) : <>
       <section>
         <label className="lbl">{t('Parámetro')}</label>
@@ -95,7 +95,8 @@ const VIEW_HELP: Record<DbView, string> = {
   measures: '',
   campaigns: 'Calendario de muestreos: qué puntos se visitaron en cada campaña y qué se tomó en cada visita. Pulsa una campaña para ver sus visitas.',
   phyto: 'Composición del fitoplancton de cada muestra: grupos, porcentaje de cianobacterias y taxones dominantes. Filtra por masa de agua y puntos.',
-  sensors: 'Series de alta frecuencia de las sondas fijas de los embalses (clorofila, ficocianina, temperatura…). Elige embalse y variable en el gráfico.',
+  fluoro: 'Perfiles de la sonda FluoroProbe III: clorofila de cada grupo algal (cianobacterias, algas verdes, diatomeas, criptófitas) a lo largo de la columna de agua, en cada punto y campaña.',
+  sensors: 'Monitorización remota: series de alta frecuencia que envían las sondas fijas instaladas en los embalses (clorofila, ficocianina, temperatura…). Elige embalse y variable en el gráfico.',
   cores: 'Testigos de sedimento: perfiles de cada parámetro a lo largo del testigo, en centímetros bajo la superficie del sedimento.',
 }
 

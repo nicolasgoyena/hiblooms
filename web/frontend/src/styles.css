@@ -524,3 +524,24 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .seg .ico, .db-views .ico { vertical-align: -0.2em; }
 .pj-ic .ico { vertical-align: 0; }
 .mon-cy .ico, .mon-warn .ico, .elval-old .ico, .model-status .ico, .model-badge .ico { vertical-align: -0.12em; }
+
+/* ── Financiación (Guía de comunicación AEI): visible en todas las pestañas ── */
+.funding-note { position: sticky; bottom: -22px; margin: auto -22px -22px; padding: 10px 22px 12px;
+  background: rgba(255,255,255,.97); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.funding-note img { height: 34px; width: auto; max-width: 100%; object-fit: contain; align-self: flex-start; }
+.funding-note small { font-size: 10.5px; line-height: 1.35; color: var(--muted); }
+.pj-funding { margin: -18px 0 22px !important; font-size: 13px; color: rgba(255,255,255,.92) !important; max-width: none !important; }
+
+/* ── Contexto de los modelos ── */
+.model-ctx { background: #EEF6F4; border: 1px solid #D5E8E3; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.model-ctx p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.45; color: var(--ink); }
+.model-ctx p:last-child { margin-bottom: 0; }
+.model-ctx a { color: var(--teal); font-weight: 600; }
+
+/* ── Fechas dudosas de la serie ── */
+.tt-warn { color: #9A4B12; }
+.doubt-note { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; color: #9A4B12 !important; }
+
+/* ── Perfiles FluoroProbe ── */
+.fp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.fp-chips .tag.on { color: #fff; }

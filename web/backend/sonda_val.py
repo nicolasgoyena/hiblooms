@@ -223,6 +223,31 @@ def _riesgo() -> dict:
         "levels": {"medio": round(float(q[0]), 4), "alto": round(float(q[1]), 4)},
         "high_season": f"{fd(alto.min())} – {fd(alto.max())}" if len(alto) else None,
         "today": {"doy": hoy, "p": round(float(curva[hoy - 1]), 4), "level": nivel(curva[hoy - 1])},
+        # Textos en inglés (la web los superpone cuando el idioma es inglés)
+        "en": {
+            "variable": "High phycocyanin risk", "unit": "probability",
+            "description": "Probability that the day's mean phycocyanin exceeds its historical 90th percentile, depending on the time of year. Learned from the CHE SAICA probe; it tells when episodes usually happen, not whether one is happening now (for that, see the real-time probe in Current status).",
+            "formula": f"P(peak) = 1 / (1 + e^−({w[0]:.3f} {w[1]:+.3f}·sin(day) {w[2]:+.3f}·cos(day)))",
+            "index_formula": f"Peak = day with mean phycocyanin ≥ {umbral:.2f} µg/L (90th percentile) · day = day of the year",
+            "training": {"ground_truth": "CHE SAICA 945 probe at El Val (phycocyanin, daily mean)",
+                         "matching": f"Days with at least 12 valid readings · {int(y.sum())} peak days"},
+            "validation": {
+                "method": "Fitted with all years but one and tested on the year left out, year by year.",
+                "metrics": [
+                    {"label": "AUC", "value": f"{auc:.2f}", "help": "Ability to rank peak days above the rest (0.5 = chance, 1 = perfect)"},
+                    {"label": "Peaks in the 25 % highest-risk days", "value": f"{captados * 100:.0f} %", "help": "Share of peak days falling in the quarter of the year flagged as highest risk"},
+                    {"label": "Peak threshold", "value": f"{umbral:.2f} µg/L", "help": "90th percentile of the probe's daily mean phycocyanin"},
+                    {"label": "Years of data", "value": str(len(np.unique(yrs))), "help": "Different summers used to learn the calendar"},
+                ],
+                "compared": "Adding weather (ERA5-Land: air temperature, warming, wind, radiation, rain), the Sentinel-2 NDCI and the reservoir level was tested: none improved the validation with the probe years available.",
+            },
+            "limits": [
+                "It is a calendar: it says when peaks usually happen at El Val, not whether there is one now.",
+                "Learned from few summers; an unusual year (e.g. an out-of-season peak) is not anticipated.",
+                "Only valid for El Val; in other reservoirs the risk season may differ.",
+            ],
+            "high_season": f"{(date(2025, 1, 1) + timedelta(days=int(alto.min()) - 1)).strftime('%d %b')} – {(date(2025, 1, 1) + timedelta(days=int(alto.max()) - 1)).strftime('%d %b')}" if len(alto) else None,
+        },
     }
 
 
@@ -307,6 +332,25 @@ def _tendencia() -> dict:
         "pairs": [],
         "history": [{"date": i.strftime("%Y-%m-%d"), "value": round(float(v), 2)} for i, v in hist.items()],
         "forecast": fc,
+        "en": {
+            "variable": "Short-term phycocyanin trend",
+            "description": "Expected phycocyanin in 1, 3 and 7 days from the latest probe reading, corrected by how it usually evolves at that time of year. A simple, transparent method: it shows where the series is heading, not an exact value.",
+            "formula": "log(1 + PC(t+h)) = log(1 + PC(t)) + clim(day + h) − clim(day)",
+            "index_formula": "clim = mean of log(1 + PC) from the probe for each day of the year (smoothed ±15 days)",
+            "training": {"ground_truth": "CHE SAICA 945 probe at El Val (phycocyanin, daily mean)",
+                         "matching": "Shaded band: range where 80 % of past forecasts fell"},
+            "validation": {
+                "method": "For each year, the climatology is computed without that year and the forecast is compared with the actual probe value.",
+                "metrics": [{"label": f"R² at {h} day{'s' if h > 1 else ''}", "value": rango(h).replace(" a ", " to ").replace(",", "."),
+                             "help": "Range across years of the forecast R² (1 = perfect, 0 = no better than the mean)"} for h in HORIZONTES],
+                "compared": "Compared with assuming “same as today” (persistence), with the climatology alone and with a gradient boosting model using the probe's temperature and turbidity: none was consistently better across years.",
+            },
+            "limits": [
+                "Experimental: works reasonably in normal years, but in unusual years it fails beyond 1–3 days.",
+                "It does not anticipate the start of an episode that has not begun yet; it follows the trend of the series.",
+                "It depends on the probe being up to date: if the latest reading is old, so is the forecast.",
+            ],
+        },
     }
 
 
@@ -379,6 +423,20 @@ def _ficha_lab() -> dict:
             "Un R² de ajuste alto no significa nada si el validado no lo acompaña.",
         ],
         "pairs": [],
+        "en": {
+            "variable": "Lab: phycocyanin and Sentinel-2",
+            "description": "A sandbox to test for yourself whether any Sentinel-2 index can estimate phycocyanin at El Val. Change the index, the form of the fit and the years, and compare the fit R² with the R² validated leaving one year out.",
+            "formula": "PC = f(index) · you choose the form",
+            "index_formula": "PCI = B5/B4 · NDCI = (B5 − B4)/(B5 + B4) = (PCI − 1)/(PCI + 1) · TBDA and CI, three-band indices",
+            "training": {"ground_truth": "CHE SAICA 945 probe (phycocyanin at 11:00, same date as the image)",
+                         "matching": "One pair per date with a clear Sentinel-2 image and a probe reading"},
+            "validation": {"method": "The lab computes both the fit R² (with all the data) and the validated R² (fitting without one year and testing on that year). If the latter drops as the model gets more complex, it is overfitting."},
+            "limits": [
+                "Not a published model: it is a tool to explore.",
+                "Sentinel-2 has no band at 620 nm, where phycocyanin absorbs; these indices measure biomass.",
+                "A high fit R² means nothing if the validated R² does not follow.",
+            ],
+        },
     }
 
 

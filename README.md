@@ -12,7 +12,8 @@ Versión publicada: <https://hiblooms.onrender.com>
 - **Seguimiento actual**: estado de todos los embalses (boletín hidrológico, sonda de El Val en tiempo casi real).
 - **Visor satelital**: búsqueda de imágenes Sentinel-2 por embalse, mapas de índices, serie temporal,
   distribución por clases y contexto histórico. Admite shapefiles propios (ZIP) para cualquier embalse.
-- **Datos del proyecto**: muestreos de campo, laboratorio, sondas y campañas (base PostgreSQL/PostGIS).
+- **Datos del proyecto**: muestreos de campo, laboratorio, fitoplancton, perfiles de la sonda FluoroProbe III,
+  monitorización remota (sondas fijas), testigos y campañas (base PostgreSQL/PostGIS).
 - **Modelos y calibraciones**: fichas de los modelos validados y calibración con datos in situ del usuario.
 
 ## Modelos
