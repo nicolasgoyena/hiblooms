@@ -117,7 +117,7 @@ export function CampaignsResult({ data, onOpenSite, onClose }: {
                   <thead><tr><th>{t('Punto')}</th><th>{t('Fecha')}</th><th>{t('Hora')}</th><th>{t('Qué se tomó')}</th><th>{t('Parámetros')}</th><th /></tr></thead>
                   <tbody>
                     {c.visits.map(v => (
-                      <tr key={v.extraction_point_id}>
+                      <tr key={v.sampling_event_id}>
                         <td><b>{v.code}</b></td>
                         <td>{fmtDate(v.date)}</td>
                         <td>{v.time ?? '—'}</td>

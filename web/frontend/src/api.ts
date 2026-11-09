@@ -26,20 +26,20 @@ export type MonitorResp = { mode: string; start: string; end: string; days: numb
 export type ClimPoint = { date: string; q: number; year: number; value: number }
 export type ClimResp = { mode: string; index: string; unit: string; label: string; years: [number, number]; points: ClimPoint[] }
 export type DbSite = { site: string; code: string; water_body: string; lat: number; lon: number; n_campaigns: number; n_obs: number; first: string | null; last: string | null; n_dates: number | null }
-export type DbParam = { parameter_code: string; name: string; group: string; unit: string | null; unit_name: string | null; n: number; n_here: number; sites: number; first: string; last: string }
-export type DbQc = { qc_flag: number; label: string; description: string | null }
+export type DbParam = { parameter_code: string; name: string; name_es?: string | null; group: string; unit: string | null; unit_name: string | null; n: number; n_here: number; sites: number; first: string; last: string }
+export type DbQc = { qc_flag: number; label: string; label_es?: string | null; description: string | null; description_es?: string | null }
 export type DbRow = { date: string; site: string; site_code: string; water_body: string; depth_m: number | null; value: number; qc_flag: number | null; source_table: string; source_code: string | null }
-export type DbSeries = { parameter: string; name: string; unit: string | null; group: string | null; rows: DbRow[]; qc: DbQc[]; n_dates: number; depth: DbDepth
+export type DbSeries = { parameter: string; name: string; name_es?: string | null; unit: string | null; group: string | null; rows: DbRow[]; qc: DbQc[]; n_dates: number; depth: DbDepth
   summary: { site_code: string; n: number; n_dates: number; min: number; median: number; max: number; last_date: string; last_value: number }[] }
 export type DbDepth = 'surface' | 'bottom' | 'all'
-export type DbVisit = { extraction_point_id: number; site: string; code: string; date: string | null; time: string | null; kinds: string[]; n_obs: number; n_params: number; lat: number | null; lon: number | null }
+export type DbVisit = { sampling_event_id: number; site: string; code: string; date: string | null; time: string | null; kinds: string[]; n_obs: number; n_params: number; lat: number | null; lon: number | null }
 export type DbCampaign = { campaign_id: number | null; code: string; water_body: string | null; start: string | null; end: string | null; n_visits: number; n_sites: number; n_obs: number; kinds: string[]; visits: DbVisit[] }
 export type DbKind = { key: string; label: string }
 export type PhytoTaxon = { name: string; group: string; toxic: boolean; density: number | null; biovolume: number | null }
 export type PhytoSample = { site: string; code: string; water_body: string; date: string; depth_m: number | null; total: number; n_taxa: number; groups: Record<string, number>; cyano_pct: number | null; toxic_pct: number | null; cyano_density: number; top: PhytoTaxon[] }
 export type PhytoResp = { samples: PhytoSample[]; groups: string[]; metric: 'density' | 'biovolume' }
-export type CoreMeta = { core_id: number; code: string | null; site: string | null; site_code: string | null; water_body: string | null; date: string | null; length_cm: number | null; water_depth_m: number | null; interval_cm: number | null; notes: string | null; n_sections: number; parameters: string[] }
-export type CoreData = { core_id: number; parameters: { parameter_code: string; name: string; unit: string | null; n: number }[]; rows: { parameter_code: string; section_top_cm: number; section_bottom_cm: number | null; depth_cm: number; value: number; qc_flag: number | null; below_lod: boolean }[] }
+export type CoreMeta = { core_id: number; code: string | null; site: string | null; site_code: string | null; water_body: string | null; date: string | null; length_cm: number | null; water_depth_m: number | null; interval_cm: number | null; notes: string | null; notes_es?: string | null; n_sections: number; parameters: string[] }
+export type CoreData = { core_id: number; parameters: { parameter_code: string; name: string; name_es?: string | null; unit: string | null; n: number }[]; rows: { parameter_code: string; section_top_cm: number; section_bottom_cm: number | null; depth_cm: number; value: number; qc_flag: number | null; below_lod: boolean }[] }
 export type SensorRes = { reservoir_id: number; name: string; sensor_days: number; sat_dates: number; first: string | null; last: string | null; sources?: string[] }
 export type SensorSeries = { reservoir_id: number; name: string; variable: string; var_name: string; unit: string; layer: string
   daily: { date: string; value: number; n: number; zmax: number }[]; profile: { date: string; dbin: number; value: number }[]

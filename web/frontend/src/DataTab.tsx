@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { colorAt, DbDepth, DbParam, DbSeries, DbSite, DbStatus, fmt, POI_COLORS } from './api'
-import { locale, t } from './i18n'
+import { loc, locale, t } from './i18n'
 import Icon from './Icon'
 
 const fmtDate = (s: string) => new Date(s + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
@@ -60,7 +60,7 @@ export function DataForm(p: {
             <optgroup key={g} label={t(g)}>
               {p.params.filter(x => x.group === g).map(x => (
                 <option key={x.parameter_code} value={x.parameter_code}>
-                  {x.name ?? x.parameter_code}{x.unit_name ? ` (${x.unit_name})` : ''} · {t('{n} datos', { n: x.n_here })}
+                  {loc(x.name, x.name_es) || x.parameter_code}{x.unit_name ? ` (${x.unit_name})` : ''} · {t('{n} datos', { n: x.n_here })}
                 </option>
               ))}
             </optgroup>
@@ -176,8 +176,8 @@ function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => st
           <ResponsiveContainer>
             <ScatterChart margin={{ top: 8, right: 16, bottom: 18, left: 4 }}>
               <CartesianGrid stroke="#E4EBEA" />
-              <XAxis type="number" dataKey="value" name={data.name} domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#5E7376' }}
-                label={{ value: data.name + u, position: 'insideBottom', offset: -8, style: { fontSize: 11, fill: '#5E7376' } }} />
+              <XAxis type="number" dataKey="value" name={loc(data.name, data.name_es)} domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#5E7376' }}
+                label={{ value: loc(data.name, data.name_es) + u, position: 'insideBottom', offset: -8, style: { fontSize: 11, fill: '#5E7376' } }} />
               <YAxis type="number" dataKey="depth" name={t('Profundidad')} reversed domain={[0, Math.ceil(maxDepth)]} width={46}
                 tick={{ fontSize: 11, fill: '#5E7376' }} label={{ value: t('Profundidad (m)'), angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#5E7376' } }} />
               <Tooltip formatter={(v: any, n: any) => [fmt(v as number, 2), n]} />
@@ -198,7 +198,7 @@ function WaterColumn({ data, color }: { data: DbSeries; color: (c: string) => st
                   tickFormatter={v => new Date(v).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: '2-digit' })} tick={{ fontSize: 11, fill: '#5E7376' }} />
                 <YAxis type="number" dataKey="depth" reversed domain={[0, Math.ceil(maxDepth)]} width={46} name={t('Profundidad')}
                   tick={{ fontSize: 11, fill: '#5E7376' }} label={{ value: t('Profundidad (m)'), angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#5E7376' } }} />
-                <ZAxis type="number" dataKey="value" range={[60, 60]} name={data.name} />
+                <ZAxis type="number" dataKey="value" range={[60, 60]} name={loc(data.name, data.name_es)} />
                 <Tooltip formatter={(v: any, n: any) => [n === t('Fecha') ? fmtDate(new Date(v).toISOString().slice(0, 10)) : fmt(v as number, 2), n]} />
                 <Scatter data={section} shape="square" isAnimationActive={false}>
                   {section.map((p, i) => <Cell key={i} fill={col(p.value)} />)}
@@ -225,7 +225,7 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
   }
   // El flag más bajo de qc_flags es el "bueno"; el resto se marca en el gráfico
   const goodFlag = data.qc.length ? Math.min(...data.qc.map(q => q.qc_flag)) : null
-  const qcLabel = (f: number | null) => data.qc.find(q => q.qc_flag === f)?.label ?? String(f)
+  const qcLabel = (f: number | null) => { const q = data.qc.find(q => q.qc_flag === f); return q ? loc(q.label, q.label_es) : String(f) }
   const flagged = data.rows.filter(r => r.qc_flag != null && goodFlag != null && r.qc_flag !== goodFlag)
 
   // Una fila por fecha, una columna por punto (media si hay varias profundidades)
@@ -266,7 +266,7 @@ export function DataResult({ data, sites, onClose }: { data: DbSeries; sites: Db
       <button className="x" onClick={onClose} aria-label={t('Cerrar')}>×</button>
       <div>
         <p className="eyebrow">{t(data.group ?? 'Datos del proyecto')}</p>
-        <h2 className="serif">{data.name}{data.unit ? <span className="unit"> · {data.unit}</span> : null}</h2>
+        <h2 className="serif">{loc(data.name, data.name_es)}{data.unit ? <span className="unit"> · {data.unit}</span> : null}</h2>
         <p className="muted small">
           {t('{n} medidas en {m} muestreos · {s} puntos', { n: data.rows.length, m: data.n_dates, s: codes.length })}
           {flagged.length > 0 && <> · <span className="qc-note">{t('{n} marcadas por control de calidad', { n: flagged.length })}</span></>}

@@ -38,6 +38,11 @@ export function useLang(): [Lang, (l: Lang) => void] {
 
 export const locale = () => (lang === 'es' ? 'es-ES' : 'en-GB')
 
+/** Text that comes from the database in both languages (name = English, name_es = Spanish). */
+export function loc(en: string | null | undefined, es?: string | null): string {
+  return (lang === 'es' ? (es || en) : (en || es)) ?? ''
+}
+
 export function t(es: string, vars?: Record<string, string | number>): string {
   if (es == null) return ''
   es = String(es)
