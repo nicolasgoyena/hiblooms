@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, colorAt, CoreData, CoreMeta, fmt, PhytoResp, SensorRes, SensorSeries } from './api'
-import { locale, t } from './i18n'
+import { loc, locale, t } from './i18n'
 import Icon from './Icon'
 
 const fmtDate = (s: string | null) => s ? new Date(s.slice(0, 10) + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -174,7 +174,7 @@ export function CoresResult({ body, onClose }: { body: string; onClose: () => vo
           {meta.water_depth_m != null && <span><Icon name="agua" /> {fmt(meta.water_depth_m, 1)} m {t('de columna de agua')}</span>}
           {meta.interval_cm != null && <span><Icon name="corte" /> {t('cortes cada {n} cm', { n: fmt(meta.interval_cm, 1) })}</span>}
           {meta.site_code && <span><Icon name="punto" /> {meta.site_code}</span>}
-          {meta.notes && <span className="muted core-notes">{meta.notes}</span>}
+          {meta.notes && <span className="muted core-notes">{loc(meta.notes, meta.notes_es)}</span>}
         </p>
       )}
       {meta && cd && !cd.rows.length && <Empty text={t('Este testigo aún no tiene resultados de laboratorio en la base de datos.')} />}
@@ -183,7 +183,7 @@ export function CoresResult({ body, onClose }: { body: string; onClose: () => vo
           <div className="kind-legend">
             {cd.parameters.map(p => (
               <button key={p.parameter_code} className={'kchip' + (pick.includes(p.parameter_code) ? ' on' : ' off')} onClick={() => toggle(p.parameter_code)}>
-                {p.name}{p.unit ? ` (${p.unit})` : ''}
+                {loc(p.name, p.name_es)}{p.unit ? ` (${p.unit})` : ''}
               </button>
             ))}
           </div>
@@ -194,7 +194,7 @@ export function CoresResult({ body, onClose }: { body: string; onClose: () => vo
               if (!p || !pts.length) return null
               return (
                 <div key={pc} className="core-plot">
-                  <b className="small">{p.name}{p.unit ? <span className="muted"> · {p.unit}</span> : null}</b>
+                  <b className="small">{loc(p.name, p.name_es)}{p.unit ? <span className="muted"> · {p.unit}</span> : null}</b>
                   <ResponsiveContainer width="100%" height={260}>
                     <ComposedChart layout="vertical" data={pts} margin={{ top: 6, right: 10, bottom: 0, left: 0 }}>
                       <CartesianGrid stroke="#E3ECEC" />

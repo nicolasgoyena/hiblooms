@@ -1,20 +1,26 @@
 """
-Acceso de SOLO LECTURA a la base de datos del proyecto (PostgreSQL/PostGIS,
-unav_water_sampling) para la pestaña «Datos» del visor.
+Acceso de SOLO LECTURA a la base de datos del proyecto (PostgreSQL/PostGIS, hiblooms)
+para la pestaña «Datos» del visor.
 
 Conexión: variable de entorno DATABASE_URL, por ejemplo
-    postgresql+psycopg2://hiblooms_ro:CLAVE@host:5432/unav_water_sampling
+    postgresql+psycopg2://hiblooms_ro:CLAVE@host:5432/hiblooms
 Conviene usar un rol que solo tenga permisos SELECT. Además, cada transacción
 se abre en modo READ ONLY, así que aunque el rol tuviera más permisos la web
 no podría modificar nada.
 
+Las tablas están en esquemas (catalog, field, lab, sampling, timeseries) y todas
+las consultas los escriben explícitamente: no dependen del search_path.
+
 La físico-química está repartida en tres tablas con formatos distintos:
-  · insitu_sampling        (ancha: una columna por parámetro, una fila por muestreo)
-  · insitu_determinations  (ancha, con profundidad: sonda multiparamétrica)
-  · lab_measurements       (larga: parameter_code + value, vía lab_samples)
+  · field.insitu_sampling        (ancha: una columna por parámetro, una fila por muestreo)
+  · field.insitu_determinations  (ancha, con profundidad: sonda multiparamétrica)
+  · lab.lab_measurements         (larga: parameter_code + value, vía lab.lab_samples)
 Aquí se unifican en una tabla larga de observaciones:
-  punto · fecha · profundidad · parámetro · valor · unidad · qc_flag · origen
+  evento de muestreo · fecha · profundidad · parámetro · valor · unidad · qc_flag · origen
 Son pocas miles de filas, así que se cargan una vez y se cachean unos minutos.
+
+Los textos de los catálogos están en inglés (name, label...) con su versión en
+español en las columnas *_es; la web elige uno u otro según el idioma.
 
 Sin DATABASE_URL (o con HIBLOOMS_DB_MOCK=1) se generan datos simulados que
 respetan el esquema, para desarrollar y probar sin la base real.
@@ -35,7 +41,7 @@ CACHE_TTL = 6 * 3600  # s: pasado este tiempo se refresca en segundo plano
 
 # Columnas numéricas de las tablas anchas que NO son parámetros
 NOT_PARAMS = {
-    "extraction_point_id", "qc_flag", "depth_m", "water_depth_meters",
+    "sampling_event_id", "qc_flag", "depth_m", "water_depth_meters",
 }
 
 _lock = threading.Lock()
@@ -85,104 +91,108 @@ def q(sql: str, **params) -> pd.DataFrame:
 
 # ── Carga desde la base real ────────────────────────────────────────────────
 
-def _numeric_cols(table: str) -> list[str]:
+def _numeric_cols(schema: str, table: str) -> list[str]:
     df = q("""SELECT column_name FROM information_schema.columns
-              WHERE table_schema='public' AND table_name=:t
+              WHERE table_schema=:s AND table_name=:t
                 AND data_type IN ('numeric','double precision','real','integer','smallint','bigint')
-              ORDER BY ordinal_position""", t=table)
+              ORDER BY ordinal_position""", s=schema, t=table)
     return [c for c in df["column_name"] if c not in NOT_PARAMS and not c.endswith("_id")]
 
 
-def _unpivot(table: str, depth_expr: str, date_expr: Optional[str] = None,
-             exclude: tuple = (), rename: Optional[dict] = None) -> str:
+def _unpivot(schema: str, table: str, depth_expr: str, date_expr: Optional[str] = None,
+             exclude: tuple = ()) -> str:
     """SQL que pasa una tabla ancha a formato largo con LATERAL (VALUES ...).
     depth_expr: expresión SQL de la profundidad de la medida (o '0' si es de superficie).
-    date_expr: fecha propia de la tabla; si no, se toma de samples vía extraction_id.
-    rename: columnas que se publican con otro código (p. ej. dos conductividades distintas)."""
-    rename = rename or {}
-    cols = [c for c in _numeric_cols(table) if c not in exclude]
+    date_expr: fecha propia de la tabla; si no, se toma de sampling.samples vía extraction_id."""
+    cols = [c for c in _numeric_cols(schema, table) if c not in exclude]
     if not cols:
         return ""
-    vals = ", ".join(f"('{rename.get(c, c)}', t.\"{c}\"::double precision)" for c in cols)
+    vals = ", ".join(f"('{c}', t.\"{c}\"::double precision)" for c in cols)
     if date_expr:
         date_sql, join = date_expr, ""
     else:
         date_sql = "s.sample_date"
-        join = """LEFT JOIN (SELECT DISTINCT ON (extraction_id) extraction_id, sample_date
-                 FROM samples ORDER BY extraction_id, sample_date) s
-        ON s.extraction_id = t.extraction_id"""
+        join = "LEFT JOIN sampling.samples s ON s.extraction_id = t.extraction_id"
     return f"""
-      SELECT t.extraction_point_id, {date_sql} AS date, ({depth_expr})::double precision AS depth_m,
+      SELECT t.sampling_event_id, {date_sql} AS date, ({depth_expr})::double precision AS depth_m,
              '{table}' AS source_table, v.col AS column_name, v.val AS value,
              t.qc_flag, t.source_code, NULL::text AS unit_raw, 'water'::text AS matrix_code
-      FROM {table} t
+      FROM {schema}.{table} t
       {join}
       CROSS JOIN LATERAL (VALUES {vals}) AS v(col, val)
       WHERE v.val IS NOT NULL"""
 
 
 def _load_real() -> dict:
-    # Puntos: agrupamos las extracciones por punto de muestreo fijo cuando lo tienen
+    # Eventos de muestreo (punto físico + campaña) con su posición del día y la del punto
     points = q("""
-      SELECT ep.extraction_point_id, ep.sampling_point_id, ep.campaign_id,
-             ep.water_body_name, ep.location_code, ep.reservoir_id, ep.river_id,
-             COALESCE(ep.latitude,  ST_Y(ST_Transform(ST_PointOnSurface(ep.geometry), 4326))) AS lat,
-             COALESCE(ep.longitude, ST_X(ST_Transform(ST_PointOnSurface(ep.geometry), 4326))) AS lon,
+      SELECT e.sampling_event_id, e.sampling_point_id, e.campaign_id,
+             e.water_body_name, e.location_code, e.reservoir_id, e.river_id,
+             COALESCE(e.latitude,  ST_Y(ST_Transform(ST_PointOnSurface(e.geometry), 4326))) AS lat,
+             COALESCE(e.longitude, ST_X(ST_Transform(ST_PointOnSurface(e.geometry), 4326))) AS lon,
              sp.point_code, sp.point_number,
              ST_Y(ST_Transform(ST_PointOnSurface(sp.geometry), 4326)) AS sp_lat,
              ST_X(ST_Transform(ST_PointOnSurface(sp.geometry), 4326)) AS sp_lon,
              c.campaign_code, c.start_date AS campaign_start
-      FROM extraction_points ep
-      LEFT JOIN sampling_points sp ON sp.sampling_point_id = ep.sampling_point_id
-      LEFT JOIN campaigns c ON c.campaign_id = ep.campaign_id""")
+      FROM sampling.sampling_events e
+      LEFT JOIN sampling.sampling_points sp ON sp.sampling_point_id = e.sampling_point_id
+      LEFT JOIN sampling.sampling_campaigns c ON c.campaign_id = e.campaign_id""")
 
     parts = [p for p in (
         # insitu_sampling: medidas de SUPERFICIE. Su water_depth_meters es la profundidad
         # TOTAL de la columna en el punto, no la de la medida.
-        _unpivot("insitu_sampling", "0", exclude=("chlorophyll_volume_estimation",)),
-        # Sonda multiparamétrica (Hanna): perfiles con profundidad real. Sus dos
-        # conductividades no son la misma magnitud: se publican por separado.
-        _unpivot("insitu_determinations", "t.depth_m", rename={"conduc_uscm_2": "conduc_uscm_2"}),
+        _unpivot("field", "insitu_sampling", "0", exclude=("chlorophyll_volume_estimation",)),
+        # Sonda multiparamétrica (Hanna): perfiles con profundidad real.
+        _unpivot("field", "insitu_determinations", "t.depth_m"),
         # Sonda de fluorescencia (FluoroProbe): perfiles finos de clorofila por grupo algal.
         # Su temperatura se omite para no mezclar dos instrumentos en el mismo perfil.
-        _unpivot("profiles_data", "t.depth_m", date_expr="t.datetime::date",
+        _unpivot("field", "profiles_data", "t.depth_m", date_expr="t.datetime::date",
                  exclude=("sample_temperature_celsius",)),
     ) if p]
     # Laboratorio: agua, material en suspensión y sedimento superficial. Los testigos
     # de sedimento (secciones en cm) quedan fuera: su profundidad no es la del agua.
+    # Las muestras de agua de laboratorio son de superficie.
     parts.append("""
-      SELECT ls.extraction_point_id, ls.sample_date AS date,
-             CASE WHEN ls.matrix_code = 'water' THEN COALESCE(ls.depth_m, 0) END::double precision AS depth_m,
+      SELECT ls.sampling_event_id, ls.sample_date AS date,
+             CASE WHEN ls.matrix_code = 'water' THEN 0 END::double precision AS depth_m,
              'lab_measurements' AS source_table, m.parameter_code AS column_name,
              m.value::double precision AS value, m.qc_flag, m.source_code, m.unit_code AS unit_raw,
              ls.matrix_code
-      FROM lab_measurements m JOIN lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
+      FROM lab.lab_measurements m JOIN lab.lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
       WHERE m.value IS NOT NULL AND COALESCE(ls.matrix_code, 'water') <> 'sediment_core'""")
     obs = q(" UNION ALL ".join(parts))
 
     # Vocabulario: columna de tabla ancha → parámetro normalizado y unidad
-    vocab = q("SELECT table_name, column_name, parameter_code, unit_code FROM variable_vocabulary")
-    params = q("SELECT parameter_code, name, parameter_group, default_unit FROM parameters")
-    units = q("SELECT unit_code, name AS unit_name FROM units")
-    qc = q("SELECT qc_flag, label, description FROM qc_flags ORDER BY qc_flag")
+    vocab = q("SELECT table_name, column_name, parameter_code, unit_code FROM catalog.variable_vocabulary")
+    params = q("SELECT parameter_code, name, name_es, parameter_group, default_unit FROM catalog.parameters")
+    units = q("SELECT unit_code, name AS unit_name FROM catalog.units")
+    qc = q("""SELECT qc_flag, label, name_es AS label_es, description, description_es
+              FROM catalog.qc_flags ORDER BY qc_flag""")
     reservoirs = q("""SELECT DISTINCT r.reservoir_id, r.reservoir_name
-                      FROM reservoirs_spain r JOIN extraction_points ep ON ep.reservoir_id = r.reservoir_id""")
-    sources = q("SELECT source_code, name, provider, licence, citation FROM data_sources")
-    matrices = q("SELECT matrix_code, name FROM matrices")
-    # Visitas: qué se tomó en cada extracción (incluye tablas que el visor aún no dibuja)
+                      FROM sampling.reservoirs_spain r
+                      JOIN sampling.sampling_events e ON e.reservoir_id = r.reservoir_id""")
+    sources = q("""SELECT source_code, name, name_es, provider, provider_es, licence, licence_es, citation
+                   FROM catalog.data_sources""")
+    matrices = q("SELECT matrix_code, name, name_es FROM catalog.matrices")
+    # Visitas: qué se tomó en cada evento (incluye tablas que el visor aún no dibuja).
+    # La tabla de origen es el prefijo del extraction_id (<tabla>_<campaña>-<punto>_...).
     samples = q("""
-      SELECT s.extraction_point_id, MIN(s.sample_date) AS date, MIN(s.sample_time)::text AS time,
-             split_part(s.extraction_id, '_' || s.extraction_point_id || '_', 1) AS source_table,
-             COUNT(*) AS n_samples
-      FROM samples s GROUP BY 1, 4
+      SELECT sampling_event_id, MIN(sample_date) AS date, MIN(sample_time)::text AS time,
+             source_table, COUNT(*) AS n_samples
+      FROM (SELECT s.*, substring(s.extraction_id FROM
+                   '^(insitu_sampling|insitu_determinations|profiles_data|sediment_surface)_') AS source_table
+            FROM sampling.samples s) s
+      WHERE source_table IS NOT NULL
+      GROUP BY 1, 4
       UNION ALL
-      SELECT ls.extraction_point_id, MIN(ls.sample_date), MIN(ls.sample_time)::text,
+      SELECT ls.sampling_event_id, MIN(ls.sample_date), NULL,
              'lab:' || COALESCE(ls.matrix_code, 'water'), COUNT(*)
-      FROM lab_samples ls GROUP BY 1, 4
+      FROM lab.lab_samples ls GROUP BY 1, 4
       UNION ALL
-      SELECT ls.extraction_point_id, MIN(ls.sample_date), NULL, 'phytoplankton', COUNT(DISTINCT p.lab_sample_id)
-      FROM phytoplankton_counts p JOIN lab_samples ls ON ls.lab_sample_id = p.lab_sample_id GROUP BY 1""")
-    campaigns = q("SELECT campaign_id, campaign_code, water_body_name, start_date, end_date FROM campaigns")
+      SELECT ls.sampling_event_id, MIN(ls.sample_date), NULL, 'phytoplankton', COUNT(DISTINCT p.lab_sample_id)
+      FROM lab.phytoplankton_counts p JOIN lab.lab_samples ls ON ls.lab_sample_id = p.lab_sample_id GROUP BY 1""")
+    campaigns = q("""SELECT campaign_id, campaign_code, water_body_name, start_date, end_date
+                     FROM sampling.sampling_campaigns""")
     out = _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices)
     out["samples"], out["campaigns"] = samples, campaigns
     out.update(_load_extra_real())
@@ -200,21 +210,21 @@ def _try(sql: str) -> Optional[pd.DataFrame]:
 
 def _load_extra_real() -> dict:
     phyto = _try("""
-      SELECT ls.extraction_point_id, ls.sample_date AS date, ls.depth_m, ls.lab_sample_id,
+      SELECT ls.sampling_event_id, ls.sample_date AS date, 0::double precision AS depth_m, ls.lab_sample_id,
              c.taxon_id, t.scientific_name, t.taxonomic_group, COALESCE(t.potentially_toxic, false) AS toxic,
              c.cell_density_cells_ml AS density, c.biovolume_um3_ml AS biovolume, c.qc_flag, c.method_code
-      FROM phytoplankton_counts c
-      JOIN lab_samples ls ON ls.lab_sample_id = c.lab_sample_id
-      LEFT JOIN phytoplankton_taxa t ON t.taxon_id = c.taxon_id""")
+      FROM lab.phytoplankton_counts c
+      JOIN lab.lab_samples ls ON ls.lab_sample_id = c.lab_sample_id
+      LEFT JOIN lab.phytoplankton_taxa t ON t.taxon_id = c.taxon_id""")
     cores = _try("""
-      SELECT sc.core_id, sc.core_code, sc.extraction_point_id, sc.sampling_date::text AS date,
-             sc.core_length_cm, sc.water_depth_m, sc.slicing_interval_cm, sc.notes
-      FROM sediment_cores sc""")
+      SELECT sc.core_id, sc.core_code, sc.sampling_event_id, sc.sampling_date::text AS date,
+             sc.core_length_cm, sc.water_depth_m, sc.slicing_interval_cm, sc.notes, sc.notes_es
+      FROM lab.sediment_cores sc""")
     core_obs = _try("""
-      SELECT ls.core_id, ls.extraction_point_id, ls.sample_date AS date,
+      SELECT ls.core_id, ls.sampling_event_id, ls.sample_date AS date,
              ls.section_top_cm, ls.section_bottom_cm, m.parameter_code, m.value::double precision AS value,
-             m.unit_code, m.qc_flag, COALESCE(m.below_lod, false) AS below_lod
-      FROM lab_measurements m JOIN lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
+             m.unit_code, m.qc_flag, false AS below_lod
+      FROM lab.lab_measurements m JOIN lab.lab_samples ls ON ls.lab_sample_id = m.lab_sample_id
       WHERE ls.matrix_code = 'sediment_core' AND m.value IS NOT NULL""")
     # Sondas fijas: media diaria por metro de profundidad (solo datos no erróneos)
     sensors = _try("""
@@ -222,17 +232,18 @@ def _load_extra_real() -> dict:
              COALESCE(FLOOR(depth), 0)::int AS dbin,
              AVG(chlorophyll) AS chlorophyll, AVG(phycocyanin) AS phycocyanin, AVG(water_temp) AS water_temp,
              AVG(ph) AS ph, AVG(turbidity) AS turbidity, COUNT(*) AS n
-      FROM sensor_data WHERE COALESCE(qc_flag, 0) < 2
+      FROM timeseries.sensor_data WHERE COALESCE(qc_flag, 0) < 2
       GROUP BY 1, 2, 3, 4""")
-    sat = _try("""
-      SELECT reservoir_id, date::date AS date, phycocyanin_est, index_value, index_name, model_name,
-             r2_cv, rmse_cv, is_valid
-      FROM phycocyanin_estimates""")
-    idx = _try("SELECT reservoir_id, date::date AS date, pci, tbda, ci FROM indices_sentinel")
+    # La tabla de estimaciones de ficocianina (phycocyanin_estimates) se eliminó en 10-2026
+    # (modelo sin validar): la web ya no dibuja esa serie.
+    sat = None
+    idx = _try("""SELECT reservoir_id, date::date AS date, pci, NULL::double precision AS tbda,
+                         NULL::double precision AS ci
+                  FROM timeseries.indices_sentinel""")
     names = _try("""
-      SELECT r.reservoir_id, r.reservoir_name FROM reservoirs_spain r
-      WHERE r.reservoir_id IN (SELECT reservoir_id FROM sensor_data UNION SELECT reservoir_id FROM phycocyanin_estimates
-                               UNION SELECT reservoir_id FROM indices_sentinel)""")
+      SELECT r.reservoir_id, r.reservoir_name FROM sampling.reservoirs_spain r
+      WHERE r.reservoir_id IN (SELECT reservoir_id FROM timeseries.sensor_data
+                               UNION SELECT reservoir_id FROM timeseries.indices_sentinel)""")
     return {"phyto": phyto, "cores": cores, "core_obs": core_obs, "sensors": sensors,
             "sat": sat, "idx": idx, "res_names": names}
 
@@ -291,9 +302,7 @@ GROUP_NAMES = {
     "remote_sensing": "Teledetección",
 }
 # Parámetros que no están en variable_vocabulary con su propio código
-EXTRA_PARAMS = {
-    "conduc_uscm_2": ("Conductividad eléctrica (2)", "field", "uS/cm"),
-}
+EXTRA_PARAMS: dict = {}  # código: (nombre, grupo, unidad)
 
 
 def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matrices=None) -> dict:
@@ -302,11 +311,11 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     _fix_cols(points, "lat", "lon")
     _fix_cols(points, "sp_lat", "sp_lon")
     points["site"] = ("sp" + points["sampling_point_id"].astype("Int64").astype(str)).where(
-        points["sampling_point_id"].notna(), "ep" + points["extraction_point_id"].astype("Int64").astype(str))
+        points["sampling_point_id"].notna(), "ep" + points["sampling_event_id"].astype("Int64").astype(str))
     points["site_code"] = points["point_code"].fillna(points["location_code"]).fillna(points["site"])
     points["site_lat"] = points["sp_lat"].fillna(points["lat"])
     points["site_lon"] = points["sp_lon"].fillna(points["lon"])
-    ep2site = dict(zip(points.extraction_point_id, points.site))
+    ep2site = dict(zip(points.sampling_event_id, points.site))
 
     # Parámetro normalizado
     # (vectorizado: con decenas de miles de filas, un apply fila a fila tarda minutos en Render)
@@ -325,9 +334,12 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
     extra = pd.DataFrame([(k, n, g, u) for k, (n, g, u) in EXTRA_PARAMS.items()],
                          columns=["parameter_code", "name", "parameter_group", "default_unit"])
     params = pd.concat([params, extra[~extra.parameter_code.isin(params.parameter_code)]], ignore_index=True)
+    if "name_es" not in params:
+        params["name_es"] = params["name"]
+    params["name_es"] = params["name_es"].fillna(params["name"])
     pinfo = params.set_index("parameter_code")
     obs["unit_code"] = obs["unit_code"].fillna(obs["parameter_code"].map(pinfo["default_unit"]))
-    obs["site"] = obs["extraction_point_id"].map(ep2site)
+    obs["site"] = obs["sampling_event_id"].map(ep2site)
     obs["date"] = pd.to_datetime(obs["date"], errors="coerce")
     obs = obs.dropna(subset=["date", "site", "value"])
 
@@ -344,8 +356,12 @@ def _assemble(points, obs, vocab, params, units, qc, reservoirs, sources, matric
                .reset_index())
     base = catalog["parameter_code"].str.split(":").str[-1]
     mtx = catalog["parameter_code"].where(catalog["parameter_code"].str.contains(":"), "water:").str.split(":").str[0]
-    mnames = dict(zip(matrices.matrix_code, matrices.name)) if matrices is not None else {}
+    # Los grupos van en español porque la web los traduce con t(); el nombre del parámetro
+    # va en los dos idiomas (name = inglés, name_es = español) y la web elige.
+    mcol = "name_es" if matrices is not None and "name_es" in matrices else "name"
+    mnames = dict(zip(matrices.matrix_code, matrices[mcol])) if matrices is not None else {}
     catalog["name"] = base.map(pinfo["name"]).fillna(base)
+    catalog["name_es"] = base.map(pinfo["name_es"]).fillna(catalog["name"])
     grp = base.map(pinfo["parameter_group"]).map(lambda g: GROUP_NAMES.get(g, g) if isinstance(g, str) else "Otros")
     catalog["group"] = [g if m == "water" else f"{mnames.get(m, m)} · {g}" for g, m in zip(grp, mtx)]
     # Símbolo corto para los ejes y el desplegable (el nombre largo es para el catálogo)
@@ -370,7 +386,7 @@ def _load_mock() -> dict:
     for name, n, la, lo in bodies:
         for k in range(1, n + 1):
             for camp in range(6):
-                rows.append(dict(extraction_point_id=eid, sampling_point_id=sid, campaign_id=camp + 1,
+                rows.append(dict(sampling_event_id=eid, sampling_point_id=sid, campaign_id=camp + 1,
                                  water_body_name=name, location_code=f"{name[-4:].upper()}-{k}",
                                  reservoir_id=1, river_id=None, lat=la + rng.uniform(-.01, .01),
                                  lon=lo + rng.uniform(-.01, .01), point_code=f"{name.split()[-1][:3].upper()}-{k}",
@@ -402,7 +418,7 @@ def _load_mock() -> dict:
         for z in range(0, 16):
             for code, surf, deep in (("WTEMP", 12 + 12 * season, 9.0), ("DOXY", 9 + rng.uniform(-.5, .5), 9 - 8 * season)):
                 w = 1 / (1 + math.exp((z - 6) * 1.2))
-                obs.append(dict(extraction_point_id=r.extraction_point_id, date=d0, depth_m=float(z) + .5,
+                obs.append(dict(sampling_event_id=r.sampling_event_id, date=d0, depth_m=float(z) + .5,
                                 source_table="insitu_determinations", column_name=code,
                                 value=round(deep + (surf - deep) * w + rng.uniform(-.2, .2), 2), qc_flag=1,
                                 source_code="HIBLOOMS"))
@@ -410,7 +426,7 @@ def _load_mock() -> dict:
             if code in ("WTEMP", "DOXY") or rng.random() < .1:
                 continue
             v = lo + (hi - lo) * max(0, min(1, season * rng.uniform(.6, 1.2) + rng.uniform(-.1, .1)))
-            obs.append(dict(extraction_point_id=r.extraction_point_id, date=d0, depth_m=.5,
+            obs.append(dict(sampling_event_id=r.sampling_event_id, date=d0, depth_m=.5,
                             source_table="lab_measurements" if code in ("NO3", "NH4", "TN", "P", "MC") else "insitu_sampling",
                             column_name=code, value=round(v, 3), qc_flag=rng.choices([1, 2, 3], [90, 7, 3])[0],
                             source_code="HIBLOOMS"))
@@ -418,8 +434,9 @@ def _load_mock() -> dict:
     vocab = pd.DataFrame(columns=["table_name", "column_name", "parameter_code", "unit_code"])
     units = pd.DataFrame([("degC", "°C"), ("pH", "pH"), ("mg_L", "mg/L"), ("uS_cm", "µS/cm"), ("m", "m"),
                           ("mg_m3", "mg/m³"), ("ppm", "ppm"), ("ng_mL", "ng/mL")], columns=["unit_code", "unit_name"])
-    qc = pd.DataFrame([(1, "Bueno", "Valor validado"), (2, "Dudoso", "Revisar"), (3, "Malo", "No usar")],
-                      columns=["qc_flag", "label", "description"])
+    qc = pd.DataFrame([(1, "Good", "Bueno", "Validated value"), (2, "Doubtful", "Dudoso", "Check"),
+                       (3, "Bad", "Malo", "Do not use")],
+                      columns=["qc_flag", "label", "label_es", "description"])
     reservoirs = pd.DataFrame([(1, "EL VAL")], columns=["reservoir_id", "reservoir_name"])
     sources = pd.DataFrame([("HIBLOOMS", "Muestreos HIBLOOMS", "BIOMA-UNAV", "CC-BY 4.0", "HIBLOOMS (2026)")],
                            columns=["source_code", "name", "provider", "licence", "citation"])
@@ -444,14 +461,14 @@ def _load_extra_mock(points: pd.DataFrame, rng: random.Random) -> dict:
             if rng.random() < .25:
                 continue
             base = (4000 * season if g == "Cyanobacteria" else 800) * rng.uniform(.2, 1.5)
-            ph.append(dict(extraction_point_id=r.extraction_point_id, date=d0, depth_m=0.5,
-                           lab_sample_id=f"L{r.extraction_point_id}", taxon_id=i, scientific_name=n,
+            ph.append(dict(sampling_event_id=r.sampling_event_id, date=d0, depth_m=0.5,
+                           lab_sample_id=f"L{r.sampling_event_id}", taxon_id=i, scientific_name=n,
                            taxonomic_group=g, toxic=tox, density=base, biovolume=base * rng.uniform(20, 300),
                            qc_flag=0, method_code="utermohl"))
-    ep = int(points.extraction_point_id.iloc[0])
+    ep = int(points.sampling_event_id.iloc[0])
     cores = pd.DataFrame([(1, "HIB-VAL-1", ep, "2025-08-25", 35.0, 23.0, 1.0, "Seccionado a 1 cm"),
                           (2, "HIB-VAL-2", ep, "2025-08-25", 30.0, 20.0, 2.0, None)],
-                         columns=["core_id", "core_code", "extraction_point_id", "date", "core_length_cm",
+                         columns=["core_id", "core_code", "sampling_event_id", "date", "core_length_cm",
                                   "water_depth_m", "slicing_interval_cm", "notes"])
     co = []
     for cid, L, step in ((1, 35, 1), (2, 30, 2)):
@@ -461,7 +478,7 @@ def _load_extra_mock(points: pd.DataFrame, rng: random.Random) -> dict:
                              ("TN", "percent", lambda z: .6 - z * .012 + rng.uniform(-.03, .03)),
                              ("d15N", "permil", lambda z: 4 + 2 * math.exp(-z / 8) + rng.uniform(-.2, .2)),
                              ("Pb210", "Bq/kg", lambda z: 300 * math.exp(-z / 7) + 20 + rng.uniform(-5, 5))):
-                co.append(dict(core_id=cid, extraction_point_id=ep, date=date(2025, 8, 25), section_top_cm=top,
+                co.append(dict(core_id=cid, sampling_event_id=ep, date=date(2025, 8, 25), section_top_cm=top,
                                section_bottom_cm=top + step, parameter_code=pc, value=round(f(z), 3),
                                unit_code=u, qc_flag=0, below_lod=False))
     sens, sat, idx = [], [], []
@@ -572,7 +589,8 @@ KINDS = [  # (clave, etiqueta, tablas de origen)
     ("fluoro", "FluoroProbe", ("profiles_data",)),
     ("lab", "Laboratorio (agua)", ("lab:water", "lab_measurements")),
     ("phyto", "Fitoplancton", ("phytoplankton", "phytoplankton_counts")),
-    ("sed", "Sedimento superficial", ("lab:surface_sediment",)),
+    ("spm", "Material en suspensión", ("lab:spm",)),
+    ("sed", "Sedimento superficial", ("lab:surface_sediment", "sediment_surface")),
     ("core", "Testigo de sedimento", ("lab:sediment_core",)),
 ]
 _KIND_OF = {src: k for k, _, srcs in KINDS for src in srcs}
@@ -585,30 +603,30 @@ def campaigns(water_body: Optional[str] = None) -> dict:
     if water_body:
         p = p[p["water_body_name"] == water_body]
     o = d["obs"]
-    o = o[o["extraction_point_id"].isin(p["extraction_point_id"])]
+    o = o[o["sampling_event_id"].isin(p["sampling_event_id"])]
     # Origen de cada visita: tabla samples/lab_samples si existe; si no, las observaciones
     smp = d.get("samples")
     if smp is not None and len(smp):
-        smp = smp[smp["extraction_point_id"].isin(p["extraction_point_id"])].copy()
+        smp = smp[smp["sampling_event_id"].isin(p["sampling_event_id"])].copy()
         smp["date"] = pd.to_datetime(smp["date"], errors="coerce")
     else:
         smp = (o.assign(source_table=o["source_table"].where(o["matrix_code"] == "water",
                                                              "lab:" + o["matrix_code"].astype(str)))
-               .groupby(["extraction_point_id", "source_table"]).agg(date=("date", "min")).reset_index())
+               .groupby(["sampling_event_id", "source_table"]).agg(date=("date", "min")).reset_index())
         smp["time"], smp["n_samples"] = None, 1
     smp["kind"] = smp["source_table"].map(_KIND_OF).fillna("other")
-    kinds_ep = smp.groupby("extraction_point_id")["kind"].agg(lambda x: sorted(set(x)))
-    date_ep = smp.groupby("extraction_point_id")["date"].min()
-    time_ep = smp.dropna(subset=["time"]).groupby("extraction_point_id")["time"].min() if "time" in smp else pd.Series(dtype=str)
-    nobs = o.groupby("extraction_point_id").agg(n_obs=("value", "size"), n_params=("parameter_code", "nunique"))
+    kinds_ep = smp.groupby("sampling_event_id")["kind"].agg(lambda x: sorted(set(x)))
+    date_ep = smp.groupby("sampling_event_id")["date"].min()
+    time_ep = smp.dropna(subset=["time"]).groupby("sampling_event_id")["time"].min() if "time" in smp else pd.Series(dtype=str)
+    nobs = o.groupby("sampling_event_id").agg(n_obs=("value", "size"), n_params=("parameter_code", "nunique"))
 
-    p["date"] = p["extraction_point_id"].map(date_ep)
+    p["date"] = p["sampling_event_id"].map(date_ep)
     if "campaign_start" in p:
         p["date"] = p["date"].fillna(pd.to_datetime(p["campaign_start"], errors="coerce"))
-    p["time"] = p["extraction_point_id"].map(time_ep)
-    p["kinds"] = p["extraction_point_id"].map(kinds_ep)
+    p["time"] = p["sampling_event_id"].map(time_ep)
+    p["kinds"] = p["sampling_event_id"].map(kinds_ep)
     p["kinds"] = p["kinds"].apply(lambda v: v if isinstance(v, list) else [])
-    p = p.join(nobs, on="extraction_point_id")
+    p = p.join(nobs, on="sampling_event_id")
     p[["n_obs", "n_params"]] = p[["n_obs", "n_params"]].fillna(0).astype(int)
     p["time"] = p["time"].astype(str).str[:5].where(p["time"].notna(), None)
 
@@ -626,7 +644,7 @@ def campaigns(water_body: Optional[str] = None) -> dict:
             e2 = pd.to_datetime(ci["end_date"], errors="coerce")
             end = e2 if pd.notna(e2) else end
         visits = [{
-            "extraction_point_id": int(r.extraction_point_id), "site": r.site, "code": str(r.site_code),
+            "sampling_event_id": int(r.sampling_event_id), "site": r.site, "code": str(r.site_code),
             "date": r.date.strftime("%Y-%m-%d") if pd.notna(r.date) else None, "time": r.time if isinstance(r.time, str) and r.time not in ("nan", "None") else None,
             "kinds": r.kinds, "n_obs": int(r.n_obs), "n_params": int(r.n_params),
             "lat": None if pd.isna(r.site_lat) else float(r.site_lat),
@@ -693,7 +711,8 @@ def series(parameter: str, water_body: Optional[str] = None, sites_: Optional[li
     last = o.sort_values("date").groupby("site_code").tail(1)[["site_code", "date", "value"]]
     summ = summ.merge(last.rename(columns={"date": "last_date", "value": "last_value"}), on="site_code")
     cols = ["date", "site", "site_code", "water_body", "depth_m", "value", "qc_flag", "source_table", "source_code"]
-    return {"parameter": parameter, "name": meta.get("name", parameter), "unit": meta.get("unit_name"),
+    return {"parameter": parameter, "name": meta.get("name", parameter), "name_es": meta.get("name_es"),
+            "unit": meta.get("unit_name"),
             "n_dates": int(o[["site", "date"]].drop_duplicates().shape[0]), "depth": depth,
             "group": meta.get("group"), "rows": _jsonable(o[cols]), "summary": _jsonable(summ),
             "qc": _jsonable(d["qc"])}
@@ -723,10 +742,10 @@ def sources() -> dict:
 # ── Fitoplancton ───────────────────────────────────────────────────────────
 
 def _site_filter(d: dict, df: pd.DataFrame, water_body: Optional[str], sites_: Optional[list]) -> pd.DataFrame:
-    p = d["points"].set_index("extraction_point_id")
-    df = df.assign(site=df["extraction_point_id"].map(p["site"]),
-                   site_code=df["extraction_point_id"].map(p["site_code"]),
-                   water_body=df["extraction_point_id"].map(p["water_body_name"]))
+    p = d["points"].set_index("sampling_event_id")
+    df = df.assign(site=df["sampling_event_id"].map(p["site"]),
+                   site_code=df["sampling_event_id"].map(p["site_code"]),
+                   water_body=df["sampling_event_id"].map(p["water_body_name"]))
     if water_body:
         df = df[df["water_body"] == water_body]
     if sites_:
@@ -792,7 +811,9 @@ def cores(water_body: Optional[str] = None) -> dict:
                     "length_cm": None if pd.isna(r.core_length_cm) else float(r.core_length_cm),
                     "water_depth_m": None if pd.isna(r.water_depth_m) else float(r.water_depth_m),
                     "interval_cm": None if pd.isna(r.slicing_interval_cm) else float(r.slicing_interval_cm),
-                    "notes": None if pd.isna(r.notes) else str(r.notes), "n_sections": n, "parameters": prm})
+                    "notes": None if pd.isna(r.notes) else str(r.notes),
+                    "notes_es": None if pd.isna(getattr(r, "notes_es", None)) else str(r.notes_es),
+                    "n_sections": n, "parameters": prm})
     out.sort(key=lambda x: (-x["n_sections"], x["date"] or "", x["code"] or ""))
     return {"cores": out}
 
@@ -807,13 +828,15 @@ def core(core_id: int) -> dict:
     cat = d["catalog"]
     pinfo = {}
     base = d["catalog"]["parameter_code"].str.split(":").str[-1]
-    for code, name in zip(base, cat["name"]):
-        pinfo.setdefault(code, name)
+    for code, name, name_es in zip(base, cat["name"], cat["name_es"]):
+        pinfo.setdefault(code, (name, name_es))
     SHORT = {"percent": "%", "permil": "‰", "ug/g": "µg/g", "g/cm2": "g/cm²", "mg/m3": "µg/L", "ng/mL": "µg/L"}
     params = []
     for pc, gg in g.groupby("parameter_code"):
         u = gg["unit_code"].dropna().iloc[0] if gg["unit_code"].notna().any() else None
-        params.append({"parameter_code": pc, "name": pinfo.get(pc, pc), "unit": SHORT.get(u, u), "n": int(len(gg))})
+        name, name_es = pinfo.get(pc, (pc, pc))
+        params.append({"parameter_code": pc, "name": name, "name_es": name_es, "unit": SHORT.get(u, u),
+                       "n": int(len(gg))})
     rows = g[["parameter_code", "section_top_cm", "section_bottom_cm", "depth_cm", "value", "qc_flag", "below_lod"]]
     return {"core_id": core_id, "parameters": sorted(params, key=lambda x: x["name"] or ""),
             "rows": _jsonable(rows.sort_values(["parameter_code", "depth_cm"]))}

@@ -51,11 +51,11 @@ def _raw(days: int) -> pd.DataFrame:
     if pdb.is_mock():
         return _mock_raw(days)
     return pdb.q(f"""
-      WITH ult AS (SELECT MAX(date_time::timestamptz) AS m FROM sensor_data
+      WITH ult AS (SELECT MAX(date_time::timestamptz) AS m FROM timeseries.sensor_data
                    WHERE reservoir_id = {RES_ID} AND source_code = '{SOURCE}')
       SELECT (date_time::timestamptz AT TIME ZONE 'Europe/Madrid') AS t,
              phycocyanin, water_temp, turbidity, ph
-      FROM sensor_data, ult
+      FROM timeseries.sensor_data, ult
       WHERE reservoir_id = {RES_ID} AND source_code = '{SOURCE}' AND COALESCE(qc_flag, 0) < 2
         AND date_time::timestamptz > ult.m - INTERVAL '{int(days)} days'
       ORDER BY 1""")
@@ -68,7 +68,7 @@ def _daily() -> pd.DataFrame:
     else:
         r = pdb.q(f"""
           SELECT (date_time::timestamptz AT TIME ZONE 'Europe/Madrid') AS t, phycocyanin
-          FROM sensor_data WHERE reservoir_id = {RES_ID} AND source_code = '{SOURCE}'
+          FROM timeseries.sensor_data WHERE reservoir_id = {RES_ID} AND source_code = '{SOURCE}'
             AND COALESCE(qc_flag, 0) < 2 AND phycocyanin IS NOT NULL""")
     r["t"] = pd.to_datetime(r["t"])
     g = r.groupby(r["t"].dt.normalize())["phycocyanin"].agg(["mean", "count"])
@@ -328,10 +328,10 @@ def _pares_pc() -> dict:
     else:
         d = pdb.q(f"""
           SELECT c.date::date AS date,
-                 COALESCE(c.pci, i.pci) AS pci, COALESCE(c.tbda, i.tbda) AS tbda, COALESCE(c.ci, i.ci) AS ci,
+                 COALESCE(c.pci, i.pci) AS pci, NULL::double precision AS tbda, NULL::double precision AS ci,
                  c.phycocyanin AS pc
-          FROM calibration_pairs c
-          LEFT JOIN indices_sentinel i ON i.date = c.date AND i.reservoir_id = c.reservoir_id
+          FROM timeseries.calibration_pairs c
+          LEFT JOIN timeseries.indices_sentinel i ON i.date = c.date AND i.reservoir_id = c.reservoir_id
           WHERE c.reservoir_id = {RES_ID} AND c.phycocyanin IS NOT NULL
           ORDER BY 1""")
         if d is None:
@@ -348,10 +348,11 @@ def _pares_pc() -> dict:
             v = r.get(k)
             fila[k] = None if v is None or not np.isfinite(v) else round(float(v), 5)
         filas.append(fila)
-    return {"reservoir_label": "El Val", "station": "SAICA 945 · CHE",
-            "indices": [{"key": "pci", "name": "PCI (B5/B4)"}, {"key": "ndci", "name": "NDCI"},
-                        {"key": "tbda", "name": "TBDA (tres bandas)"}, {"key": "ci", "name": "CI"}],
-            "rows": filas}
+    indices = [{"key": "pci", "name": "PCI (B5/B4)"}, {"key": "ndci", "name": "NDCI"},
+               {"key": "tbda", "name": "TBDA (tres bandas)"}, {"key": "ci", "name": "CI"}]
+    # Solo los índices que tienen datos (la base guarda hoy solo el PCI)
+    indices = [i for i in indices if any(f[i["key"]] is not None for f in filas)]
+    return {"reservoir_label": "El Val", "station": "SAICA 945 · CHE", "indices": indices, "rows": filas}
 
 
 def _ficha_lab() -> dict:
