@@ -694,7 +694,7 @@ def image(req: ImageReq):
             "datetime": f"{req.date.isoformat()} 10:5{rng.randint(0, 9)}:00",
             "cloud": round(rng.uniform(0, req.max_cloud), 1), "coverage": round(rng.uniform(80, 100), 1),
             "mean": _mock_value(meta, req.reservoir, req.date, req.index),
-            "q": {"median": _mock_value(meta, req.reservoir, req.date, req.index), "n_px": 900, "valid_pct": round(rng.uniform(40, 95), 1)},
+            "q": {"median": _mock_value(meta, req.reservoir, req.date, req.index), "n_px": 900, "valid_pct": round(rng.uniform(40, 95), 1), "cloud": round(rng.uniform(0, 15), 1)},
             "points": {p.name: _mock_value(meta, req.reservoir, req.date, req.index, p.name) for p in req.points},
             **({"interval80": [0, 0], "extrapolation_pct": round(rng.uniform(0, 15), 1)} if req.index in CALS else {}),
         }
@@ -713,7 +713,7 @@ def image(req: ImageReq):
             dvals["extrap"] = ind.select(eb).reduceRegion(ee.Reducer.mean(), _aoi(req.reservoir), 20, maxPixels=1e13).get(eb)
         vals = ee.Dictionary(dvals).getInfo()
         mean, pts = _unpack(vals, req.points)
-        extra = {"q": _quality(vals)}
+        extra = {"q": {**_quality(vals), "cloud": round(float(cloud), 1) if cloud is not None else None}}
         if req.index in CALS:
             iv = CALS[req.index]["raster"].get("interval") or {}
             if mean is not None and iv.get("factor_lo") is not None:
@@ -762,9 +762,9 @@ def timeseries(req: SeriesReq):
             rng = _mock_rng(req.reservoir, d, req.index)
             season = 0.5 + 0.5 * math.sin((d.timetuple().tm_yday - 150) / 365 * 2 * math.pi)
             v = meta["min"] + (meta["max"] - meta["min"]) * min(1, rng.betavariate(1.5, 6) + 0.35 * season * rng.random())
-            q = {"median": round(v, 3), "n_px": rng.randint(600, 1200), "valid_pct": round(rng.uniform(45, 95), 1)}
-            if rng.random() < 0.1:  # de vez en cuando, una fecha con pocos píxeles y la media disparada
-                q = {"median": round(v, 3), "n_px": rng.randint(5, 60), "valid_pct": round(rng.uniform(0.5, 6), 1)}
+            q = {"median": round(v, 3), "n_px": rng.randint(600, 1200), "valid_pct": round(rng.uniform(45, 95), 1), "cloud": round(rng.uniform(0, 12), 1)}
+            if rng.random() < 0.1:  # de vez en cuando, una fecha nubosa con la media disparada
+                q = {"median": round(v, 3), "n_px": rng.randint(5, 60), "valid_pct": round(rng.uniform(0.5, 6), 1), "cloud": round(rng.uniform(25, 60), 1)}
                 v = v + (meta["max"] - meta["min"]) * rng.uniform(0.6, 1.2)
             row = {"date": d.isoformat(), "mean": round(v, 3), "q": q}
             for p in req.points:
@@ -793,7 +793,8 @@ def timeseries(req: SeriesReq):
         raise HTTPException(502, f"Error en Earth Engine: {e}")
     for d in days:
         mean, pts = _unpack(got.get(d, {}), req.points)
-        out.append({"date": d, "mean": mean, "q": _quality(got.get(d, {})), **pts})
+        nub = best.get(d, {}).get("cloud")   # % de nubes sobre el embalse (el mismo de la lista de fechas)
+        out.append({"date": d, "mean": mean, "q": {**_quality(got.get(d, {})), "cloud": round(float(nub), 1) if nub is not None else None}, **pts})
     return {"index": req.index, "series": out, "mode": "gee"}
 
 

@@ -819,7 +819,8 @@ const EN: Record<string, string> = {
     '{n} doubtful dates removed from the line: few clear water pixels (undetected clouds, haze or shadows) or an isolated spike.',
   'Mostrarlas': 'Show them',
   'Ocultarlas': 'Hide them',
-  'quedan pocos píxeles de agua despejada': 'few clear water pixels left',
+  'nubes sobre el embalse o muy pocos píxeles de agua': 'clouds over the reservoir or very few water pixels',
+  '{p} % de nubes': '{p} % clouds',
   'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)': 'the mean is far from the median (dragged by a few extreme pixels)',
   'pico aislado respecto a las fechas vecinas': 'isolated spike compared with neighbouring dates',
   'El modelo elegido no se puede pintar en el mapa (no es lineal ni logístico). Incluye un modelo marcado con ◆ en el modo experto si lo necesitas en el mapa.':

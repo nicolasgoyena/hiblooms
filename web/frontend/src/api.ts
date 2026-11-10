@@ -75,7 +75,7 @@ export type ElValLive = { ok: boolean; reservoir_id: number; station?: string; l
 export type DbStatus = { ok: boolean; mode: 'db' | 'demo' | 'error'; n_obs?: number; n_sites?: number; n_params?: number; first?: string; last?: string; detail?: string }
 export type Poi = { name: string; lat: number; lon: number; custom?: boolean }
 /** Calidad de la media del embalse en una fecha: mediana, píxeles de agua válidos y % del polígono. */
-export type SeriesQ = { median: number | null; n_px: number; valid_pct: number | null }
+export type SeriesQ = { median: number | null; n_px: number; valid_pct: number | null; cloud?: number | null }
 export type SeriesPoint = { date: string; mean: number | null; q?: SeriesQ; [poi: string]: number | string | null | SeriesQ | undefined }
 export type ClassRow = { low: number; high: number | null; area_ha: number; pct: number }
 
@@ -284,19 +284,18 @@ export function downloadBlob(name: string, text: string, type = 'application/jso
 
 export type Doubt = 'pocos' | 'pico' | 'sesgo'
 /** Fechas dudosas de una serie de medias del embalse.
- *  · pocos: quedan pocos píxeles de agua despejada (< 30 % de los de la mejor fecha, o < 10 % del
- *    polígono); unos pocos píxeles con nubes, bruma o sombra sin marcar disparan la media.
+ *  · pocos: nubes sobre el embalse (≥ 20 % del polígono) o casi sin píxeles de agua (< 30, ~1 ha);
+ *    alrededor de las nubes quedan bruma y sombras sin marcar que disparan la media. No se usa el
+ *    nº de píxeles relativo a otras fechas: baja también cuando baja el nivel del embalse.
  *  · sesgo: la media se separa mucho de la mediana → la arrastran unos pocos píxeles extremos.
  *  · pico: valor aislado muy por encima/debajo de sus vecinos (filtro de Hampel, ±3 fechas). */
 export function doubtful(series: SeriesPoint[], range: number): Map<string, Doubt> {
   const out = new Map<string, Doubt>()
-  const ns = series.map(r => r.q?.n_px ?? 0)
-  const nmax = Math.max(0, ...ns)
   const span = Math.abs(range) || 1
   series.forEach((r, i) => {
     if (r.mean == null) return
     const q = r.q
-    if (q && nmax > 0 && (q.n_px < 0.3 * nmax || (q.valid_pct != null && q.valid_pct < 10))) { out.set(r.date, 'pocos'); return }
+    if (q && (q.n_px < 30 || (q.cloud != null && q.cloud >= 20))) { out.set(r.date, 'pocos'); return }
     if (q?.median != null && Math.abs(r.mean - q.median) > 0.15 * span) { out.set(r.date, 'sesgo'); return }
     const win = series.slice(Math.max(0, i - 3), i + 4).filter((x, j) => x !== r && x.mean != null && !out.has(x.date) && j >= 0).map(x => x.mean as number)
     if (win.length < 4) return

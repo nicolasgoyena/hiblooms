@@ -20,7 +20,7 @@ import LangToggle from './LangToggle'
 import Icon from './Icon'
 
 const DOUBT_TXT: Record<Doubt, string> = {
-  pocos: 'quedan pocos píxeles de agua despejada',
+  pocos: 'nubes sobre el embalse o muy pocos píxeles de agua',
   sesgo: 'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)',
   pico: 'pico aislado respecto a las fechas vecinas',
 }
@@ -388,7 +388,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
     if (!series || !reservoir) return
     const rows = series.map(r => {
       const o: Record<string, unknown> = { fecha: r.date, Media_Embalse: r.mean, Mediana_Embalse: r.q?.median ?? null,
-        agua_valida_pct: r.q?.valid_pct ?? null, dudosa: doubts.get(r.date) ?? '' }
+        agua_valida_pct: r.q?.valid_pct ?? null, nubes_pct: r.q?.cloud ?? null, dudosa: doubts.get(r.date) ?? '' }
       pois.forEach(p => { o[p.name] = r[p.name] ?? null })
       return o
     })
@@ -681,7 +681,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           {img?.q?.valid_pct != null && (
             <p className="muted small" style={{ margin: 0 }}>{t('Mediana {m} · {p} % del embalse con agua despejada', { m: fmt(img.q.median), p: fmt(img.q.valid_pct, 0) })}</p>
           )}
-          {img?.q && meta && img.mean != null && ((img.q.valid_pct != null && img.q.valid_pct < 10) || (img.q.median != null && Math.abs(img.mean - img.q.median) > 0.15 * (meta.max - meta.min))) && (
+          {img?.q && meta && img.mean != null && ((img.q.n_px < 30) || (img.q.cloud != null && img.q.cloud >= 20) || (img.q.median != null && Math.abs(img.mean - img.q.median) > 0.15 * (meta.max - meta.min))) && (
             <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}><Icon name="aviso" /> {t('Media poco fiable en esta fecha: quedan pocos píxeles de agua despejada o unos pocos píxeles extremos la arrastran. Mira la mediana.')}</div>
           )}
           {img?.interval80 && meta && img.mean != null && (
@@ -759,6 +759,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
                         {why && <span className="tt-warn"><Icon name="aviso" size={12} /> {t('Fecha dudosa')}: {t(DOUBT_TXT[why])}<br />{t('Media')}: {fmt(r.bad)} · </span>}
                         {r.q?.median != null && <span className="muted">{t('Mediana')}: {fmt(r.q.median)}</span>}
                         {r.q?.valid_pct != null && <span className="muted"> · {t('{p} % del embalse con agua despejada', { p: fmt(r.q.valid_pct, 0) })}</span>}
+                        {r.q?.cloud != null && <span className="muted"> · {t('{p} % de nubes', { p: fmt(r.q.cloud, 0) })}</span>}
                       </div>
                     )
                   }} />
