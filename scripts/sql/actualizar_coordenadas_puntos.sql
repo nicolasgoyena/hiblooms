@@ -6,7 +6,8 @@
 -- USO: ejecútalo en pgAdmin sobre la base hiblooms. Primero revisa la consulta de
 -- comprobación (paso 2): cada código debe casar con UN solo punto y la distancia al
 -- punto actual debe ser razonable. Si todo cuadra, cambia el ROLLBACK final por COMMIT.
--- OJO: Yasser escribe «BLL-2-3» entre BLL-3-x; se toma como el punto 3 de Bellús.
+-- Los códigos son embalse-campaña-punto (BLL-2-3 = punto 3 de Bellús medido en la campaña 2);
+-- se empareja por el último número, el del punto.
 
 BEGIN;
 
