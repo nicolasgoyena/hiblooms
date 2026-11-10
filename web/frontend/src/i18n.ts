@@ -689,8 +689,7 @@ const EN: Record<string, string> = {
   'Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.':
     'Chlorophyll-a: Aquadam profiling probe, with data from 2018 to 2024. Several ML models were compared, but the most robust was a simple formula with the Sentinel-2 NDCI index.',
   'en estudio': 'under study',
-  'Herramienta digital diseñada y desarrollada por': 'Digital tool designed and developed by',
-  'Ingeniería de datos y desarrollo de la herramienta digital': 'Data engineering and development of the digital tool',
+  'Teledetección y modelización satelital, análisis de datos y herramienta digital': 'Remote sensing and satellite modelling, data analysis and digital tool',
   'La ficha «Predicción de ficocianina con redes LSTM» resume el TFM de Manuel Ruiz Galilea sobre la misma sonda SAICA; todavía no se ejecuta en la plataforma.':
     "The “Phycocyanin forecast with LSTM networks” card summarises Manuel Ruiz Galilea's Master's thesis on the same SAICA probe; it does not run on the platform yet.",
   'Ficha de referencia: resume los resultados publicados en el TFM. El modelo no se ejecuta todavía en la plataforma.': 'Reference card: it summarises the results published in the thesis. The model does not run on the platform yet.',
