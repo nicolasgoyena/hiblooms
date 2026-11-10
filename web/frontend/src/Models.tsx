@@ -13,7 +13,8 @@ const TROFICO = [
 const MES = (d: string) => new Date(d + 'T12:00:00').getMonth()
 const MES_COL = ['#2c7bb6', '#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#f9d057', '#f29e2e', '#e76818', '#d7191c', '#f29e2e', '#00ccbc', '#2c7bb6']
 
-/** Enlace al TFM de Manuel Ruiz Galilea en DADUN (repositorio de la Universidad de Navarra).
+/** Enlace al TFM de Manuel Ruiz Galilea en DADUN (repositorio de la Universidad de Navarra), del que sale
+ *  el modelo de tendencia de ficocianina a corto plazo (se cita en su ficha).
  *  Pega aquí la URL del registro (https://hdl.handle.net/10171/…) cuando esté publicado:
  *  mientras esté vacío, el texto se muestra sin enlace. */
 export const TFM_URL = ''
@@ -34,8 +35,6 @@ function ModelContext() {
   return (
     <div className="model-ctx">
       <p>{t('Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.')}</p>
-      <p>{t('Parten del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), dentro de HIBLOOMS.')}{' '}
-        {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
     </div>
   )
 }
@@ -98,6 +97,13 @@ export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpe
           </div>
         ))}
       </div>
+
+      {m.kind === 'trend' && (
+        <div className="model-ctx">
+          <p>{t('Este modelo procede del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), realizado dentro de HIBLOOMS.')}{' '}
+            {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
+        </div>
+      )}
 
       <div className="model-grid">
         <div>

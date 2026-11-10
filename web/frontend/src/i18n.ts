@@ -684,8 +684,8 @@ const EN: Record<string, string> = {
   // Modelos y calibraciones
   'Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.':
     'The models in this section are based on machine learning (ML) techniques trained with data from the Ebro River Basin Authority probes at El Val reservoir, mainly between 2023 and 2025.',
-  'Parten del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), dentro de HIBLOOMS.':
-    "They build on Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra), within HIBLOOMS.",
+  'Este modelo procede del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), realizado dentro de HIBLOOMS.':
+    "This model comes from Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra), carried out within HIBLOOMS.",
   'Leer el TFM en DADUN': 'Read the thesis in DADUN',
   'experimental': 'experimental',
   'laboratorio': 'lab',
