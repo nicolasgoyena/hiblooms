@@ -682,14 +682,14 @@ const EN: Record<string, string> = {
   // Financiación (las siglas MICIU/AEI no se traducen, según la guía de la AEI)
   'Proyecto {ref} financiado por MICIU/AEI/10.13039/501100011033 y por FEDER, UE': 'Grant {ref} funded by MICIU/AEI/10.13039/501100011033 and by ERDF, EU',
   // Modelos y calibraciones
-  'Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val:':
-    'All models have been trained and validated with data from the Ebro River Basin Authority probes at El Val reservoir:',
-  'Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA, con datos de 2023 a 2025 y técnicas de aprendizaje automático (machine learning, ML).':
-    'Phycocyanin (seasonal risk, trend and lab): SAICA probe, with data from 2023 to 2025 and machine learning (ML) techniques.',
+  'Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val (el periodo exacto de cada uno aparece en su ficha):':
+    'All models have been trained and validated with data from the Ebro River Basin Authority probes at El Val reservoir (the exact period of each one is shown on its card):',
+  'Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA. El riesgo estacional es un modelo de aprendizaje automático (regresión logística); la tendencia combina el último dato con la evolución típica de cada época del año.':
+    'Phycocyanin (seasonal risk, trend and lab): SAICA probe. Seasonal risk is a machine learning model (logistic regression); the trend combines the latest reading with the typical evolution at each time of year.',
   'Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.':
     'Chlorophyll-a: Aquadam profiling probe, with data from 2018 to 2024. Several ML models were compared, but the most robust was a simple formula with the Sentinel-2 NDCI index.',
-  'Este modelo procede del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), realizado dentro de HIBLOOMS.':
-    "This model comes from Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra), carried out within HIBLOOMS.",
+  'Trabajo relacionado: el Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra, 2026), dentro de HIBLOOMS, predice la ficocianina de esta misma sonda con redes neuronales LSTM, con R² de 0,7 a 0,9 a 3–5 días vista.':
+    "Related work: Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra, 2026), within HIBLOOMS, forecasts phycocyanin from this same probe with LSTM neural networks, with R² of 0.7 to 0.9 at 3–5 days ahead.",
   'Leer el TFM en DADUN': 'Read the thesis in DADUN',
   'experimental': 'experimental',
   'laboratorio': 'lab',

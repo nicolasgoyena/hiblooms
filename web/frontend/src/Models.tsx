@@ -14,7 +14,7 @@ const MES = (d: string) => new Date(d + 'T12:00:00').getMonth()
 const MES_COL = ['#2c7bb6', '#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#f9d057', '#f29e2e', '#e76818', '#d7191c', '#f29e2e', '#00ccbc', '#2c7bb6']
 
 /** Enlace al TFM de Manuel Ruiz Galilea en DADUN (repositorio de la Universidad de Navarra), del que sale
- *  el modelo de tendencia de ficocianina a corto plazo (se cita en su ficha).
+ *  se cita como trabajo relacionado en la ficha de tendencia de ficocianina (predicción con redes LSTM).
  *  Pega aquí la URL del registro (https://hdl.handle.net/10171/…) cuando esté publicado:
  *  mientras esté vacío, el texto se muestra sin enlace. */
 export const TFM_URL = ''
@@ -34,9 +34,9 @@ export function localCard(m: ModelCard): ModelCard {
 function ModelContext() {
   return (
     <div className="model-ctx">
-      <p>{t('Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val:')}</p>
+      <p>{t('Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val (el periodo exacto de cada uno aparece en su ficha):')}</p>
       <ul>
-        <li>{t('Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA, con datos de 2023 a 2025 y técnicas de aprendizaje automático (machine learning, ML).')}</li>
+        <li>{t('Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA. El riesgo estacional es un modelo de aprendizaje automático (regresión logística); la tendencia combina el último dato con la evolución típica de cada época del año.')}</li>
         <li>{t('Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.')}</li>
       </ul>
     </div>
@@ -104,7 +104,7 @@ export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpe
 
       {m.kind === 'trend' && (
         <div className="model-ctx">
-          <p>{t('Este modelo procede del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), realizado dentro de HIBLOOMS.')}{' '}
+          <p>{t('Trabajo relacionado: el Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra, 2026), dentro de HIBLOOMS, predice la ficocianina de esta misma sonda con redes neuronales LSTM, con R² de 0,7 a 0,9 a 3–5 días vista.')}{' '}
             {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
         </div>
       )}
