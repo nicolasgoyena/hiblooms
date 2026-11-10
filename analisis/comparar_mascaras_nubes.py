@@ -105,7 +105,11 @@ def main():
         # _build_indices_image comprueba las bandas en el cliente (getInfo), así que no puede ir
         # dentro de un .map(): se construye cada imagen aquí y se piden todas juntas en lotes.
         ids = s2.filterDate(ini, fin).aggregate_array("system:index").getInfo()
-        print(f"Earth Engine {y}: {len(ids)} imágenes…", flush=True)
+        # Cloud Score+ no tiene todas las escenas: solo se comparan las que existen en las dos colecciones
+        cs_ids = set(csp.filterBounds(aoi).filterDate(ini, fin).aggregate_array("system:index").getInfo())
+        falta = [i for i in ids if i not in cs_ids]
+        ids = [i for i in ids if i in cs_ids]
+        print(f"Earth Engine {y}: {len(ids)} imágenes" + (f" ({len(falta)} sin Cloud Score+, se omiten)" if falta else "") + "…", flush=True)
         feats = []
         for k, iid in enumerate(ids, 1):
             img = ee.Image(f"{server.S2}/{iid}").addBands(
