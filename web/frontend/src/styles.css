@@ -536,6 +536,8 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .model-ctx { background: #EEF6F4; border: 1px solid #D5E8E3; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
 .model-ctx p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.45; color: var(--ink); }
 .model-ctx p:last-child { margin-bottom: 0; }
+.model-ctx ul { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.45; color: var(--ink); }
+.model-ctx li { margin-bottom: 4px; }
 .model-ctx a { color: var(--teal); font-weight: 600; }
 
 /* ── Fechas dudosas de la serie ── */

@@ -682,8 +682,12 @@ const EN: Record<string, string> = {
   // Financiación (las siglas MICIU/AEI no se traducen, según la guía de la AEI)
   'Proyecto {ref} financiado por MICIU/AEI/10.13039/501100011033 y por FEDER, UE': 'Grant {ref} funded by MICIU/AEI/10.13039/501100011033 and by ERDF, EU',
   // Modelos y calibraciones
-  'Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.':
-    'The models in this section are based on machine learning (ML) techniques trained with data from the Ebro River Basin Authority probes at El Val reservoir, mainly between 2023 and 2025.',
+  'Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val:':
+    'All models have been trained and validated with data from the Ebro River Basin Authority probes at El Val reservoir:',
+  'Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA, con datos de 2023 a 2025 y técnicas de aprendizaje automático (machine learning, ML).':
+    'Phycocyanin (seasonal risk, trend and lab): SAICA probe, with data from 2023 to 2025 and machine learning (ML) techniques.',
+  'Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.':
+    'Chlorophyll-a: Aquadam profiling probe, with data from 2018 to 2024. Several ML models were compared, but the most robust was a simple formula with the Sentinel-2 NDCI index.',
   'Este modelo procede del Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra), realizado dentro de HIBLOOMS.':
     "This model comes from Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra), carried out within HIBLOOMS.",
   'Leer el TFM en DADUN': 'Read the thesis in DADUN',

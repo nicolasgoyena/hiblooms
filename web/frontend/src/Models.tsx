@@ -34,7 +34,11 @@ export function localCard(m: ModelCard): ModelCard {
 function ModelContext() {
   return (
     <div className="model-ctx">
-      <p>{t('Los modelos de esta sección se basan en técnicas de aprendizaje automático (machine learning, ML) entrenadas con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val, sobre todo entre 2023 y 2025.')}</p>
+      <p>{t('Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val:')}</p>
+      <ul>
+        <li>{t('Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA, con datos de 2023 a 2025 y técnicas de aprendizaje automático (machine learning, ML).')}</li>
+        <li>{t('Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.')}</li>
+      </ul>
     </div>
   )
 }
