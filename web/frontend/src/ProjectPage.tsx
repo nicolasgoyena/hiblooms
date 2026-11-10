@@ -39,6 +39,7 @@ const TEAM_RESEARCH = [
   ['Sheila Izquieta Rojano', 'SIR', 'Instituto BIOMA · Universidad de Navarra', 'SIG y teledetección, datos FAIR, digitalización'],
 ]
 const TEAM_WORK = [
+  ['Nicolás Goyena Serveto', 'NGS', 'Instituto BIOMA · Universidad de Navarra', 'Ingeniería de datos y desarrollo de la herramienta digital'],
   ['Aimee Valle Pombrol', 'AVP', 'Instituto BIOMA · Universidad de Navarra', 'Taxonomía de cianobacterias e identificación de toxinas'],
   ['Carlos Manuel Alonso Hernández', 'CAH', 'Laboratorio de Radioecología · Organismo Internacional de Energía Atómica (OIEA), Mónaco', 'Geocronología con ²¹⁰Pb'],
   ['David Widory', 'DWI', 'GEOTOP · Universidad de Quebec en Montreal (UQAM), Canadá', 'Geoquímica isotópica y calidad del agua'],
@@ -97,6 +98,7 @@ export default function ProjectPage({ onClose, onStart, lang, setLang }: { onClo
         </div>
         <h1>{t('Vigilancia satelital de')} <em>{t('floraciones algales')}</em> {t('en embalses')}</h1>
         <p>{t('Reconstrucción histórica y monitorización en tiempo casi real de las floraciones algales en embalses españoles mediante teledetección Sentinel-2, con especial atención a las algas tóxicas como las cianobacterias.')}</p>
+        <p className="pj-credit"><span className="pj-av">NGS</span><span>{t('Herramienta digital diseñada y desarrollada por')} <b>Nicolás Goyena Serveto</b> · {t('Instituto BIOMA · Universidad de Navarra')}</span></p>
         <div className="pj-chips">
           <span><Icon name="satelite" /> {t('31 embalses por defecto')}</span><span><Icon name="calendario" /> {t('Desde 2017')}</span><span><Icon name="modelos" /> {t('Clorofila-a y ficocianina')}</span><span><Icon name="lupa" /> {t('Calibración con datos in situ')}</span>
         </div>

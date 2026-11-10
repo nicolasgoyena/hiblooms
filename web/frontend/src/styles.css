@@ -547,3 +547,7 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 /* ── Perfiles FluoroProbe ── */
 .fp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
 .fp-chips .tag.on { color: #fff; }
+
+/* Crédito de la herramienta digital, en la portada */
+.pj-hero p.pj-credit { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-size: 13.5px; color: #EAFBF8; }
+.pj-credit .pj-av { width: 32px; height: 32px; font-size: 11px; flex: none; background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.35); }
