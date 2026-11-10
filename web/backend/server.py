@@ -578,7 +578,8 @@ def models():
         except Exception:  # noqa: BLE001
             continue
     import sonda_val  # fichas calculadas en vivo con la sonda de El Val
-    out += sonda_val.cards()
+    end = [m for m in out if m.get("position") == "end"]   # fichas de referencia, al final de la lista
+    out = [m for m in out if m.get("position") != "end"] + sonda_val.cards() + end
     return {"models": out}
 
 

@@ -56,7 +56,7 @@ export type ModelCard = { id: string; index_id: string; reservoir: string; reser
   training: { pairs: number; period: string; ground_truth: string; matching: string }
   validation: { method: string; metrics: { label: string; value: string; help: string }[]; compared: string }
   limits: string[]; pairs: { date: string; obs: number; pred: number; ndci: number }[]
-  kind?: 'satellite' | 'seasonal' | 'trend' | 'lab'
+  kind?: 'satellite' | 'seasonal' | 'trend' | 'lab' | 'reference'
   curve?: { doy: number; p: number; obs: number | null }[]; levels?: { medio: number; alto: number }
   high_season?: string | null; today?: RiskToday
   history?: { date: string; value: number }[]; forecast?: TrendPoint[]

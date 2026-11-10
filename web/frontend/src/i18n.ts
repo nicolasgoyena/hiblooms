@@ -688,8 +688,15 @@ const EN: Record<string, string> = {
     'Phycocyanin (seasonal risk, trend and lab): SAICA probe. Seasonal risk is a machine learning model (logistic regression); the trend combines the latest reading with the typical evolution at each time of year.',
   'Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.':
     'Chlorophyll-a: Aquadam profiling probe, with data from 2018 to 2024. Several ML models were compared, but the most robust was a simple formula with the Sentinel-2 NDCI index.',
-  'Trabajo relacionado: el Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra, 2026), dentro de HIBLOOMS, predice la ficocianina de esta misma sonda con redes neuronales LSTM, con R² de 0,7 a 0,9 a 3–5 días vista.':
-    "Related work: Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra, 2026), within HIBLOOMS, forecasts phycocyanin from this same probe with LSTM neural networks, with R² of 0.7 to 0.9 at 3–5 days ahead.",
+  'en estudio': 'under study',
+  'La ficha «Predicción de ficocianina con redes LSTM» resume el TFM de Manuel Ruiz Galilea sobre la misma sonda SAICA; todavía no se ejecuta en la plataforma.':
+    "The “Phycocyanin forecast with LSTM networks” card summarises Manuel Ruiz Galilea's Master's thesis on the same SAICA probe; it does not run on the platform yet.",
+  'Ficha de referencia: resume los resultados publicados en el TFM. El modelo no se ejecuta todavía en la plataforma.': 'Reference card: it summarises the results published in the thesis. The model does not run on the platform yet.',
+  'Sin resultados.': 'No results.',
+  'Prueba en 2025 (año parecido)': 'Test on 2025 (similar year)',
+  'Prueba en 2026 (bloom adelantado)': 'Test on 2026 (early bloom)',
+  'Mejor R² de cada horizonte (media de 5 ejecuciones) en los años no vistos. Línea discontinua: R² = 0,7, que la literatura considera excelente para sistemas operativos. Fuente: TFM de Manuel Ruiz Galilea (2026).':
+    'Best R² for each horizon (mean of 5 runs) on unseen years. Dashed line: R² = 0.7, considered excellent for operational systems in the literature. Source: Manuel Ruiz Galilea\'s Master\'s thesis (2026).',
   'Leer el TFM en DADUN': 'Read the thesis in DADUN',
   'experimental': 'experimental',
   'laboratorio': 'lab',

@@ -1,0 +1,118 @@
+{
+ "id": "lstm_pc_val_tfm",
+ "kind": "reference",
+ "position": "end",
+ "index_id": "",
+ "reservoir": "VAL",
+ "reservoir_label": "El Val",
+ "variable": "Predicción de ficocianina con redes LSTM",
+ "unit": "µg/L",
+ "status": "en estudio",
+ "version": "2026-08",
+ "description": "Redes neuronales LSTM que predicen la ficocianina de la sonda SAICA de El Val para los próximos días. Es el trabajo del TFM de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra, 2026), dentro de HIBLOOMS. Aquí se resumen sus resultados: el modelo todavía no se ejecuta en la plataforma.",
+ "formula": "LSTM: ficocianina de los últimos 3–5 días (sola, o con temperatura, turbidez y profundidad) → ficocianina de los próximos 3, 5, 7 o 14 días",
+ "index_formula": "Arquitecturas: LSTM apilada (50 + 50 unidades, salida vectorial) y LSTM Encoder-Decoder · estacionalidad con mes_sin y mes_cos · escalados MinMax, RobustScaler y log(1+x)",
+ "training": {
+  "pairs": 813,
+  "period": "2024-03 – 2026-06",
+  "ground_truth": "Sonda SAICA 945 de la CHE en El Val (ficocianina, media diaria)",
+  "matching": "Valores por encima de 100 µg/L acotados (picos de medida sospechosos) · huecos rellenados por interpolación lineal · ventanas deslizantes de un día"
+ },
+ "validation": {
+  "method": "Dos experimentos con años no vistos: entrenar con 2024 y 2025 y probar en 2026 (hasta junio), y entrenar solo con 2024 y probar en 2025. Cada configuración se repitió 5 veces; las cifras son el mejor R² medio de cada horizonte.",
+  "metrics": [
+   {
+    "label": "R² a 3 días (prueba 2026)",
+    "value": "0,81",
+    "help": "Mejor configuración al predecir los 3 días siguientes en 2026, un año con el bloom adelantado a finales de primavera"
+   },
+   {
+    "label": "R² a 7 días (prueba 2026)",
+    "value": "0,65",
+    "help": "Mejor configuración al predecir los 7 días siguientes en 2026"
+   },
+   {
+    "label": "R² a 3 días (prueba 2025)",
+    "value": "0,92",
+    "help": "Mejor configuración al predecir los 3 días siguientes en 2025, un año parecido al de entrenamiento"
+   },
+   {
+    "label": "R² a 14 días (prueba 2026)",
+    "value": "0,10",
+    "help": "A dos semanas vista el modelo ya no aporta información en 2026"
+   }
+  ],
+  "compared": "Se compararon tres arquitecturas (LSTM con salida vectorial, Encoder-Decoder univariable y multivariable) y cuatro tratamientos de los datos. Añadir temperatura, turbidez y profundidad no mejora de forma clara a usar solo la ficocianina.",
+  "results": [
+   {
+    "h": 3,
+    "test_2026": 0.81,
+    "test_2025": 0.92
+   },
+   {
+    "h": 5,
+    "test_2026": 0.68,
+    "test_2025": 0.84
+   },
+   {
+    "h": 7,
+    "test_2026": 0.65,
+    "test_2025": 0.79
+   },
+   {
+    "h": 14,
+    "test_2026": 0.1,
+    "test_2025": 0.72
+   }
+  ]
+ },
+ "limits": [
+  "No anticipa el inicio de un bloom: empieza a subir cuando la subida ya se ve en los datos de la sonda.",
+  "Entrenado con solo dos años; en 2026 el bloom se adelantó a finales de primavera y superó los 50 µg/L, fuera de lo aprendido, y el modelo lo infraestima.",
+  "Los buenos resultados de 2025 reflejan un año muy parecido al de entrenamiento; no garantizan lo mismo en años atípicos.",
+  "Aún no está integrado en la plataforma: falta compararlo con el modelo de tendencia actual y decidir si merece la pena."
+ ],
+ "pairs": [],
+ "en": {
+  "variable": "Phycocyanin forecast with LSTM networks",
+  "description": "LSTM neural networks that forecast phycocyanin from the SAICA probe at El Val for the coming days. This is the work of Manuel Ruiz Galilea's Master's thesis (Master's in Data Science for Experimental Sciences, University of Navarra, 2026), within HIBLOOMS. Its results are summarised here: the model does not run on the platform yet.",
+  "formula": "LSTM: phycocyanin over the last 3–5 days (alone, or with temperature, turbidity and depth) → phycocyanin over the next 3, 5, 7 or 14 days",
+  "index_formula": "Architectures: stacked LSTM (50 + 50 units, vector output) and LSTM Encoder-Decoder · seasonality with month_sin and month_cos · MinMax, RobustScaler and log(1+x) scaling",
+  "training": {
+   "ground_truth": "CHE SAICA 945 probe at El Val (phycocyanin, daily mean)",
+   "matching": "Values above 100 µg/L capped (suspicious measurement spikes) · gaps filled by linear interpolation · one-day sliding windows"
+  },
+  "validation": {
+   "method": "Two experiments on unseen years: train on 2024 and 2025 and test on 2026 (up to June), and train on 2024 only and test on 2025. Each configuration was run 5 times; figures are the best mean R² for each horizon.",
+   "metrics": [
+    {
+     "label": "R² at 3 days (test 2026)",
+     "value": "0.81",
+     "help": "Best configuration forecasting the next 3 days in 2026, a year with the bloom brought forward to late spring"
+    },
+    {
+     "label": "R² at 7 days (test 2026)",
+     "value": "0.65",
+     "help": "Best configuration forecasting the next 7 days in 2026"
+    },
+    {
+     "label": "R² at 3 days (test 2025)",
+     "value": "0.92",
+     "help": "Best configuration forecasting the next 3 days in 2025, a year similar to the training ones"
+    },
+    {
+     "label": "R² at 14 days (test 2026)",
+     "value": "0.10",
+     "help": "Two weeks ahead the model no longer adds information in 2026"
+    }
+   ],
+   "compared": "Three architectures (vector-output LSTM, univariate and multivariate Encoder-Decoder) and four data treatments were compared. Adding temperature, turbidity and depth does not clearly beat using phycocyanin alone."
+  },
+  "limits": [
+   "It does not anticipate the start of a bloom: it starts rising once the rise is already visible in the probe data.",
+   "Trained on only two years; in 2026 the bloom came early (late spring) and exceeded 50 µg/L, outside what was learned, and the model underestimates it.",
+   "The good 2025 results reflect a year very similar to the training ones; they do not guarantee the same in unusual years.",
+   "Not yet integrated into the platform: it still has to be compared with the current trend model to decide whether it is worth it."
+  ]
+ }
+}

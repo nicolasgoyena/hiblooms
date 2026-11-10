@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { api, fmt, LabPairs, LabRow, ModelCard } from './api'
 import { getLang, locale, t } from './i18n'
 import Icon from './Icon'
@@ -14,7 +14,7 @@ const MES = (d: string) => new Date(d + 'T12:00:00').getMonth()
 const MES_COL = ['#2c7bb6', '#2c7bb6', '#00a6ca', '#00ccbc', '#90eb9d', '#f9d057', '#f29e2e', '#e76818', '#d7191c', '#f29e2e', '#00ccbc', '#2c7bb6']
 
 /** Enlace al TFM de Manuel Ruiz Galilea en DADUN (repositorio de la Universidad de Navarra), del que sale
- *  se cita como trabajo relacionado en la ficha de tendencia de ficocianina (predicción con redes LSTM).
+ *  se enlaza desde su ficha «Predicción de ficocianina con redes LSTM» (data/modelos/lstm_pc_val_tfm.json).
  *  Pega aquí la URL del registro (https://hdl.handle.net/10171/…) cuando esté publicado:
  *  mientras esté vacío, el texto se muestra sin enlace. */
 export const TFM_URL = ''
@@ -37,6 +37,7 @@ function ModelContext() {
       <p>{t('Todos los modelos se han entrenado y validado con datos de las sondas de la Confederación Hidrográfica del Ebro en el embalse de El Val (el periodo exacto de cada uno aparece en su ficha):')}</p>
       <ul>
         <li>{t('Ficocianina (riesgo estacional, tendencia y laboratorio): sonda SAICA. El riesgo estacional es un modelo de aprendizaje automático (regresión logística); la tendencia combina el último dato con la evolución típica de cada época del año.')}</li>
+        <li>{t('La ficha «Predicción de ficocianina con redes LSTM» resume el TFM de Manuel Ruiz Galilea sobre la misma sonda SAICA; todavía no se ejecuta en la plataforma.')}</li>
         <li>{t('Clorofila-a: sonda de perfiles Aquadam, con datos de 2018 a 2024. Se compararon varios modelos de ML, pero el más robusto fue una fórmula sencilla con el índice NDCI de Sentinel-2.')}</li>
       </ul>
     </div>
@@ -102,16 +103,9 @@ export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpe
         ))}
       </div>
 
-      {m.kind === 'trend' && (
-        <div className="model-ctx">
-          <p>{t('Trabajo relacionado: el Trabajo Fin de Máster de Manuel Ruiz Galilea (Máster en Ciencia de Datos para Ciencias Experimentales, Universidad de Navarra, 2026), dentro de HIBLOOMS, predice la ficocianina de esta misma sonda con redes neuronales LSTM, con R² de 0,7 a 0,9 a 3–5 días vista.')}{' '}
-            {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
-        </div>
-      )}
-
       <div className="model-grid">
         <div>
-          {m.kind === 'lab' ? <LabPC /> : m.kind === 'seasonal' ? <SeasonalChart m={m} /> : m.kind === 'trend' ? <TrendChart m={m} /> : pts.length > 0 ? (
+          {m.kind === 'reference' ? <ReferenceResults m={m} /> : m.kind === 'lab' ? <LabPC /> : m.kind === 'seasonal' ? <SeasonalChart m={m} /> : m.kind === 'trend' ? <TrendChart m={m} /> : pts.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={300}>
                 <ScatterChart margin={{ top: 8, right: 12, bottom: 18, left: 0 }}>
@@ -147,7 +141,7 @@ export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpe
             <div className="model-legend">
               {TROFICO.map(c => <span key={c.label}><i style={{ background: c.color }} />{t(c.label)}</span>)}
             </div>
-          ) : <ByYear m={m} />}
+          ) : m.kind === 'reference' ? null : <ByYear m={m} />}
         </div>
         <div className="model-info">
           <h4>{t('Datos de calibración')}</h4>
@@ -161,7 +155,10 @@ export function ModelCardView({ m: raw, onOpen, onClose }: { m: ModelCard; onOpe
           <p className="muted small">{t(m.validation.compared)}</p>
           <h4>{t('Limitaciones')}</h4>
           <ul>{m.limits.map(l => <li key={l}>{t(l)}</li>)}</ul>
-          {m.index_id
+          {m.kind === 'reference'
+            ? <p className="muted small">{t('Ficha de referencia: resume los resultados publicados en el TFM. El modelo no se ejecuta todavía en la plataforma.')}{' '}
+                {TFM_URL && <a href={TFM_URL} target="_blank" rel="noreferrer">{t('Leer el TFM en DADUN')} ↗</a>}</p>
+            : m.index_id
             ? <button className="primary" onClick={onOpen}><Icon name="satelite" /> {t('Ver en el visor')}</button>
             : m.kind === 'lab'
               ? <p className="muted small">{t('Los pares salen de la base del proyecto y se actualizan con ella. Nada de lo que pruebes aquí modifica el visor: es un banco de pruebas.')}</p>
@@ -183,6 +180,31 @@ const doyLabel = (d: number) => {
 function Status({ s, small }: { s: string; small?: boolean }) {
   const exp = s !== 'validado'
   return <span className={(small ? 'model-status' : 'model-badge') + (exp ? ' exp' : '')}><Icon name={exp ? 'ensayo' : 'ok'} size={13} /> {t(s)}</span>
+}
+
+/** Resultados de un modelo de referencia (TFM): R² por horizonte en los dos experimentos. */
+function ReferenceResults({ m }: { m: ModelCard }) {
+  const rows: { h: number; test_2026: number; test_2025: number }[] = (m.validation as any).results || []
+  if (!rows.length) return <p className="muted an-empty">{t('Sin resultados.')}</p>
+  const data = rows.map(r => ({ ...r, lbl: `${r.h} ${t('días')}` }))
+  return (
+    <>
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+          <CartesianGrid stroke="#E3ECEC" vertical={false} />
+          <XAxis dataKey="lbl" tick={{ fontSize: 11 }} />
+          <YAxis domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tickFormatter={v => fmt(v, 2)} tick={{ fontSize: 11 }} width={40}
+            label={{ value: 'R²', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+          <ReferenceLine y={0.7} stroke="#0C2B33" strokeDasharray="4 3" />
+          <Tooltip formatter={(v: any, n: any) => [fmt(v as number, 2), n]} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar name={t('Prueba en 2025 (año parecido)')} dataKey="test_2025" fill="#8FC9BE" />
+          <Bar name={t('Prueba en 2026 (bloom adelantado)')} dataKey="test_2026" fill="#0F8A78" />
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="muted small">{t('Mejor R² de cada horizonte (media de 5 ejecuciones) en los años no vistos. Línea discontinua: R² = 0,7, que la literatura considera excelente para sistemas operativos. Fuente: TFM de Manuel Ruiz Galilea (2026).')}</p>
+    </>
+  )
 }
 
 /** Curva anual de riesgo, con la frecuencia observada de picos y el día de hoy. */
