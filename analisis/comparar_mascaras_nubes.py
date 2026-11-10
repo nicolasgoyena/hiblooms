@@ -19,7 +19,7 @@ o .streamlit/secrets.toml, y DATABASE_URL para leer la sonda):
 
     python analisis/comparar_mascaras_nubes.py
 
-Tarda unos minutos (una petición a Earth Engine por año). Resultado:
+Tarda unos 5–10 minutos. Resultado:
     analisis/resultados/mascaras_nubes_val.csv
 """
 from __future__ import annotations
@@ -102,11 +102,21 @@ def main():
     filas = []
     for y in range(d.index.min().year, d.index.max().year + 1):
         ini, fin = f"{y}-01-01", f"{y + 1}-01-01"
-        col = s2.filterDate(ini, fin)
-        print(f"Earth Engine {y}: {col.size().getInfo()} imágenes…", flush=True)
-        fc = ee.FeatureCollection(col.map(lambda im: por_imagen(im, aoi, sonda)))
-        for f in fc.getInfo()["features"]:
-            filas.append(f["properties"])
+        # _build_indices_image comprueba las bandas en el cliente (getInfo), así que no puede ir
+        # dentro de un .map(): se construye cada imagen aquí y se piden todas juntas en lotes.
+        ids = s2.filterDate(ini, fin).aggregate_array("system:index").getInfo()
+        print(f"Earth Engine {y}: {len(ids)} imágenes…", flush=True)
+        feats = []
+        for k, iid in enumerate(ids, 1):
+            img = ee.Image(f"{server.S2}/{iid}").addBands(
+                ee.Image(f"GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED/{iid}").select("cs_cdf"))
+            feats.append(por_imagen(img, aoi, sonda))
+            if k % 25 == 0 or k == len(ids):
+                print(f"   preparadas {k}/{len(ids)}", flush=True)
+        for j in range(0, len(feats), 30):
+            print(f"   calculando lote {j // 30 + 1}/{(len(feats) + 29) // 30}…", flush=True)
+            for f in ee.FeatureCollection(feats[j:j + 30]).getInfo()["features"]:
+                filas.append(f["properties"])
 
     df = pd.DataFrame(filas)
     df["fecha"] = pd.to_datetime(df["fecha"])
