@@ -284,9 +284,8 @@ export function downloadBlob(name: string, text: string, type = 'application/jso
 
 export type Doubt = 'pocos' | 'pico' | 'sesgo'
 /** Fechas dudosas de una serie de medias del embalse.
- *  · pocos: nubes sobre el embalse (≥ 20 % del polígono) o casi sin píxeles de agua (< 30, ~1 ha);
- *    alrededor de las nubes quedan bruma y sombras sin marcar que disparan la media. No se usa el
- *    nº de píxeles relativo a otras fechas: baja también cuando baja el nivel del embalse.
+ *  · pocos: casi sin píxeles de agua (< 30, ~1 ha). La nubosidad no se usa aquí: ya la filtra el
+ *    visor (nubosidad máxima sobre el embalse); el % de nubes solo se enseña en el tooltip.
  *  · sesgo: la media se separa mucho de la mediana → la arrastran unos pocos píxeles extremos.
  *  · pico: valor aislado muy por encima/debajo de sus vecinos (filtro de Hampel, ±3 fechas). */
 export function doubtful(series: SeriesPoint[], range: number): Map<string, Doubt> {
@@ -295,7 +294,7 @@ export function doubtful(series: SeriesPoint[], range: number): Map<string, Doub
   series.forEach((r, i) => {
     if (r.mean == null) return
     const q = r.q
-    if (q && (q.n_px < 30 || (q.cloud != null && q.cloud >= 20))) { out.set(r.date, 'pocos'); return }
+    if (q && q.n_px < 30) { out.set(r.date, 'pocos'); return }
     if (q?.median != null && Math.abs(r.mean - q.median) > 0.15 * span) { out.set(r.date, 'sesgo'); return }
     const win = series.slice(Math.max(0, i - 3), i + 4).filter((x, j) => x !== r && x.mean != null && !out.has(x.date) && j >= 0).map(x => x.mean as number)
     if (win.length < 4) return

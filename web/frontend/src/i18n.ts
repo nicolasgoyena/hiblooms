@@ -813,13 +813,13 @@ const EN: Record<string, string> = {
   'Mediana {m} · {p} % del embalse con agua despejada': 'Median {m} · {p} % of the reservoir with clear water',
   'Media poco fiable en esta fecha: quedan pocos píxeles de agua despejada o unos pocos píxeles extremos la arrastran. Mira la mediana.':
     'Unreliable mean on this date: few clear water pixels are left, or a few extreme pixels drag it. Check the median.',
-  '{n} fechas dudosas marcadas con un aro naranja: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado. Su media no es representativa del embalse.':
-    '{n} doubtful dates marked with an orange ring: few clear water pixels (undetected clouds, haze or shadows) or an isolated spike. Their mean does not represent the reservoir.',
-  '{n} fechas dudosas quitadas de la línea: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado.':
-    '{n} doubtful dates removed from the line: few clear water pixels (undetected clouds, haze or shadows) or an isolated spike.',
+  '{n} fechas dudosas marcadas con un aro naranja: media arrastrada por unos pocos píxeles extremos (bruma, sombras o bordes de nube sin detectar), pico aislado o casi sin agua visible. Su media no es representativa del embalse.':
+    '{n} doubtful dates marked with an orange ring: mean dragged by a few extreme pixels (undetected haze, shadows or cloud edges), isolated spike or almost no visible water. Their mean does not represent the reservoir.',
+  '{n} fechas dudosas quitadas de la línea: media arrastrada por unos pocos píxeles extremos (bruma, sombras o bordes de nube sin detectar), pico aislado o casi sin agua visible.':
+    '{n} doubtful dates removed from the line: mean dragged by a few extreme pixels (undetected haze, shadows or cloud edges), isolated spike or almost no visible water.',
   'Mostrarlas': 'Show them',
   'Ocultarlas': 'Hide them',
-  'nubes sobre el embalse o muy pocos píxeles de agua': 'clouds over the reservoir or very few water pixels',
+  'muy pocos píxeles de agua': 'very few water pixels',
   '{p} % de nubes': '{p} % clouds',
   'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)': 'the mean is far from the median (dragged by a few extreme pixels)',
   'pico aislado respecto a las fechas vecinas': 'isolated spike compared with neighbouring dates',

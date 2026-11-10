@@ -20,7 +20,7 @@ import LangToggle from './LangToggle'
 import Icon from './Icon'
 
 const DOUBT_TXT: Record<Doubt, string> = {
-  pocos: 'nubes sobre el embalse o muy pocos píxeles de agua',
+  pocos: 'muy pocos píxeles de agua',
   sesgo: 'la media se aleja mucho de la mediana (la arrastran unos pocos píxeles extremos)',
   pico: 'pico aislado respecto a las fechas vecinas',
 }
@@ -681,7 +681,7 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
           {img?.q?.valid_pct != null && (
             <p className="muted small" style={{ margin: 0 }}>{t('Mediana {m} · {p} % del embalse con agua despejada', { m: fmt(img.q.median), p: fmt(img.q.valid_pct, 0) })}</p>
           )}
-          {img?.q && meta && img.mean != null && ((img.q.n_px < 30) || (img.q.cloud != null && img.q.cloud >= 20) || (img.q.median != null && Math.abs(img.mean - img.q.median) > 0.15 * (meta.max - meta.min))) && (
+          {img?.q && meta && img.mean != null && ((img.q.n_px < 30) || (img.q.median != null && Math.abs(img.mean - img.q.median) > 0.15 * (meta.max - meta.min))) && (
             <div className="badge warn" style={{ background: '#FFF4E8', color: '#9A4B12' }}><Icon name="aviso" /> {t('Media poco fiable en esta fecha: quedan pocos píxeles de agua despejada o unos pocos píxeles extremos la arrastran. Mira la mediana.')}</div>
           )}
           {img?.interval80 && meta && img.mean != null && (
@@ -778,8 +778,8 @@ export default function App({ user, onLogout }: { user?: string | null; onLogout
               {doubts.size > 0 && (
                 <p className="muted small doubt-note">
                   <Icon name="aviso" size={13} /> {showDoubtful
-                    ? t('{n} fechas dudosas marcadas con un aro naranja: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado. Su media no es representativa del embalse.', { n: doubts.size })
-                    : t('{n} fechas dudosas quitadas de la línea: pocos píxeles de agua despejada (nubes, bruma o sombras sin detectar) o un pico aislado.', { n: doubts.size })}{' '}
+                    ? t('{n} fechas dudosas marcadas con un aro naranja: media arrastrada por unos pocos píxeles extremos (bruma, sombras o bordes de nube sin detectar), pico aislado o casi sin agua visible. Su media no es representativa del embalse.', { n: doubts.size })
+                    : t('{n} fechas dudosas quitadas de la línea: media arrastrada por unos pocos píxeles extremos (bruma, sombras o bordes de nube sin detectar), pico aislado o casi sin agua visible.', { n: doubts.size })}{' '}
                   <button className="link dark" onClick={() => setShowDoubtful(v => !v)}>{showDoubtful ? t('Ocultarlas') : t('Mostrarlas')}</button>
                 </p>
               )}
