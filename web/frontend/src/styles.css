@@ -334,6 +334,10 @@ input.txt { width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
 .mon-arw.good { color: #1C6B4B; }
 .mon-arw.flat { color: var(--muted); font-weight: 500; }
 .map-b { pointer-events: none; }
+/* Los dos mapas del comparador comparten un contexto de apilado propio: así los puntos de interés
+   (marcadores del mapa principal) quedan por encima del segundo mapa sin tapar los paneles. */
+.map-stack { position: absolute; inset: 0; isolation: isolate; }
+.map-stack .poi.maplibregl-marker { z-index: 2; }
 .cmp { display: flex; flex-direction: column; gap: 8px; }
 .swipe-handle { position: absolute; top: 0; bottom: 0; width: 0; pointer-events: none; z-index: 3;
   display: flex; flex-direction: column; align-items: center; }

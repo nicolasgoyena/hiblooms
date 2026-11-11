@@ -292,10 +292,10 @@ export default function MapView(p: Props) {
   }, [p.swipe, p.compareTileUrl])
 
   return (
-    <>
+    <div className="map-stack">
       <div ref={ref} className="map" />
       <div ref={refB} className="map map-b" style={{ display: p.compareTileUrl ? 'block' : 'none' }} />
-    </>
+    </div>
   )
 }
 
